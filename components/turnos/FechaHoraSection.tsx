@@ -18,6 +18,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDisponibilidadTurnos } from "@/hooks/turnos/useDisponibilidadTurnos";
+import type { HorarioTenant } from "@/lib/firebase/firestore";
+import { diaToWeekdays, generateTimeSlots, getHorarioForDay } from "@/hooks/turnos/useTurnoForm";
 
 interface FechaHoraSectionProps {
   selectedDate: Date | undefined;
@@ -29,6 +31,8 @@ interface FechaHoraSectionProps {
   handleChange: (field: string, value: string) => void;
   diasBloqueados: string[];
   horariosDisponibles: string[];
+  closedDays: number[];
+  tenantHorarios: HorarioTenant[];
 }
 
 export function FechaHoraSection({
@@ -38,6 +42,8 @@ export function FechaHoraSection({
   handleChange,
   diasBloqueados,
   horariosDisponibles,
+  closedDays,
+  tenantHorarios,
 }: FechaHoraSectionProps) {
   const { turnosExistentes } = useDisponibilidadTurnos();
 
@@ -90,23 +96,27 @@ export function FechaHoraSection({
                   }
                 }}
                 disabled={(date) => {
-                  // Deshabilitar fechas pasadas
-                  if (date < new Date(new Date().setHours(0, 0, 0, 0)))
-                    return true;
+                  // Fechas pasadas
+                  if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
 
-                  // Deshabilitar domingos (0 = domingo)
-                  if (date.getDay() === 0) return true;
+                  // Días cerrados según configuración
+                  if (closedDays.includes(date.getDay())) return true;
 
-                  // Deshabilitar días bloqueados desde Firestore
+                  // Días bloqueados manualmente
                   const fechaStr = format(date, "yyyy-MM-dd");
                   if (diasBloqueados.includes(fechaStr)) return true;
 
-                  // Deshabilitar días llenos (13 turnos = todos los horarios ocupados)
+                  // Días llenos (todos los turnos ocupados)
                   const turnosDelDia = turnosExistentes.filter(
-                    (t: any) =>
-                      t.turno?.fecha === fechaStr && t.estado !== "cancelado"
+                    (t: any) => t.turno?.fecha === fechaStr && t.estado !== "cancelado"
                   );
-                  if (turnosDelDia.length >= 13) return true;
+                  const horario = tenantHorarios.length > 0
+                    ? getHorarioForDay(date.getDay(), tenantHorarios)
+                    : null;
+                  const totalSlots = (horario && !horario.cerrado)
+                    ? generateTimeSlots(horario.apertura, horario.cierre).length
+                    : 13;
+                  if (turnosDelDia.length >= totalSlots) return true;
 
                   return false;
                 }}
@@ -155,9 +165,9 @@ export function FechaHoraSection({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {horariosDisponibles.length} horario
-            {horariosDisponibles.length !== 1 ? "s" : ""} disponible
-            {horariosDisponibles.length !== 1 ? "s" : ""} (8:00 a 20:00 hs)
+            {selectedDate
+              ? `${horariosDisponibles.length} horario${horariosDisponibles.length !== 1 ? "s" : ""} disponible${horariosDisponibles.length !== 1 ? "s" : ""}`
+              : "Primero seleccioná una fecha"}
           </p>
         </div>
       </div>

@@ -26,13 +26,13 @@ export async function POST(request: NextRequest) {
     }
 
     const clientEmail = process.env.GOOGLE_CALENDAR_CLIENT_EMAIL ?? process.env.CLIENT_EMAIL;
-    const calendarId = process.env.GOOGLE_CALENDAR_CALENDAR_ID ?? process.env.CALENDAR_ID ?? "veterinariapriscilas@gmail.com";
+    const calendarId = process.env.GOOGLE_CALENDAR_CALENDAR_ID ?? process.env.CALENDAR_ID;
     const privateKeyRaw = process.env.GOOGLE_CALENDAR_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
 
-    if (!clientEmail || !privateKeyRaw) {
-      console.error("Faltan variables de Google Calendar:", { clientEmail: !!clientEmail, privateKey: !!privateKeyRaw });
+    if (!clientEmail || !privateKeyRaw || !calendarId) {
+      console.error("Faltan variables de Google Calendar:", { clientEmail: !!clientEmail, privateKey: !!privateKeyRaw, calendarId: !!calendarId });
       return NextResponse.json(
-        { error: "Configuración de calendario incompleta (CLIENT_EMAIL y PRIVATE_KEY)" },
+        { error: "Configuración de calendario incompleta (CLIENT_EMAIL, PRIVATE_KEY y CALENDAR_ID)" },
         { status: 503 }
       );
     }

@@ -1,40 +1,35 @@
-import { useState, useEffect } from "react";
-import { getClienteByEmail, getMascotasByClienteId } from "@/lib/firebase/firestore";
+import { useState, useEffect } from "react"
+import { getClienteByEmail, getMascotas } from "@/lib/firebase/firestore"
+import { DEFAULT_TENANT_ID } from "@/lib/config"
 
-export function useClienteByEmail(email: string) {
-  const [clienteExistente, setClienteExistente] = useState<any>(null);
-  const [mascotas, setMascotas] = useState<any[]>([]);
-  const [mostrarNuevaMascota, setMostrarNuevaMascota] = useState(true);
+export function useClienteByEmail(email: string, tenantId = DEFAULT_TENANT_ID) {
+  const [clienteExistente, setClienteExistente] = useState<any>(null)
+  const [mascotas, setMascotas] = useState<any[]>([])
+  const [mostrarNuevaMascota, setMostrarNuevaMascota] = useState(true)
 
   useEffect(() => {
     const buscarCliente = async () => {
       if (email && email.includes("@")) {
         try {
-          const cliente = await getClienteByEmail(email);
+          const cliente = await getClienteByEmail(tenantId, email)
           if (cliente) {
-            setClienteExistente(cliente);
-            const mascotasCliente = await getMascotasByClienteId(cliente.id);
-            setMascotas(mascotasCliente);
-            setMostrarNuevaMascota(mascotasCliente.length === 0);
+            setClienteExistente(cliente)
+            const mascotasCliente = await getMascotas(tenantId, cliente.id!)
+            setMascotas(mascotasCliente)
+            setMostrarNuevaMascota(mascotasCliente.length === 0)
           } else {
-            setClienteExistente(null);
-            setMascotas([]);
-            setMostrarNuevaMascota(true);
+            setClienteExistente(null)
+            setMascotas([])
+            setMostrarNuevaMascota(true)
           }
         } catch (error) {
-          console.error("Error buscando cliente:", error);
+          console.error("Error buscando cliente:", error)
         }
       }
-    };
+    }
+    const debounce = setTimeout(buscarCliente, 500)
+    return () => clearTimeout(debounce)
+  }, [email, tenantId])
 
-    const debounce = setTimeout(buscarCliente, 500);
-    return () => clearTimeout(debounce);
-  }, [email]);
-
-  return {
-    clienteExistente,
-    mascotas,
-    mostrarNuevaMascota,
-    setMostrarNuevaMascota,
-  };
+  return { clienteExistente, mascotas, mostrarNuevaMascota, setMostrarNuevaMascota }
 }

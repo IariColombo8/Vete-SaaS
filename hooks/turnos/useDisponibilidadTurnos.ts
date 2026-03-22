@@ -1,48 +1,29 @@
-import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { getTurnos } from "@/lib/firebase/firestore";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react"
+import { getTurnos, getDiasBloqueados } from "@/lib/firebase/firestore"
+import { DEFAULT_TENANT_ID } from "@/lib/config"
+import { useToast } from "@/hooks/use-toast"
 
-export function useDisponibilidadTurnos() {
-  const { toast } = useToast();
-  const [diasBloqueados, setDiasBloqueados] = useState<string[]>([]);
-  const [turnosExistentes, setTurnosExistentes] = useState<any[]>([]);
+export function useDisponibilidadTurnos(tenantId = DEFAULT_TENANT_ID) {
+  const { toast } = useToast()
+  const [diasBloqueados, setDiasBloqueados] = useState<string[]>([])
+  const [turnosExistentes, setTurnosExistentes] = useState<any[]>([])
 
-  // Cargar días bloqueados y turnos al montar
   useEffect(() => {
-    const cargarDisponibilidad = async () => {
+    const cargar = async () => {
       try {
-        // Cargar fechas bloqueadas desde Firestore settings/blockedDates
-        const docRef = doc(db, "settings", "blockedDates");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const fechasBloqueadas = docSnap.data().dates || [];
-          setDiasBloqueados(fechasBloqueadas);
-          console.log("Fechas bloqueadas cargadas:", fechasBloqueadas);
-        } else {
-          console.log("No hay documento de fechas bloqueadas");
-          setDiasBloqueados([]);
-        }
-
-        // Cargar turnos existentes
-        const turnosData = await getTurnos();
-        setTurnosExistentes(turnosData);
+        const [dias, turnos] = await Promise.all([
+          getDiasBloqueados(tenantId),
+          getTurnos(tenantId),
+        ])
+        setDiasBloqueados(dias.map((d: any) => d.fecha ?? d.id))
+        setTurnosExistentes(turnos)
       } catch (error) {
-        console.error("Error cargando disponibilidad:", error);
-        toast({
-          title: "Error",
-          description: "No se pudo cargar la disponibilidad",
-          variant: "destructive",
-        });
+        console.error("Error cargando disponibilidad:", error)
+        toast({ title: "Error", description: "No se pudo cargar la disponibilidad", variant: "destructive" })
       }
-    };
+    }
+    cargar()
+  }, [tenantId, toast])
 
-    cargarDisponibilidad();
-  }, [toast]);
-
-  return {
-    diasBloqueados,
-    turnosExistentes,
-  };
+  return { diasBloqueados, turnosExistentes }
 }

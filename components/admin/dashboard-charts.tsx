@@ -25,8 +25,10 @@ import {
   Area,
   AreaChart,
   RadialBarChart,
-  RadialBar,
+  RadialBar as RadialBarBase,
 } from "recharts";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RadialBar = RadialBarBase as any;
 import {
   Dialog,
   DialogContent,
@@ -35,6 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_TENANT_ID } from "@/lib/config";
 import { getTurnos, getClientesBasic } from "@/lib/firebase/firestore";
 import type { Turno } from "@/lib/firebase/firestore";
 import {
@@ -54,10 +57,11 @@ import {
 } from "lucide-react";
 
 interface DashboardChartsProps {
+  tenantId: string;
   onNavigateToTurnos?: (fecha?: string) => void;
 }
 
-export function DashboardCharts({ onNavigateToTurnos }: DashboardChartsProps = {}) {
+export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChartsProps) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +71,8 @@ export function DashboardCharts({ onNavigateToTurnos }: DashboardChartsProps = {
     const fetchData = async () => {
       try {
         const [turnosData, clientesData] = await Promise.all([
-          getTurnos(),
-          getClientesBasic(),
+          getTurnos(tenantId),
+          getClientesBasic(tenantId),
         ]);
         setTurnos(turnosData);
         setClientes(clientesData);

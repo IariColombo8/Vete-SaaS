@@ -12,9 +12,11 @@ import { FechaHoraSection } from "./FechaHoraSection";
 import { TurnoSubmitButton } from "./TurnoSubmitButton";
 import { ModalConfirmacion } from "./ModalConfirmacion";
 import { useTurnoForm } from "@/hooks/turnos/useTurnoForm";
-import { Heart, Clock } from "lucide-react";
+import { useTenant } from "@/hooks/useTenant";
+import { Heart, Clock, PauseCircle } from "lucide-react";
 
 interface TurnoFormProps {
+  tenantId?: string;
   defaultDni?: string;
   lockDni?: boolean;
   redirectOnSuccess?: boolean;
@@ -22,17 +24,20 @@ interface TurnoFormProps {
 }
 
 export function TurnoForm({
+  tenantId,
   defaultDni,
   lockDni,
   redirectOnSuccess = true,
   onSuccess,
 }: TurnoFormProps) {
+  const { tenant, loading: tenantLoading } = useTenant(tenantId)
+
   const {
     formData,
     handleChange,
     handleSubmit,
     handleConfirmedSubmit,
-    handleVacunasChange, // NUEVO
+    handleVacunasChange,
     loading,
     clienteExistente,
     mascotas,
@@ -45,10 +50,27 @@ export function TurnoForm({
     loadingCliente,
     showConfirmModal,
     setShowConfirmModal,
-  } = useTurnoForm({ defaultDni, lockDni, redirectOnSuccess, onSuccess });
+    closedDays,
+    tenantHorarios,
+  } = useTurnoForm({ tenantId, defaultDni, lockDni, redirectOnSuccess, onSuccess });
 
-  // NUEVO: Determinar si mostrar sección de vacunas
   const mostrarVacunas = formData.servicio === "vacunacion" && formData.tipoMascota;
+
+  if (!tenantLoading && tenant?.status === "pausado") {
+    return (
+      <Card className="shadow-2xl border-2 backdrop-blur-sm bg-background/95">
+        <CardContent className="flex flex-col items-center justify-center py-20 text-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+            <PauseCircle className="h-8 w-8 text-orange-500" />
+          </div>
+          <h2 className="text-xl font-extrabold">Servicio pausado</h2>
+          <p className="text-muted-foreground text-sm max-w-xs">
+            Esta veterinaria no está recibiendo turnos en este momento. Por favor, contactate directamente con la clínica.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <>
@@ -127,6 +149,8 @@ export function TurnoForm({
               handleChange={handleChange}
               diasBloqueados={diasBloqueados}
               horariosDisponibles={horariosDisponibles}
+              closedDays={closedDays}
+              tenantHorarios={tenantHorarios}
             />
 
             {/* Submit Button */}

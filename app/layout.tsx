@@ -9,74 +9,43 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Salud Animal Domiciliaria - Atención Veterinaria a Domicilio",
+  title: "VetPanel — Sistema de gestión para Veterinarias",
   description:
-    "Medicina veterinaria profesional y humana en el hogar. Atención personalizada sin el estrés de la consulta tradicional. Cuidado con tiempo, criterio y vocación.",
-  generator: "v0.app",
+    "Controlá turnos, clientes y libretas sanitarias desde un solo lugar. Tu clínica online con tu propio link, en minutos.",
   keywords: [
-    "veterinaria",
-    "veterinaria a domicilio",
-    "Salud Animal",
-    "atención domiciliaria",
-    "mascotas",
-    "medicina veterinaria",
-    "veterinario en casa",
+    "sistema gestión veterinaria",
+    "turnos veterinaria online",
+    "libreta sanitaria digital",
+    "software veterinaria",
+    "agenda veterinaria",
   ],
-  authors: [{ name: "Salud Animal Domiciliaria" }],
-  creator: "Salud Animal Domiciliaria",
-
-  // Open Graph (Facebook, WhatsApp, LinkedIn)
+  authors: [{ name: "VetPanel" }],
+  creator: "VetPanel",
   openGraph: {
     type: "website",
     locale: "es_AR",
-    url: "https://veterinariaps.vercel.app/", // Cambia por tu dominio real
-    siteName: "Salud Animal Domiciliaria",
-    title: "Salud Animal Domiciliaria - Atención Veterinaria en el Hogar",
-    description:
-      "Medicina veterinaria profesional y humana en el hogar. Atención personalizada sin el estrés de la consulta tradicional.",
-    images: [
-      {
-        url: "/metadato.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Salud Animal Domiciliaria - Atención Veterinaria a Domicilio",
-      },
-    ],
+    url: "https://veterinariaps.vercel.app/",
+    siteName: "VetPanel",
+    title: "VetPanel — Sistema de gestión para Veterinarias",
+    description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
+    images: [{ url: "/metadato.jpg", width: 1200, height: 630, alt: "VetPanel" }],
   },
-
-  // Twitter
   twitter: {
     card: "summary_large_image",
-    title: "Salud Animal Domiciliaria - Atención Veterinaria en el Hogar",
-    description:
-      "Medicina veterinaria profesional y humana en el hogar. Atención personalizada sin el estrés de la consulta tradicional.",
+    title: "VetPanel — Sistema de gestión para Veterinarias",
+    description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
     images: ["/metadato.jpg"],
   },
-
-  // Iconos
   icons: {
     icon: [
-      {
-        url: "/icon-light.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/logo111.png",
-        type: "image/png",
-      },
+      { url: "/icon-light.png", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/logo111.png", type: "image/png" },
     ],
     apple: "/logo111.png",
   },
-
-  // Configuración adicional
-  metadataBase: new URL("https://veterinariaps.vercel.app/"), // Cambia por tu dominio real
-  alternates: {
-    canonical: "/",
-  },
+  metadataBase: new URL("https://veterinariaps.vercel.app/"),
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({

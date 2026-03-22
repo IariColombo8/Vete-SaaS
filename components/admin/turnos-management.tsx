@@ -25,6 +25,7 @@ import {
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_TENANT_ID } from "@/lib/config";
 import { createHistoria, updateTurno } from "@/lib/firebase/firestore";
 import type { Turno } from "@/lib/firebase/firestore";
 
@@ -40,10 +41,11 @@ import { NextAppointmentCard } from "./NextAppointmentCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TurnosManagementProps {
+  tenantId: string;
   targetDate?: string;
 }
 
-export default function TurnosManagement({ targetDate }: TurnosManagementProps) {
+export default function TurnosManagement({ tenantId, targetDate }: TurnosManagementProps) {
   const {
     turnos,
     loading,
@@ -64,7 +66,7 @@ export default function TurnosManagement({ targetDate }: TurnosManagementProps) 
     handleDelete,
     handleSaveEdit,
     fetchTurnos,
-  } = useTurnosManagement();
+  } = useTurnosManagement(tenantId);
 
   const { toast } = useToast();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -157,7 +159,7 @@ export default function TurnosManagement({ targetDate }: TurnosManagementProps) 
     const observacionesFinal = partesObs.length ? partesObs.join("\n") : "";
     setSavingNota(true);
     try {
-      await createHistoria(t.clienteId, t.mascotaId, {
+      await createHistoria(tenantId, t.clienteId, t.mascotaId, {
         fechaAtencion: fecha,
         motivo: t.mascota?.motivo ?? "Consulta",
         diagnostico: diag,
@@ -165,7 +167,7 @@ export default function TurnosManagement({ targetDate }: TurnosManagementProps) 
         observaciones: observacionesFinal,
         proximaVisita: "",
       });
-      await updateTurno(t.id, { estado: "completado" });
+      await updateTurno(tenantId, t.id, { estado: "completado" });
       await fetchTurnos();
       toast({ title: "Nota clínica guardada", description: "El turno se marcó como completado." });
       setGenerateHistoriaTurno(null);

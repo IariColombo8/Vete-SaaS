@@ -180,7 +180,7 @@ function SkeletonCard() {
   );
 }
 
-export function LibretaSanitariaManagement() {
+export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -278,7 +278,7 @@ export function LibretaSanitariaManagement() {
       try {
         const results = await Promise.all(
           missingIds.map(async (id) => {
-            const mascotas = await getMascotas(id);
+            const mascotas = await getMascotas(tenantId, id);
             const names = mascotas.map((m) => m.nombre).filter(Boolean);
             return { id, count: mascotas.length, names };
           })
@@ -304,7 +304,7 @@ export function LibretaSanitariaManagement() {
   const loadClientes = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getClientesBasic();
+      const data = await getClientesBasic(tenantId);
       setClientes(data);
       const conDNI = data.filter((c) => c.dni?.trim());
       setTotal(conDNI.length);
@@ -356,11 +356,11 @@ export function LibretaSanitariaManagement() {
       if (isMobile) setDetailSheetOpen(true);
       try {
         const [completo, turnos] = await Promise.all([
-          getClienteCompleto(clienteId),
-          getTurnosByClienteId(clienteId),
+          getClienteCompleto(tenantId, clienteId),
+          getTurnosByClienteId(tenantId, clienteId),
         ]);
         if (completo) {
-          const mascotas = completo.mascotas || (await getMascotas(clienteId));
+          const mascotas = completo.mascotas || (await getMascotas(tenantId, clienteId));
           const clienteFull = { ...completo, mascotas, historialDatos: (completo as Cliente & { historialDatos?: HistorialDato[] }).historialDatos } as Cliente;
           setClienteExpandido({
             cliente: clienteFull,
@@ -385,7 +385,7 @@ export function LibretaSanitariaManagement() {
       setLoadingTimeline(true);
       try {
         const [historias, turnosCliente] = await Promise.all([
-          getHistorias(clienteId, mascotaId),
+          getHistorias(tenantId, clienteId, mascotaId),
           Promise.resolve(clienteExpandido.turnos),
         ]);
         const nombreMascota = (clienteExpandido.mascotas.find((m) => m.id === mascotaId)?.nombre ?? "").trim().toLowerCase();
@@ -427,7 +427,7 @@ export function LibretaSanitariaManagement() {
     if (!editingCliente?.id) return;
     setSavingCliente(true);
     try {
-      await updateCliente(editingCliente.id, {
+      await updateCliente(tenantId, editingCliente.id, {
         nombre: clienteForm.nombre,
         domicilio: clienteForm.domicilio,
         telefono: clienteForm.telefono,
@@ -460,6 +460,8 @@ export function LibretaSanitariaManagement() {
       tratamiento: h.tratamiento ?? "",
       observaciones: h.observaciones ?? "",
       proximaVisita: h.proximaVisita ?? "",
+      pesoActual: "",
+      temperatura: "",
     });
     setEditEntradaOpen(true);
   };
@@ -486,7 +488,7 @@ export function LibretaSanitariaManagement() {
     if (editTipo === "historia" && editHistoria) {
       setSavingEntrada(true);
       try {
-        await updateHistoria(editHistoria.clienteId, editHistoria.mascotaId, editHistoria.h.id!, {
+        await updateHistoria(tenantId, editHistoria.clienteId, editHistoria.mascotaId, editHistoria.h.id!, {
           fechaAtencion: formHistoria.fechaAtencion,
           motivo: formHistoria.motivo || undefined,
           diagnostico: formHistoria.diagnostico,
@@ -523,11 +525,11 @@ export function LibretaSanitariaManagement() {
         } else {
           payload.mascota = { ...editTurno.mascota, motivo: formTurno.motivo };
         }
-        await updateTurno(editTurno.id, payload);
+        await updateTurno(tenantId, editTurno.id, payload);
         toast({ title: "Turno actualizado" });
         setEditEntradaOpen(false);
         if (clienteExpandido) {
-          const turnos = await getTurnosByClienteId(clienteExpandido.cliente.id!);
+          const turnos = await getTurnosByClienteId(tenantId, clienteExpandido.cliente.id!);
           setClienteExpandido((prev) => (prev ? { ...prev, turnos } : null));
           if (selectedMascotaId) loadTimeline(clienteExpandido.cliente.id!, selectedMascotaId);
         }
@@ -581,7 +583,7 @@ export function LibretaSanitariaManagement() {
       try {
         const [blockedSnap, turnosData] = await Promise.all([
           getDoc(doc(db, "settings", "blockedDates")),
-          getTurnos(),
+          getTurnos(tenantId),
         ]);
         setBlockedDatesLibreta(blockedSnap.exists() ? (blockedSnap.data().dates ?? []) : []);
         setTurnosParaDisponibilidad(turnosData);
@@ -643,7 +645,7 @@ export function LibretaSanitariaManagement() {
 
     setSavingNota(true);
     try {
-      await createHistoria(addNotaMascota.cliente.id, addNotaMascota.mascota.id, payloadHistoria);
+      await createHistoria(tenantId, addNotaMascota.cliente.id, addNotaMascota.mascota.id, payloadHistoria);
       toast({ title: "Nota clínica agregada" });
       setAddNotaOpen(false);
       setAddNotaMascota(null);
@@ -680,7 +682,7 @@ export function LibretaSanitariaManagement() {
     }
     setSavingNota(true);
     try {
-      await createTurno({
+      await createTurno(tenantId, {
         clienteId: addNotaMascota.cliente.id,
         mascotaId: addNotaMascota.mascota.id,
         cliente: {
@@ -721,7 +723,7 @@ export function LibretaSanitariaManagement() {
       setFormProximaVisita({ fecha: "", hora: "09:00", motivo: "", servicio: "consulta-general" });
       setFechaTurnoSeleccionada(undefined);
       if (clienteExpandido?.cliente.id === clienteIdRef) {
-        const turnos = await getTurnosByClienteId(clienteExpandido.cliente.id);
+        const turnos = await getTurnosByClienteId(tenantId, clienteExpandido.cliente.id);
         setClienteExpandido((prev) => (prev ? { ...prev, turnos } : null));
         if (selectedMascotaId === mascotaIdRef) loadTimeline(clienteIdRef, mascotaIdRef);
       }
@@ -773,7 +775,7 @@ export function LibretaSanitariaManagement() {
     if (!clienteExpandido?.cliente.id || !inlineEditField) return;
     setSavingCliente(true);
     try {
-      await updateCliente(clienteExpandido.cliente.id, {
+      await updateCliente(tenantId, clienteExpandido.cliente.id, {
         [inlineEditField]: inlineValues[inlineEditField],
       });
       setClienteExpandido((prev) =>

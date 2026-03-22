@@ -104,7 +104,7 @@ function formatMascotasSummary(mascotas: Mascota[]): string {
   return `${mascotas.length} (${parts.join(", ")})`;
 }
 
-export function ClientesManagement() {
+export function ClientesManagement({ tenantId }: { tenantId: string }) {
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -139,7 +139,7 @@ export function ClientesManagement() {
   const loadClientes = async () => {
     setLoading(true);
     try {
-      const data = await getClientesBasic();
+      const data = await getClientesBasic(tenantId);
       setClientes(data);
       // Cargar mascotas solo para los primeros 10 clientes (lazy load el resto)
       const primeros = data.slice(0, 10);
@@ -147,7 +147,7 @@ export function ClientesManagement() {
       for (const c of primeros) {
         if (c.id) {
           try {
-            map[c.id] = await getMascotas(c.id);
+            map[c.id] = await getMascotas(tenantId, c.id);
           } catch {
             map[c.id] = [];
           }
@@ -171,7 +171,7 @@ export function ClientesManagement() {
     if (mascotasByClienteId[clienteId]) return; // Ya cargado
     setLoadingMascotas((prev) => ({ ...prev, [clienteId]: true }));
     try {
-      const mascotas = await getMascotas(clienteId);
+      const mascotas = await getMascotas(tenantId, clienteId);
       setMascotasByClienteId((prev) => ({ ...prev, [clienteId]: mascotas }));
     } catch {
       setMascotasByClienteId((prev) => ({ ...prev, [clienteId]: [] }));
@@ -235,7 +235,7 @@ export function ClientesManagement() {
     setLoadingDetails(true);
     try {
       if (c.id) {
-        const completo = await getClienteCompleto(c.id);
+        const completo = await getClienteCompleto(tenantId, c.id);
         if (completo) {
           setDetailsCliente(completo);
         } else {
@@ -264,13 +264,13 @@ export function ClientesManagement() {
     setSaving(true);
     try {
       if (editingId) {
-        await updateCliente(editingId, form);
+        await updateCliente(tenantId, editingId, form);
         toast({
           title: "Cliente actualizado",
           description: "Los datos se guardaron correctamente",
         });
       } else {
-        await createCliente(form);
+        await createCliente(tenantId, form);
         toast({
           title: "Cliente agregado",
           description: form.dni ? "Cliente registrado o actualizado según DNI" : "El cliente se registró correctamente",

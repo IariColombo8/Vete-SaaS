@@ -131,7 +131,7 @@ function EmptyState({ searchTerm }: { searchTerm: string }) {
   );
 }
 
-export function HistoriasManagement() {
+export function HistoriasManagement({ tenantId }: { tenantId: string }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [clientesData, setClientesData] = useState<ClienteConMascotas[]>([]);
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
@@ -178,7 +178,7 @@ export function HistoriasManagement() {
     
     try {
       const offset = pageNum * ITEMS_PER_PAGE;
-      const result = await getClientesConMascotasYContadores(ITEMS_PER_PAGE, offset);
+      const result = await getClientesConMascotasYContadores(tenantId, ITEMS_PER_PAGE, offset);
       
       if (append) {
         setClientesData((prev) => [...prev, ...result.clientes]);
@@ -259,7 +259,7 @@ export function HistoriasManagement() {
       return;
     }
     try {
-      const data = await getMascotas(clienteId);
+      const data = await getMascotas(tenantId, clienteId);
       setMascotasForSelect(data);
     } catch {
       setMascotasForSelect([]);
@@ -274,7 +274,7 @@ export function HistoriasManagement() {
     setMascotasForSelect([]);
     // Cargar todos los clientes para el select
     try {
-      const clientes = await getClientesBasic();
+      const clientes = await getClientesBasic(tenantId);
       setAllClientesForSelect(clientes.filter((c) => c.dni?.trim()));
     } catch (error) {
       console.error("Error loading clientes for select:", error);
@@ -304,8 +304,8 @@ export function HistoriasManagement() {
     setIsHistorialLoading(true);
     try {
       const [historias, turnosCliente] = await Promise.all([
-        getHistorias(cliente.id!, mascota.id!),
-        getTurnosByClienteId(cliente.id!),
+        getHistorias(tenantId, cliente.id!, mascota.id!),
+        getTurnosByClienteId(tenantId, cliente.id!),
       ]);
       const nombreMascota = (mascota.nombre ?? "").trim().toLowerCase();
       const turnosMascota = turnosCliente.filter((t) => {
@@ -356,7 +356,7 @@ export function HistoriasManagement() {
     if (editingId) {
       setSaving(true);
       try {
-        await updateHistoria(editingClienteId, editingMascotaId, editingId, {
+        await updateHistoria(tenantId, editingClienteId, editingMascotaId, editingId, {
           fechaAtencion: form.fechaAtencion,
           motivo: form.motivo || undefined,
           diagnostico: form.diagnostico,
@@ -393,7 +393,7 @@ export function HistoriasManagement() {
       }
       setSaving(true);
       try {
-        await createHistoria(editingClienteId, editingMascotaId, {
+        await createHistoria(tenantId, editingClienteId, editingMascotaId, {
           fechaAtencion: form.fechaAtencion,
           motivo: form.motivo || undefined,
           diagnostico: form.diagnostico,
@@ -426,7 +426,7 @@ export function HistoriasManagement() {
   const handleDelete = async (h: Historia, clienteId: string, mascotaId: string) => {
     if (!confirm("¿Eliminar esta consulta? Esta acción no se puede deshacer.")) return;
     try {
-      await deleteHistoria(clienteId, mascotaId, h.id!);
+      await deleteHistoria(tenantId, clienteId, mascotaId, h.id!);
       toast({
         title: "Consulta eliminada",
         description: "La historia clínica se eliminó correctamente",
