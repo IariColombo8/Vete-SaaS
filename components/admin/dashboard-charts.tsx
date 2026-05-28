@@ -37,7 +37,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_TENANT_ID } from "@/lib/config";
 import { getTurnos, getClientesBasic } from "@/lib/firebase/firestore";
 import type { Turno } from "@/lib/firebase/firestore";
 import {

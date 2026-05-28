@@ -4,7 +4,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { signOut, checkIfUserIsAdmin, getUserRole, getUsuarioData } from "@/lib/firebase/auth"
+import { signOut, checkIfUserIsAdmin } from "@/lib/firebase/auth"
+import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useRouter, usePathname } from "next/navigation"
 import { Menu, X, Stethoscope, LayoutDashboard, Shield, CalendarPlus } from "lucide-react"
 import { useState, useEffect } from "react"
@@ -17,18 +18,16 @@ function SaasNavbar() {
   const [role, setRole] = useState<UserRole | null>(null)
   const [tenantId, setTenantId] = useState<string | null>(null)
 
+  const [dashboardHref, setDashboardHref] = useState<string | null>(null)
+
   useEffect(() => {
-    if (!user) { setRole(null); setTenantId(null); return }
-    Promise.all([getUserRole(user.uid), getUsuarioData(user.uid)]).then(([r, data]) => {
+    if (!user) { setRole(null); setTenantId(null); setDashboardHref(null); return }
+    resolveUserDashboard(user.uid).then(({ role: r, tenantId: t, redirectTo }) => {
       setRole(r)
-      setTenantId(data?.tenantId as string ?? null)
+      setTenantId(t)
+      setDashboardHref(r === "usuario" ? null : redirectTo)
     })
   }, [user])
-
-  const dashboardHref =
-    role === "superadmin" ? "/superadmin" :
-    role === "veterinario" ? (tenantId ? `/${tenantId}/dashboard` : "/registro") :
-    null
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
@@ -388,7 +387,7 @@ export function Navbar() {
   if (pathname.startsWith("/superadmin")) return <SuperAdminNavbar />
 
   // Vet admin pages have their own nav via VetAdminLayout
-  const isVetAdmin = /^\/[^/]+(\/dashboard|\/turnoadmin|\/libretasanitaria|\/clientes|\/configuracion)/.test(pathname)
+  const isVetAdmin = /^\/[^/]+(\/admin|\/turnoadmin|\/libretasanitaria|\/clientes|\/configuracion)/.test(pathname)
   if (isVetAdmin) return null
 
   // Public vet page has its own full-page hero/footer design

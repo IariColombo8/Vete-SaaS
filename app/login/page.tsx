@@ -4,7 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { signInWithGoogle, getUserRole, getUsuarioData } from "@/lib/firebase/auth"
+import { signInWithGoogle } from "@/lib/firebase/auth"
+import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Stethoscope } from "lucide-react"
@@ -19,22 +20,8 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await signInWithGoogle()
-      const role = await getUserRole(result.user.uid)
-
-      if (role === "superadmin") {
-        router.push("/superadmin")
-      } else if (role === "veterinario") {
-        const data = await getUsuarioData(result.user.uid)
-        const tenantId = data?.tenantId as string | undefined
-        if (tenantId) {
-          router.push(`/${tenantId}/dashboard`)
-        } else {
-          router.push("/registro")
-        }
-      } else {
-        // usuario normal → sus turnos
-        router.push("/mis-turnos")
-      }
+      const { redirectTo } = await resolveUserDashboard(result.user.uid)
+      router.push(redirectTo)
     } catch (error) {
       console.error("Login error:", error)
       toast({

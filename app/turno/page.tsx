@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 
-// Legacy: redirige a la veterinaria por defecto
+// Legacy: la URL /turno ya no tiene sentido sin slug
 export default function TurnoLegacyRedirect() {
-  redirect("/priscilas/turno")
+  redirect("/")
 }

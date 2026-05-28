@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react"
 import { getTurnos, getDiasBloqueados } from "@/lib/firebase/firestore"
-import { DEFAULT_TENANT_ID } from "@/lib/config"
 import { useToast } from "@/hooks/use-toast"
 
-export function useDisponibilidadTurnos(tenantId = DEFAULT_TENANT_ID) {
+export function useDisponibilidadTurnos(tenantId: string) {
   const { toast } = useToast()
   const [diasBloqueados, setDiasBloqueados] = useState<string[]>([])
   const [turnosExistentes, setTurnosExistentes] = useState<any[]>([])

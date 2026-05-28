@@ -18,7 +18,7 @@ export function TurnoSubmitButton({ loading }: TurnoSubmitButtonProps) {
             Agendando...
           </span>
         ) : (
-          "Agendar Turno a Domicilio"
+          "Agendar Turno"
         )}
       </Button>
     </div>

@@ -4,10 +4,9 @@ import {
   getDiasBloqueados, bloquearDia, desbloquearDia,
 } from "@/lib/firebase/firestore"
 import type { Turno, Mascota } from "@/lib/firebase/firestore"
-import { DEFAULT_TENANT_ID } from "@/lib/config"
 import { useToast } from "@/hooks/use-toast"
 
-export function useTurnosManagement(tenantId = DEFAULT_TENANT_ID) {
+export function useTurnosManagement(tenantId: string) {
   const { toast } = useToast()
   const [turnos, setTurnos]                 = useState<Turno[]>([])
   const [loading, setLoading]               = useState(true)

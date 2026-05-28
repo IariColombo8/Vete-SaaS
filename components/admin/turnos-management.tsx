@@ -25,7 +25,6 @@ import {
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { DEFAULT_TENANT_ID } from "@/lib/config";
 import { createHistoria, updateTurno } from "@/lib/firebase/firestore";
 import type { Turno } from "@/lib/firebase/firestore";
 

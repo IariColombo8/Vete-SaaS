@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
-import { getUserRole, getUsuarioData } from "@/lib/firebase/auth"
+import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { ArrowRight, LayoutDashboard } from "lucide-react"
 
 export function HeroCta() {
@@ -17,15 +17,8 @@ export function HeroCta() {
     if (authLoading) return
     if (!user) { setChecking(false); return }
 
-    Promise.all([getUserRole(user.uid), getUsuarioData(user.uid)]).then(([role, data]) => {
-      if (role === "superadmin") {
-        setPanelHref("/superadmin")
-      } else if (role === "veterinario") {
-        const tenantId = data?.tenantId as string | undefined
-        setPanelHref(tenantId ? `/${tenantId}/dashboard` : "/registro")
-      } else {
-        setPanelHref("/mis-turnos")
-      }
+    resolveUserDashboard(user.uid).then(({ redirectTo }) => {
+      setPanelHref(redirectTo)
       setChecking(false)
     })
   }, [user, authLoading])

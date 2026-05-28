@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_AR",
-    url: "https://veterinariaps.vercel.app/",
+    url: process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app",
     siteName: "VetPanel",
     title: "VetPanel — Sistema de gestión para Veterinarias",
     description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     ],
     apple: "/logo111.png",
   },
-  metadataBase: new URL("https://veterinariaps.vercel.app/"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"),
   alternates: { canonical: "/" },
 };
 

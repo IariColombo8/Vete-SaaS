@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -15,7 +16,6 @@ import type { Turno } from "@/lib/firebase/firestore";
 import { TurnoForm } from "@/components/turnos/TurnoForm";
 
 interface MisTurnosClienteProps {
-  dni: string;
   turnos: Turno[];
   onCancelar: (turno: Turno) => void;
   onRefresh: () => void;
@@ -25,7 +25,7 @@ function getFechaTurno(t: Turno) {
   return t.turno?.fecha ?? t.fecha ?? "";
 }
 
-export function MisTurnosCliente({ dni, turnos, onCancelar, onRefresh }: MisTurnosClienteProps) {
+export function MisTurnosCliente({ turnos, onCancelar, onRefresh }: MisTurnosClienteProps) {
   const [agendarOpen, setAgendarOpen] = useState(false);
   const hoy = new Date().toISOString().slice(0, 10);
   const manana = new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -59,7 +59,7 @@ export function MisTurnosCliente({ dni, turnos, onCancelar, onRefresh }: MisTurn
             Mis turnos
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            DNI {dni}
+            Turnos registrados
           </p>
         </div>
         <Button onClick={() => setAgendarOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
@@ -146,10 +146,11 @@ export function MisTurnosCliente({ dni, turnos, onCancelar, onRefresh }: MisTurn
         <DialogContent className="sm:max-w-3xl border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Agendar turno</DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+              Completá el formulario para reservar un nuevo turno.
+            </DialogDescription>
           </DialogHeader>
           <TurnoForm
-            defaultDni={dni}
-            lockDni
             redirectOnSuccess={false}
             onSuccess={() => {
               setAgendarOpen(false);

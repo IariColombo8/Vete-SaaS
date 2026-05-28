@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { signInWithGoogle, getUserRole, getUsuarioData, updateUsuario } from "@/lib/firebase/auth"
-import { createTenant } from "@/lib/firebase/firestore"
-import { Stethoscope, ArrowRight, Check } from "lucide-react"
+import { signInWithGoogle, updateUsuario } from "@/lib/firebase/auth"
+import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
+import { createTenant, getTenant } from "@/lib/firebase/firestore"
+import { Stethoscope, ArrowRight, Check, Loader2, XCircle } from "lucide-react"
 import Link from "next/link"
 
 type Step = "login" | "perfil" | "listo"
@@ -41,11 +42,30 @@ export default function RegistroPage() {
 
   const slugPreview = toSlug(form.nombreClinica)
 
+  // ── Verificación de slug disponible ────────────────────────────────────────
+  type SlugStatus = "idle" | "checking" | "available" | "taken"
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!form.nombreClinica.trim()) { setSlugStatus("idle"); return }
+
+    setSlugStatus("checking")
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    debounceRef.current = setTimeout(async () => {
+      const existing = await getTenant(slugPreview)
+      setSlugStatus(existing ? "taken" : "available")
+    }, 500)
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [slugPreview, form.nombreClinica])
+
   // Auto-redirect to dashboard when registration is complete
   useEffect(() => {
     if (step === "listo") {
       const timer = setTimeout(() => {
-        router.push(`/${slugPreview}/dashboard`)
+        router.push(`/${slugPreview}/admin`)
       }, 2500)
       return () => clearTimeout(timer)
     }
@@ -56,13 +76,10 @@ export default function RegistroPage() {
     setLoading(true)
     try {
       const result = await signInWithGoogle()
-      const role = await getUserRole(result.user.uid)
+      const { role, redirectTo } = await resolveUserDashboard(result.user.uid)
 
       if (role === "veterinario" || role === "superadmin") {
-        // Ya tiene veterinaria → ir directo al panel
-        const userData = await getUsuarioData(result.user.uid)
-        const tenantId = userData?.tenantId as string | undefined
-        router.push(tenantId ? `/${tenantId}/dashboard` : "/admin")
+        router.push(redirectTo)
         return
       }
 
@@ -90,6 +107,19 @@ export default function RegistroPage() {
     setLoading(true)
     try {
       const tenantId = slugPreview
+
+      // Validar que el slug no esté tomado (segunda verificación antes de escribir)
+      const existing = await getTenant(tenantId)
+      if (existing) {
+        toast({
+          title: "Ese nombre ya está en uso",
+          description: "Probá con un nombre diferente para tu clínica.",
+          variant: "destructive",
+        })
+        setSlugStatus("taken")
+        setLoading(false)
+        return
+      }
 
       // Crear el tenant — doc raíz + config/datos
       await createTenant(tenantId, {
@@ -194,9 +224,28 @@ export default function RegistroPage() {
                     required
                   />
                   {form.nombreClinica && (
-                    <p className="text-xs text-muted-foreground">
-                      Tu link será: <span className="font-mono text-emerald-600">vetpanel.app/v/{slugPreview}</span>
-                    </p>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      {slugStatus === "checking" && (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          <span className="text-muted-foreground font-mono">vetpanel.app/{slugPreview}</span>
+                        </>
+                      )}
+                      {slugStatus === "available" && (
+                        <>
+                          <Check className="h-3 w-3 text-emerald-600" />
+                          <span className="font-mono text-emerald-600">vetpanel.app/{slugPreview}</span>
+                          <span className="text-emerald-600">— disponible</span>
+                        </>
+                      )}
+                      {slugStatus === "taken" && (
+                        <>
+                          <XCircle className="h-3 w-3 text-destructive" />
+                          <span className="font-mono text-destructive">vetpanel.app/{slugPreview}</span>
+                          <span className="text-destructive">— ya está en uso</span>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -242,7 +291,11 @@ export default function RegistroPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading || slugStatus === "taken" || slugStatus === "checking"}
+                >
                   {loading ? "Creando..." : (
                     <>
                       Crear mi veterinaria
@@ -274,7 +327,7 @@ export default function RegistroPage() {
                 <p className="text-xs text-muted-foreground">Tu link público:</p>
                 <p className="font-semibold text-emerald-600">/{slugPreview}</p>
               </div>
-              <Button className="w-full" onClick={() => router.push(`/${slugPreview}/dashboard`)}>
+              <Button className="w-full" onClick={() => router.push(`/${slugPreview}/admin`)}>
                 Ir a mi panel ahora
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

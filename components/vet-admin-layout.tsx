@@ -52,7 +52,7 @@ export function VetAdminLayout({ slug, children }: Props) {
   }
 
   const navItems = [
-    { href: `/${slug}/dashboard`,       label: "Dashboard",    icon: LayoutDashboard },
+    { href: `/${slug}/admin`,            label: "Dashboard",    icon: LayoutDashboard },
     { href: `/${slug}/turnoadmin`,       label: "Turnos",       icon: Calendar },
     { href: `/${slug}/libretasanitaria`, label: "Libreta",      icon: FileText },
     { href: `/${slug}/clientes`,         label: "Clientes",     icon: Users },

@@ -23,6 +23,7 @@ export interface Usuario {
   displayName?: string | null
   photoURL?: string | null
   role: UserRole
+  tenantId?: string
   /** @deprecated usar role */
   isAdmin?: boolean
   createdAt?: unknown
@@ -47,6 +48,12 @@ export interface HorarioTenant {
   apertura: string
   cierre: string
   cerrado: boolean
+  /** true (default) = horario corrido, false = cierra al mediodia */
+  corrido?: boolean
+  /** Cierre del primer bloque (ej: 12:00) — solo cuando corrido === false */
+  cierre1?: string
+  /** Apertura del segundo bloque (ej: 16:00) — solo cuando corrido === false */
+  apertura2?: string
 }
 
 /** Identificador mínimo — el doc raíz veterinarias/{slug} solo marca existencia */
@@ -56,6 +63,37 @@ export interface Tenant {
 
 /** "local" = atiende en consultorio, "domicilio" = va a la casa, "ambos" = las dos */
 export type Modalidad = "local" | "domicilio" | "ambos"
+
+// ============ TURNO CONFIG ============
+/** Tipo de mascota que atiende la veterinaria */
+export interface MascotaTurnoConfig {
+  id: string
+  emoji: string
+  nombre: string
+}
+
+/** Servicio disponible para reservar turno */
+export interface ServicioTurnoConfig {
+  id: string
+  emoji: string
+  nombre: string
+  descripcion?: string
+}
+
+/** Vacuna disponible para un tipo de mascota */
+export interface VacunaTurnoConfig {
+  id: string
+  nombre: string
+  descripcion?: string
+}
+
+/** Configuración de turnos — vive en veterinarias/{slug}/config/turno */
+export interface TurnoConfig {
+  mascotas?: MascotaTurnoConfig[]
+  servicios?: ServicioTurnoConfig[]
+  /** Vacunas agrupadas por tipo de mascota: { perro: [...], gato: [...] } */
+  vacunas?: Record<string, VacunaTurnoConfig[]>
+}
 
 /** Todo vive en veterinarias/{slug}/config/datos */
 export interface TenantConfig {
@@ -77,9 +115,14 @@ export interface TenantConfig {
   logo?: string
   modalidad?: Modalidad
   googleMapsUrl?: string
+  /** Horas mínimas de anticipación para turnos del mismo día (default 2) */
+  minHorasAnticipacion?: number
+  /** ID del Google Calendar donde se crean los eventos de turno */
+  calendarId?: string
 }
 
 const configDoc_ = (t: string) => doc(db, "veterinarias", t, "config", "datos")
+const turnoConfigDoc_ = (t: string) => doc(db, "veterinarias", t, "config", "turno")
 
 export async function getTenant(tenantId: string): Promise<Tenant | null> {
   const snap = await getDoc(doc(db, "veterinarias", tenantId))
@@ -95,6 +138,17 @@ export async function getTenantConfig(tenantId: string): Promise<TenantConfig | 
 
 export async function updateTenantConfig(tenantId: string, data: Partial<TenantConfig>): Promise<void> {
   await setDoc(configDoc_(tenantId), data, { merge: true })
+}
+
+// ── Turno Config CRUD ──
+export async function getTurnoConfig(tenantId: string): Promise<TurnoConfig | null> {
+  const snap = await getDoc(turnoConfigDoc_(tenantId))
+  if (!snap.exists()) return null
+  return snap.data() as TurnoConfig
+}
+
+export async function updateTurnoConfig(tenantId: string, data: Partial<TurnoConfig>): Promise<void> {
+  await setDoc(turnoConfigDoc_(tenantId), data, { merge: true })
 }
 
 /** Tenant + config merged — útil para páginas que necesitan ambos */
@@ -588,8 +642,29 @@ export async function getTurnosByClienteId(tenantId: string, clienteId: string):
   }
 }
 
+/** Busca turnos por email del cliente — permite al cliente autenticado ver sus turnos sin acceso admin. */
+export async function getTurnosByClienteEmail(tenantId: string, email: string): Promise<Turno[]> {
+  if (!email) return []
+  try {
+    const q = query(turnosCol(tenantId), where("cliente.email", "==", email))
+    const snapshot = await getDocs(q)
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Turno)
+  } catch {
+    return []
+  }
+}
+
 export async function updateTurno(tenantId: string, turnoId: string, data: Partial<Turno>) {
   return await updateDoc(doc(turnosCol(tenantId), turnoId), data)
+}
+
+/** Devuelve cuántos turnos se crearon en el mes actual para este tenant */
+export async function getTurnosDelMes(tenantId: string): Promise<number> {
+  const snap = await getDoc(contadorDoc(tenantId))
+  if (!snap.exists()) return 0
+  const mesActual = new Date().toISOString().slice(0, 7)
+  const turnosMes: Record<string, number> = snap.data().turnosMes ?? {}
+  return turnosMes[mesActual] ?? 0
 }
 
 export async function deleteTurno(tenantId: string, turnoId: string) {

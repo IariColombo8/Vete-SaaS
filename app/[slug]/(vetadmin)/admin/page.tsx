@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
-import { getTenantConfig } from "@/lib/firebase/firestore"
+import { getTenantConfig, getTurnosDelMes } from "@/lib/firebase/firestore"
 import type { TenantConfig } from "@/lib/firebase/firestore"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,7 @@ import {
   Globe,
   CalendarPlus,
   Stethoscope,
+  Link2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
@@ -35,15 +36,19 @@ export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [config, setConfig] = useState<TenantConfig | null>(null)
+  const [turnosMes, setTurnosMes] = useState<number | null>(null)
 
   useEffect(() => {
-    getTenantConfig(slug).then(setConfig)
+    Promise.all([getTenantConfig(slug), getTurnosDelMes(slug)]).then(([cfg, count]) => {
+      setConfig(cfg)
+      setTurnosMes(count)
+    })
   }, [slug])
 
-  const origin = typeof window !== "undefined" ? window.location.origin : ""
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
 
   function copyLink(path: string) {
-    navigator.clipboard.writeText(`${origin}${path}`)
+    navigator.clipboard.writeText(`${BASE_URL}${path}`)
     toast({ title: "Link copiado" })
   }
 
@@ -99,7 +104,7 @@ export default function DashboardPage() {
     {
       href: `/${slug}/configuracion`,
       label: "Configuracion",
-      desc: "Datos y enlaces de tu clinica",
+      desc: "Datos de tu clinica y turnos",
       icon: Settings,
       color: "bg-slate-50 dark:bg-slate-800/50",
       iconColor: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400",
@@ -130,6 +135,40 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Uso del plan — solo visible en plan básico */}
+        {plan === "basico" && turnosMes !== null && (
+          <div className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-4 text-sm
+            ${turnosMes >= 10
+              ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+              : turnosMes >= 7
+              ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+              : "bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+            }`}
+          >
+            <div>
+              <p className={`font-semibold ${turnosMes >= 10 ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
+                {turnosMes >= 10
+                  ? "Límite del plan alcanzado"
+                  : `Turnos este mes: ${turnosMes} / 10`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {turnosMes >= 10
+                  ? "No se pueden agendar más turnos este mes. Contactá a VetPanel para subir de plan."
+                  : `Te quedan ${10 - turnosMes} turno${10 - turnosMes === 1 ? "" : "s"} disponibles en el plan Básico.`}
+              </p>
+            </div>
+            <div className="shrink-0 w-24">
+              <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${turnosMes >= 10 ? "bg-red-500" : turnosMes >= 7 ? "bg-amber-500" : "bg-emerald-500"}`}
+                  style={{ width: `${Math.min((turnosMes / 10) * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-right mt-1">{Math.round((turnosMes / 10) * 100)}%</p>
+            </div>
+          </div>
+        )}
 
         {/* Accesos rapidos */}
         <div>
@@ -181,6 +220,35 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Tus enlaces */}
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+            <Link2 className="h-3.5 w-3.5" />
+            Tus enlaces
+          </h2>
+          <div className="space-y-2">
+            {[
+              { label: "Pagina publica", path: `/${slug}` },
+              { label: "Link para sacar turno", path: `/${slug}/turno` },
+              { label: "Panel admin", path: `/${slug}/admin` },
+            ].map(({ label, path }) => (
+              <div key={path} className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
+                <code className="flex-1 rounded bg-muted px-3 py-1.5 text-sm font-mono truncate">{BASE_URL}{path}</code>
+                <Button variant="outline" size="icon" className="h-8 w-8 shrink-0"
+                  onClick={() => copyLink(path)}>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                <a href={path} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </a>
+              </div>
             ))}
           </div>
         </div>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnos } from "@/lib/firebase/firestore"
 import type { Usuario, TenantFull } from "@/lib/firebase/firestore"
-import { DEFAULT_TENANT_ID } from "@/lib/config"
 import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,22 +35,26 @@ const roleLabel: Record<string, { label: string; variant: "default" | "secondary
 }
 
 export default function SuperAdminPage() {
-  const [usuarios, setUsuarios]     = useState<Usuario[]>([])
-  const [tenants, setTenants]       = useState<TenantFull[]>([])
+  const [usuarios, setUsuarios]       = useState<Usuario[]>([])
+  const [tenants, setTenants]         = useState<TenantFull[]>([])
   const [totalTurnos, setTotalTurnos] = useState(0)
-  const [loading, setLoading]       = useState(true)
-  const [updating, setUpdating]     = useState<string | null>(null)
+  const [turnosPorSlug, setTurnosPorSlug] = useState<Record<string, number>>({})
+  const [loading, setLoading]         = useState(true)
+  const [updating, setUpdating]       = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
-    const [users, vets, turnos] = await Promise.all([
+    const [users, vets] = await Promise.all([
       getUsuarios(),
       getTenantsFull(),
-      getTurnos(DEFAULT_TENANT_ID),
     ])
+    const turnosLists = await Promise.all(vets.map((v) => getTurnos(v.slug)))
+    const porSlug: Record<string, number> = {}
+    vets.forEach((v, i) => { porSlug[v.slug] = turnosLists[i].length })
     setUsuarios(users)
     setTenants(vets)
-    setTotalTurnos(turnos.length)
+    setTurnosPorSlug(porSlug)
+    setTotalTurnos(turnosLists.reduce((acc, t) => acc + t.length, 0))
     setLoading(false)
   }
 
@@ -130,20 +133,23 @@ export default function SuperAdminPage() {
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Veterinaria</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Plan</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Turnos</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Estado</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {tenants.map((t) => {
-                    const pl = planLabel[t.plan ?? "basico"] ?? planLabel["basico"]
                     const isPaused = t.status === "pausado"
                     const isUpdatingThis = updating?.startsWith(t.slug)
                     return (
                       <tr key={t.slug} className={`hover:bg-muted/30 transition-colors ${isPaused ? "opacity-60" : ""}`}>
                         <td className="px-4 py-3">
-                          <div className="font-medium">{t.nombre}</div>
-                          <div className="text-xs text-muted-foreground font-mono">/v/{t.slug}</div>
+                          <div className="font-medium">{t.nombre ?? t.slug}</div>
+                          <div className="text-xs text-muted-foreground font-mono">/{t.slug}</div>
+                          {t.ciudad && (
+                            <div className="text-xs text-muted-foreground">{t.ciudad}</div>
+                          )}
                         </td>
 
                         {/* Plan selector */}
@@ -162,6 +168,13 @@ export default function SuperAdminPage() {
                               <SelectItem value="pro">Pro</SelectItem>
                             </SelectContent>
                           </Select>
+                        </td>
+
+                        {/* Turnos */}
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-sm">
+                            {loading ? "—" : (turnosPorSlug[t.slug] ?? 0)}
+                          </span>
                         </td>
 
                         {/* Estado */}
@@ -190,7 +203,7 @@ export default function SuperAdminPage() {
                               )}
                               {isPaused ? "Reactivar" : "Pausar"}
                             </Button>
-                            <Link href="/admin">
+                            <Link href={`/${t.slug}/admin`} target="_blank">
                               <Button variant="ghost" size="sm" className="text-xs h-7">
                                 <ExternalLink className="h-3 w-3 mr-1" />
                                 Ver panel
@@ -228,13 +241,17 @@ export default function SuperAdminPage() {
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Usuario</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Email</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Rol actual</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Veterinaria</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Rol</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {usuarios.map((u) => {
                     const r = u.role || (u.isAdmin ? "veterinario" : "usuario")
                     const rl = roleLabel[r] ?? roleLabel["usuario"]
+                    const tenantVet = u.tenantId
+                      ? tenants.find(t => t.slug === u.tenantId)
+                      : null
                     return (
                       <tr key={u.uid} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3">
@@ -250,6 +267,17 @@ export default function SuperAdminPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                        <td className="px-4 py-3">
+                          {u.tenantId ? (
+                            <Link href={`/${u.tenantId}/admin`} target="_blank" className="group">
+                              <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 group-hover:underline">
+                                {tenantVet?.nombre ?? u.tenantId}
+                              </span>
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <Badge variant={rl.variant}>{rl.label}</Badge>
                         </td>

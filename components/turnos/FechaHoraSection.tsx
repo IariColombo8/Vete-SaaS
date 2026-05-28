@@ -18,8 +18,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDisponibilidadTurnos } from "@/hooks/turnos/useDisponibilidadTurnos";
+import { useSlug } from "@/context/slug-context";
 import type { HorarioTenant } from "@/lib/firebase/firestore";
-import { diaToWeekdays, generateTimeSlots, getHorarioForDay } from "@/hooks/turnos/useTurnoForm";
+import { diaToWeekdays, generateTimeSlots, generateTimeSlotsConSiesta, getHorarioForDay } from "@/hooks/turnos/useTurnoForm";
 
 interface FechaHoraSectionProps {
   selectedDate: Date | undefined;
@@ -45,7 +46,8 @@ export function FechaHoraSection({
   closedDays,
   tenantHorarios,
 }: FechaHoraSectionProps) {
-  const { turnosExistentes } = useDisponibilidadTurnos();
+  const slug = useSlug();
+  const { turnosExistentes } = useDisponibilidadTurnos(slug);
 
   return (
     <div
@@ -99,23 +101,33 @@ export function FechaHoraSection({
                   // Fechas pasadas
                   if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
 
-                  // Días cerrados según configuración
+                  // Dias cerrados segun configuracion
                   if (closedDays.includes(date.getDay())) return true;
 
-                  // Días bloqueados manualmente
+                  // Dias bloqueados manualmente
                   const fechaStr = format(date, "yyyy-MM-dd");
                   if (diasBloqueados.includes(fechaStr)) return true;
 
-                  // Días llenos (todos los turnos ocupados)
+                  // Dias llenos (todos los turnos ocupados)
                   const turnosDelDia = turnosExistentes.filter(
-                    (t: any) => t.turno?.fecha === fechaStr && t.estado !== "cancelado"
+                    (t: Record<string, unknown>) => {
+                      const turno = t.turno as { fecha?: string } | undefined;
+                      return turno?.fecha === fechaStr && t.estado !== "cancelado";
+                    }
                   );
                   const horario = tenantHorarios.length > 0
                     ? getHorarioForDay(date.getDay(), tenantHorarios)
                     : null;
-                  const totalSlots = (horario && !horario.cerrado)
-                    ? generateTimeSlots(horario.apertura, horario.cierre).length
-                    : 13;
+                  let totalSlots: number;
+                  if (horario && !horario.cerrado) {
+                    if (horario.corrido === false && horario.cierre1 && horario.apertura2) {
+                      totalSlots = generateTimeSlotsConSiesta(horario.apertura, horario.cierre, horario.cierre1, horario.apertura2).length;
+                    } else {
+                      totalSlots = generateTimeSlots(horario.apertura, horario.cierre).length;
+                    }
+                  } else {
+                    totalSlots = 13;
+                  }
                   if (turnosDelDia.length >= totalSlots) return true;
 
                   return false;
@@ -167,16 +179,16 @@ export function FechaHoraSection({
           <p className="text-xs text-muted-foreground">
             {selectedDate
               ? `${horariosDisponibles.length} horario${horariosDisponibles.length !== 1 ? "s" : ""} disponible${horariosDisponibles.length !== 1 ? "s" : ""}`
-              : "Primero seleccioná una fecha"}
+              : "Primero selecciona una fecha"}
           </p>
         </div>
       </div>
 
       <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
         <p className="text-sm text-muted-foreground">
-          <strong className="text-foreground">Nota:</strong> El turno está
-          sujeto a confirmación. Nos pondremos en contacto contigo para
-          coordinar la visita a domicilio.
+          <strong className="text-foreground">Nota:</strong> El turno esta
+          sujeto a confirmacion. Nos pondremos en contacto contigo para
+          coordinar.
         </p>
       </div>
     </div>

@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Lee el documento del usuario por su uid (campo, no doc ID)
+    // Nota: usa el formato nuevo donde el doc tiene campo uid == request.auth.uid
+    function userData() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function userRole() {
+      return isSignedIn() ? userData().role : null;
+    }
+
+    function userTenantId() {
+      return isSignedIn() ? userData().tenantId : null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && userRole() == 'superadmin';
+    }
+
+    // Es veterinario dueño de este tenant específico
+    function isTenantOwner(tenantId) {
+      return isSignedIn()
+          && userRole() == 'veterinario'
+          && userTenantId() == tenantId;
+    }
+
+    // Puede acceder al tenant (dueño o superadmin)
+    function canAccessTenant(tenantId) {
+      return isSuperAdmin() || isTenantOwner(tenantId);
+    }
+
+    // ── usuarios ─────────────────────────────────────────────────────────────
+    // Seguridad: el usuario solo puede modificar campos seguros de su propio doc.
+    // role y tenantId solo pueden ser cambiados por superadmin o durante
+    // el auto-registro como veterinario (usuario → veterinario, una sola vez).
+
+    function isOwnUserDoc(docId) {
+      return docId == request.auth.uid || resource.data.uid == request.auth.uid;
+    }
+
+    // Campos que un usuario común puede modificar en su propio doc
+    function onlySafeFieldsChanged() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasOnly(['displayName', 'photoURL', 'lastLogin', 'email']);
+    }
+
+    // Auto-registro veterinario: usuario con role "usuario" puede
+    // promoverse a "veterinario" y asignar tenantId (una sola vez)
+    function isSelfVetRegistration() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return resource.data.role == 'usuario'
+          && request.resource.data.role == 'veterinario'
+          && request.resource.data.tenantId is string
+          && request.resource.data.tenantId.size() > 0
+          && changed.hasOnly(['role', 'tenantId', 'lastLogin']);
+    }
+
+    match /usuarios/{docId} {
+      // Lectura: solo el propio doc o superadmin
+      allow read: if isSignedIn() && (
+        docId == request.auth.uid ||
+        resource.data.uid == request.auth.uid ||
+        isSuperAdmin()
+      );
+
+      // Creación: solo el propio doc (login) o superadmin
+      allow create: if isSignedIn() && (
+        request.resource.data.uid == request.auth.uid ||
+        isSuperAdmin()
+      );
+
+      // Update: campos seguros propios, auto-registro vet, o superadmin
+      allow update: if isSignedIn() && (
+        (isOwnUserDoc(docId) && onlySafeFieldsChanged()) ||
+        (isOwnUserDoc(docId) && isSelfVetRegistration()) ||
+        isSuperAdmin()
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── veterinarias ─────────────────────────────────────────────────────────
+
+    match /veterinarias/{tenantId} {
+      // Doc raíz: lectura pública (para páginas públicas de la vet)
+      allow read: if true;
+      // Solo superadmin puede crear/eliminar tenants
+      // Los veterinarios se crean via /registro que usa Admin SDK o funciones
+      allow write: if isSuperAdmin();
+
+      // Config del tenant (datos + turno + contadores)
+      // Lectura pública: la página pública y el booking form necesitan
+      // leer datos y turno sin ser owner del tenant.
+      // Escritura: solo el tenant owner o superadmin.
+      // Contadores: solo lectura para tenant (escritura via transacción en createTurno).
+      match /config/{configDoc} {
+        allow read: if true;
+        allow write: if canAccessTenant(tenantId);
+      }
+
+      // Turnos:
+      //   - lectura: tenant owner, superadmin, o el propio cliente (por email)
+      //   - creación: cualquier usuario autenticado, con validación de campos
+      //   - update: tenant owner/superadmin full, o cliente solo para cancelar
+      //   - delete: solo tenant owner o superadmin
+      match /turnos/{turnoId} {
+        allow read: if canAccessTenant(tenantId)
+          || (isSignedIn() && resource.data.cliente.email == request.auth.token.email);
+
+        allow create: if isSignedIn()
+          && request.resource.data.keys().hasAll(['cliente', 'mascota', 'turno', 'estado'])
+          && request.resource.data.cliente.keys().hasAll(['nombre', 'telefono', 'email'])
+          && request.resource.data.cliente.nombre is string
+          && request.resource.data.cliente.nombre.size() > 0
+          && request.resource.data.turno.keys().hasAll(['fecha', 'hora'])
+          && request.resource.data.estado == 'pendiente';
+
+        // Cliente puede cancelar su propio turno (cambiar solo estado a cancelado)
+        allow update: if canAccessTenant(tenantId)
+          || (isSignedIn()
+              && resource.data.cliente.email == request.auth.token.email
+              && request.resource.data.estado == 'cancelado'
+              && resource.data.estado == 'pendiente'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']));
+
+        allow delete: if canAccessTenant(tenantId);
+      }
+
+      // Días bloqueados:
+      //   - lectura pública (para que los clientes vean disponibilidad sin login)
+      //   - escritura: solo el tenant
+      match /diasBloqueados/{diaId} {
+        allow read: if true;
+        allow write: if canAccessTenant(tenantId);
+      }
+
+      // Clientes y toda su jerarquía: solo el tenant
+      match /clientes/{clienteId} {
+        allow read, write: if canAccessTenant(tenantId);
+
+        match /mascotas/{mascotaId} {
+          allow read, write: if canAccessTenant(tenantId);
+
+          match /historias/{historiaId} {
+            allow read, write: if canAccessTenant(tenantId);
+          }
+
+          match /historiaClinica/{doc} {
+            allow read, write: if canAccessTenant(tenantId);
+          }
+        }
+      }
+    }
+  }
+}

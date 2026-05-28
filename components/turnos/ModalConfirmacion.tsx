@@ -115,7 +115,7 @@ export function ModalConfirmacion({
               <h3 className="font-semibold text-xs">Servicio</h3>
             </div>
             <div className="text-[11px] space-y-0.5">
-              <p className="font-medium">{servicioNombres[formData.servicio]}</p>
+              <p className="font-medium">{servicioNombres[formData.servicio] || formData.servicio}</p>
               
               {/* NUEVO: Mostrar vacunas si el servicio es vacunación */}
               {formData.servicio === "vacunacion" && formData.vacunas && formData.vacunas.length > 0 && (

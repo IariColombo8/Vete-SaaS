@@ -1,6 +1,19 @@
-# CLAUDE.md — Veterinaria SaaS
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 Guía de referencia para Claude Code. Refleja decisiones tomadas y el rumbo del proyecto.
+
+---
+
+## Comandos
+
+```bash
+npm run dev        # servidor de desarrollo
+npm run build      # build de producción
+npm run lint       # ESLint
+npx tsc --noEmit   # verificar tipos sin compilar
+```
 
 ---
 
@@ -22,20 +35,30 @@ Guía de referencia para Claude Code. Refleja decisiones tomadas y el rumbo del 
 ## Arquitectura
 
 ```
-app/                  → páginas públicas y protegidas (App Router)
-components/admin/     → gestión interna (turnos, libreta, clientes)
-components/turnos/    → flujo de reserva público
-hooks/turnos/         → lógica de dominio separada por responsabilidad
-lib/firebase/         → capa de datos (config, auth, firestore)
-app/api/              → server routes (solo Google Calendar hoy)
+app/                       → páginas públicas y protegidas (App Router)
+app/[slug]/                → layout que inyecta el slug via SlugProvider
+app/[slug]/(vetadmin)/     → rutas protegidas del panel veterinario
+app/v/[slug]/              → página pública de cada veterinaria
+components/admin/          → gestión interna (turnos, libreta, clientes)
+components/turnos/         → flujo de reserva público
+context/slug-context.tsx   → SlugProvider + useSlug() hook
+hooks/turnos/              → lógica de dominio separada por responsabilidad
+hooks/useCurrentTenantId.ts → resuelve tenantId del usuario autenticado
+lib/firebase/              → capa de datos (config, auth, firestore, storage)
+app/api/                   → server routes (solo Google Calendar hoy)
 ```
 
+**Patrón de slug/tenant:** `app/[slug]/layout.tsx` lee `params.slug` y lo provee via `SlugProvider`. Los componentes hijo llaman `useSlug()` para obtenerlo. `VetAdminLayout` valida que el usuario autenticado tenga `tenantId === slug` (o sea `superadmin`) antes de renderizar.
+
 **Patrón de datos en Firestore:**
+- `veterinarias/{slug}` — doc raíz de cada tenant
+- `veterinarias/{slug}/config/datos` — `TenantConfig` (nombre, plan, horarios, servicios, fotos…)
+- `veterinarias/{slug}/config/turno` — `TurnoConfig` (mascotas, servicios, vacunas disponibles)
 - `clientes/{id}/mascotas/{id}/historias` — historial clínico cronológico
 - `clientes/{id}/mascotas/{id}/historiaClinica/registro` — resumen consolidado
 - `turnos` — colección raíz (datos denormalizados para lectura rápida en admin)
 - `diasBloqueados` — disponibilidad
-- `usuarios` — auth + roles
+- `usuarios` — auth + roles (`role`, `tenantId`, `isAdmin` deprecado)
 
 ---
 
@@ -91,17 +114,23 @@ app/api/              → server routes (solo Google Calendar hoy)
 | Ruta | Descripción | Acceso |
 |------|-------------|--------|
 | `/` | SaaS landing — VetPanel | Público |
-| `/v/[slug]` | Página pública de cada veterinaria | Público |
-| `/turno` | Reserva de turno (actual: Priscila) | Público |
+| `/[slug]` | Página pública de cada veterinaria | Público |
+| `/[slug]/turno` | Reserva de turno para ese tenant | Público |
+| `/[slug]/admin` | Dashboard del veterinario | `tenantId === slug` o `superadmin` |
+| `/[slug]/turnoadmin` | Gestión de turnos | ídem |
+| `/[slug]/libretasanitaria` | Libreta sanitaria / historial | ídem |
+| `/[slug]/clientes` | Listado de clientes | ídem |
+| `/[slug]/configuracion` | Config del tenant | ídem |
+| `/v/[slug]` | Alias público alternativo | Público |
 | `/mis-turnos` | Turnos del cliente | Autenticado |
 | `/login` | Google OAuth | Público |
-| `/admin` | Dashboard del veterinario | `veterinario` o `superadmin` |
+| `/registro` | Registro | Público |
 | `/superadmin` | Panel global | solo `superadmin` |
 
 **Navbar:** componente inteligente en `components/navbar.tsx`:
 - `/` → `SaasNavbar` (dark, logo VetPanel, CTA Contratar)
 - `/superadmin/*` → `SuperAdminNavbar`
-- Resto → `VetNavbar` (logo Priscila, comportamiento actual)
+- Resto → `VetNavbar` (logo de la veterinaria actual)
 
 ---
 
@@ -120,8 +149,14 @@ type UserRole = "superadmin" | "veterinario" | "usuario"
 
 **Backward compat:** si el campo `role` no existe pero `isAdmin: true`, se trata como `veterinario`.
 
-**Para dar acceso superadmin:**
+**`tenantId` en `usuarios/{uid}`:** indica a qué veterinaria pertenece el veterinario. `VetAdminLayout` verifica `userData.tenantId === slug` antes de dar acceso. El `tenantId` siempre se resuelve desde la URL (`useSlug()`) — no hay fallback hardcodeado.
+
+**Para dar acceso a un veterinario:**
 1. El usuario debe iniciar sesión una vez (se crea su doc en `usuarios/{uid}`)
+2. En Firestore → `usuarios/{uid}` → editar `role: "veterinario"` y `tenantId: "<slug>"`
+
+**Para dar acceso superadmin:**
+1. El usuario debe iniciar sesión una vez
 2. En Firestore → `usuarios/{uid}` → editar `role: "superadmin"`
 
 **`ProtectedRoute`** acepta `requiredRole`:

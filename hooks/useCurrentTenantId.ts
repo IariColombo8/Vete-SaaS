@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { getUsuarioData } from "@/lib/firebase/auth"
-import { DEFAULT_TENANT_ID } from "@/lib/config"
 
 export function useCurrentTenantId() {
   const { user, loading: authLoading } = useAuth()
@@ -13,13 +12,7 @@ export function useCurrentTenantId() {
     if (!user) { setLoading(false); return }
 
     getUsuarioData(user.uid).then((data) => {
-      if (data) {
-        if (data.tenantId) {
-          setTenantId(data.tenantId as string)
-        } else if (data.isAdmin === true) {
-          setTenantId(DEFAULT_TENANT_ID)
-        }
-      }
+      setTenantId((data?.tenantId as string) ?? null)
       setLoading(false)
     })
   }, [user, authLoading])

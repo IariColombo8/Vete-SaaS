@@ -17,7 +17,7 @@ export default function AdminRedirect() {
     getDoc(doc(db, "usuarios", user.uid)).then((snap) => {
       const tenantId = snap.data()?.tenantId
       if (tenantId) {
-        router.replace(`/${tenantId}/dashboard`)
+        router.replace(`/${tenantId}/admin`)
       } else {
         router.replace("/registro")
       }

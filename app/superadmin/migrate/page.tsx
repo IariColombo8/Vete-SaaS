@@ -53,20 +53,27 @@ export default function MigratePage() {
       // ── 0. Verificar si ya existe ─────────────────────────────────────
       setStep("Verificar estado previo", "running")
       const vetSnap = await getDoc(doc(db, "veterinarias", TENANT_ID))
-      if (vetSnap.exists()) {
-        setStep("Verificar estado previo", "skip", "El tenant ya existe — migración idempotente")
+      const tenantYaExiste = vetSnap.exists()
+      if (tenantYaExiste) {
+        setStep("Verificar estado previo", "skip", "El tenant ya existe — se preserva su configuración actual")
       } else {
         setStep("Verificar estado previo", "ok", "Tenant nuevo")
       }
 
-      // ── 1. Crear documento del tenant ─────────────────────────────────
+      // ── 1. Crear documento del tenant (solo si no existe) ─────────────
+      // IMPORTANTE: nunca sobreescribir config existente con createTenant,
+      // ya que setDoc sin merge destruiría nombre, logo, horarios, etc.
       setStep("Crear veterinaria", "running")
-      await createTenant(TENANT_ID, {
-        nombre: "Salud Animal Domiciliaria",
-        plan: "plus",
-        adminIds: [],
-      })
-      setStep("Crear veterinaria", "ok")
+      if (!tenantYaExiste) {
+        await createTenant(TENANT_ID, {
+          nombre: "Salud Animal Domiciliaria",
+          plan: "plus",
+          adminIds: [],
+        })
+        setStep("Crear veterinaria", "ok", "Tenant creado")
+      } else {
+        setStep("Crear veterinaria", "skip", "Ya existe — configuración preservada")
+      }
 
       // ── 2. Migrar clientes + mascotas + historias ─────────────────────
       setStep("Migrar clientes", "running")
@@ -215,7 +222,7 @@ export default function MigratePage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-3xl mx-auto px-4 py-12">
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-extrabold mb-1">Migración a estructura multi-tenant</h1>
           <p className="text-muted-foreground text-sm">
             Mueve todos los datos existentes de las colecciones raíz a{" "}
@@ -224,31 +231,46 @@ export default function MigratePage() {
           </p>
         </div>
 
+        {/* Aviso orden de ejecución */}
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6 text-sm">
+          <p className="font-semibold text-amber-800 dark:text-amber-300 mb-1">
+            ⚠ Correr ANTES de deployar las Firestore Security Rules
+          </p>
+          <p className="text-amber-700 dark:text-amber-400 text-xs">
+            Una vez que las Rules estén activas, las colecciones raíz{" "}
+            <code className="bg-amber-200/50 dark:bg-amber-900/40 px-1 rounded">/clientes</code>,{" "}
+            <code className="bg-amber-200/50 dark:bg-amber-900/40 px-1 rounded">/turnos</code> y{" "}
+            <code className="bg-amber-200/50 dark:bg-amber-900/40 px-1 rounded">/diasBloqueados</code>{" "}
+            quedan bloqueadas y esta migración fallará.
+          </p>
+        </div>
+
         {/* Resumen de cambios */}
-        <div className="rounded-xl border bg-muted/30 p-5 mb-8 space-y-2 text-sm">
+        <div className="rounded-xl border bg-muted/30 p-5 mb-6 space-y-2 text-sm">
           <p className="font-semibold mb-3">Qué hará esta migración:</p>
           {[
-            ["/clientes/{autoId}", "→", "veterinarias/priscilas/clientes/{DNI}"],
-            ["/clientes/.../mascotas/{autoId}", "→", "…/mascotas/{nombre-tipo}"],
-            ["/clientes/.../historias/{autoId}", "→", "…/historias/{YYYY-MM-DD}"],
-            ["/turnos/{autoId}", "→", "veterinarias/priscilas/turnos/{n_Cliente_Mascota}"],
-            ["/diasBloqueados + settings/blockedDates", "→", "veterinarias/priscilas/diasBloqueados/{fecha}"],
-          ].map(([from, arrow, to]) => (
+            ["/clientes/{autoId}", "veterinarias/priscilas/clientes/{DNI}"],
+            ["/clientes/.../mascotas/{autoId}", "…/mascotas/{nombre-tipo}"],
+            ["/clientes/.../historias/{autoId}", "…/historias/{YYYY-MM-DD}"],
+            ["/turnos/{autoId}", "veterinarias/priscilas/turnos/{n_Cliente_Mascota}"],
+            ["/diasBloqueados + settings/blockedDates", "veterinarias/priscilas/diasBloqueados/{fecha}"],
+          ].map(([from, to]) => (
             <div key={from} className="flex items-start gap-2 font-mono text-xs">
               <span className="text-muted-foreground shrink-0">{from}</span>
               <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />
               <span className="text-emerald-600 dark:text-emerald-400">{to}</span>
             </div>
           ))}
-          <p className="text-muted-foreground text-xs pt-2">
-            Es <strong>idempotente</strong>: se puede correr más de una vez sin duplicar datos.
-            Los documentos originales <strong>no se eliminan</strong>.
-          </p>
+          <div className="border-t pt-3 mt-3 space-y-1 text-xs text-muted-foreground">
+            <p>✅ <strong>Idempotente</strong>: se puede correr más de una vez sin duplicar datos.</p>
+            <p>✅ <strong>No destructiva</strong>: los documentos originales no se eliminan.</p>
+            <p>✅ <strong>Preserva config</strong>: si el tenant ya existe, su configuración no se toca.</p>
+          </div>
         </div>
 
         {/* Botón */}
         {!done && (
-          <Button onClick={runMigration} disabled={running} size="lg" className="mb-8">
+          <Button onClick={runMigration} disabled={running} size="lg" className="mb-8 bg-emerald-600 hover:bg-emerald-700">
             {running ? (
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Migrando…</>
             ) : (

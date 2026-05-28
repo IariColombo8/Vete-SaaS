@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && userDoc().role == 'superadmin';
+    }
+
+    function isTenantOwner(tenantId) {
+      return isSignedIn()
+          && userDoc().role == 'veterinario'
+          && userDoc().tenantId == tenantId;
+    }
+
+    function canAccessTenant(tenantId) {
+      return isSuperAdmin() || isTenantOwner(tenantId);
+    }
+
+    // veterinarias/{tenantId}/... — solo el dueño del tenant o superadmin
+    match /veterinarias/{tenantId}/{allPaths=**} {
+      allow read: if canAccessTenant(tenantId);
+      allow write: if canAccessTenant(tenantId);
+    }
+  }
+}

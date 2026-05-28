@@ -25,37 +25,21 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as DateCalendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import {
   getClientesBasic,
   getClienteCompleto,
   getMascotas,
   getHistorias,
   getTurnosByClienteId,
-  getTurnos,
   createHistoria,
-  createTurno,
   updateHistoria,
   updateCliente,
   updateTurno,
 } from "@/lib/firebase/firestore";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import type { Cliente, Mascota, Historia, Turno, HistorialDato } from "@/lib/firebase/firestore";
+import { uploadArchivoHistoria } from "@/lib/firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { enviarEmailConfirmacion } from "@/app/turno/confirmaciondeturno";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   FileText,
@@ -78,6 +62,13 @@ import {
   History,
   Eye,
   ChevronDown,
+  XCircle,
+  Paperclip,
+  Upload,
+  Trash2,
+  Image,
+  Film,
+  File,
 } from "lucide-react";
 import LibretaDetallesModal from "./LibretaDetallesModal";
 
@@ -217,12 +208,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [addNotaOpen, setAddNotaOpen] = useState(false);
   const [addNotaMascota, setAddNotaMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
   const [formNota, setFormNota] = useState(emptyHistoriaForm);
-  const [formNotaTab, setFormNotaTab] = useState<"historia" | "turno">("historia");
-  const [formProximaVisita, setFormProximaVisita] = useState({ fecha: "", hora: "09:00", motivo: "", servicio: "consulta-general" });
+  const [archivosNota, setArchivosNota] = useState<File[]>([]);
+  const [uploadingArchivos, setUploadingArchivos] = useState(false);
   const [savingNota, setSavingNota] = useState(false);
-  const [blockedDatesLibreta, setBlockedDatesLibreta] = useState<string[]>([]);
-  const [turnosParaDisponibilidad, setTurnosParaDisponibilidad] = useState<Turno[]>([]);
-  const [fechaTurnoSeleccionada, setFechaTurnoSeleccionada] = useState<Date | undefined>(undefined);
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailModalItem, setDetailModalItem] = useState<TimelineItem | null>(null);
@@ -256,7 +244,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1023px)");
+    const mq = window.matchMedia("(max-width: 767px)");
     const fn = () => setIsMobile(mq.matches);
     fn();
     mq.addEventListener("change", fn);
@@ -450,6 +438,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   };
 
   const openEditHistoria = (h: Historia, clienteId: string, mascotaId: string) => {
+    if (isMobile) setDetailSheetOpen(false);
     setEditTipo("historia");
     setEditHistoria({ h, clienteId, mascotaId });
     setEditTurno(null);
@@ -463,15 +452,15 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       pesoActual: "",
       temperatura: "",
     });
-    setEditEntradaOpen(true);
+    setTimeout(() => setEditEntradaOpen(true), isMobile ? 150 : 0);
   };
 
   const openEditTurno = (t: Turno) => {
+    if (isMobile) setDetailSheetOpen(false);
     setEditTipo("turno");
     setEditTurno(t);
     setEditHistoria(null);
     const fechaStr = t.turno?.fecha || t.fecha || "";
-    const esFuturo = fechaStr ? new Date(fechaStr + "T12:00:00") > new Date() : false;
     setFormTurno({
       fecha: fechaStr,
       hora: t.turno?.hora || t.hora || "",
@@ -481,40 +470,41 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       medicacion: t.medicacion ?? "",
       observaciones: t.observaciones ?? "",
     });
-    setEditEntradaOpen(true);
+    setTimeout(() => setEditEntradaOpen(true), isMobile ? 150 : 0);
   };
 
   const saveEntrada = async () => {
     if (editTipo === "historia" && editHistoria) {
       setSavingEntrada(true);
       try {
-        await updateHistoria(tenantId, editHistoria.clienteId, editHistoria.mascotaId, editHistoria.h.id!, {
+        const historiaPayload: Record<string, string> = {
           fechaAtencion: formHistoria.fechaAtencion,
-          motivo: formHistoria.motivo || undefined,
           diagnostico: formHistoria.diagnostico,
           tratamiento: formHistoria.tratamiento,
-          observaciones: formHistoria.observaciones || undefined,
-          proximaVisita: formHistoria.proximaVisita || undefined,
-        });
+        };
+        if (formHistoria.motivo) historiaPayload.motivo = formHistoria.motivo;
+        if (formHistoria.observaciones) historiaPayload.observaciones = formHistoria.observaciones;
+        if (formHistoria.proximaVisita) historiaPayload.proximaVisita = formHistoria.proximaVisita;
+        await updateHistoria(tenantId, editHistoria.clienteId, editHistoria.mascotaId, editHistoria.h.id!, historiaPayload);
         toast({ title: "Consulta actualizada" });
         setEditEntradaOpen(false);
         if (clienteExpandido?.cliente.id === editHistoria.clienteId && selectedMascotaId === editHistoria.mascotaId) {
           loadTimeline(editHistoria.clienteId, editHistoria.mascotaId);
         }
       } catch (e) {
-        toast({ title: "Error", variant: "destructive" });
+        console.error("Error al actualizar historia:", e);
+        toast({ title: "Error", description: e instanceof Error ? e.message : "No se pudo guardar la consulta", variant: "destructive" });
       } finally {
         setSavingEntrada(false);
       }
     } else if (editTipo === "turno" && editTurno?.id) {
       setSavingEntrada(true);
       try {
-        const payload: Partial<Turno> = {
-          diagnostico: formTurno.diagnostico || undefined,
-          tratamiento: formTurno.tratamiento || undefined,
-          medicacion: formTurno.medicacion || undefined,
-          observaciones: formTurno.observaciones || undefined,
-        };
+        const payload: Partial<Turno> = {};
+        if (formTurno.diagnostico) payload.diagnostico = formTurno.diagnostico;
+        if (formTurno.tratamiento) payload.tratamiento = formTurno.tratamiento;
+        if (formTurno.medicacion) payload.medicacion = formTurno.medicacion;
+        if (formTurno.observaciones) payload.observaciones = formTurno.observaciones;
         const fechaStr = formTurno.fecha;
         const esFuturo = fechaStr ? new Date(fechaStr + "T12:00:00") > new Date() : false;
         if (esFuturo) {
@@ -541,21 +531,18 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
-  /** Abre el modal de nueva entrada. Si no se pasa preferredModalTab, usa la pestaña activa de la ficha (Historia Clínica → nota, Turnos → cita). */
-  const openAddNota = (cliente: Cliente, mascota: Mascota, preferredModalTab?: "historia" | "turno") => {
+  const openAddNota = (cliente: Cliente, mascota: Mascota) => {
     const clienteId = cliente?.id ?? "";
     const mascotaId = mascota?.id ?? "";
     if (!clienteId || !mascotaId) {
       toast({ title: "Error", description: "No se pudo identificar cliente o mascota. Asegurate de que estén guardados con ID.", variant: "destructive" });
       return;
     }
+    if (isMobile) setDetailSheetOpen(false);
     setAddNotaMascota({ cliente: { ...cliente, id: clienteId }, mascota: { ...mascota, id: mascotaId } });
     setFormNota({ ...emptyHistoriaForm, fechaAtencion: new Date().toISOString().slice(0, 10) });
-    const modalTab = preferredModalTab ?? (mascotaContentTab === "historia" ? "historia" : "turno");
-    setFormNotaTab(modalTab);
-    setFormProximaVisita({ fecha: "", hora: "09:00", motivo: "", servicio: "consulta-general" });
-    setFechaTurnoSeleccionada(undefined);
-    setAddNotaOpen(true);
+    setArchivosNota([]);
+    setTimeout(() => setAddNotaOpen(true), isMobile ? 150 : 0);
   };
 
   /** Abre el formulario de nota clínica precargado con datos del turno (desde Libreta). Al guardar, el turno se puede marcar completado desde Gestión de Turnos. */
@@ -572,44 +559,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       motivo: motivoInicial,
       diagnostico: motivoInicial,
     });
-    setFormNotaTab("historia");
-    setFormProximaVisita({ fecha: "", hora: "09:00", motivo: "", servicio: "consulta-general" });
     setAddNotaOpen(true);
   };
-
-  useEffect(() => {
-    if (!addNotaOpen || formNotaTab !== "turno") return;
-    const load = async () => {
-      try {
-        const [blockedSnap, turnosData] = await Promise.all([
-          getDoc(doc(db, "settings", "blockedDates")),
-          getTurnos(tenantId),
-        ]);
-        setBlockedDatesLibreta(blockedSnap.exists() ? (blockedSnap.data().dates ?? []) : []);
-        setTurnosParaDisponibilidad(turnosData);
-      } catch (e) {
-        console.error(e);
-        toast({ title: "Error", description: "No se pudo cargar disponibilidad", variant: "destructive" });
-      }
-    };
-    load();
-  }, [addNotaOpen, formNotaTab, toast]);
-
-  const HORARIOS_TURNO = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
-  const horariosDisponiblesTurno = useMemo(() => {
-    const fecha = formProximaVisita.fecha;
-    if (!fecha) return HORARIOS_TURNO;
-    const ocupados = turnosParaDisponibilidad
-      .filter((t) => (t.turno?.fecha ?? t.fecha) === fecha && t.estado !== "cancelado")
-      .map((t) => t.turno?.hora ?? t.hora);
-    return HORARIOS_TURNO.filter((h) => !ocupados.includes(h));
-  }, [formProximaVisita.fecha, turnosParaDisponibilidad]);
-
-  useEffect(() => {
-    if (formProximaVisita.fecha && formProximaVisita.hora && !horariosDisponiblesTurno.includes(formProximaVisita.hora)) {
-      setFormProximaVisita((f) => ({ ...f, hora: horariosDisponiblesTurno[0] ?? "09:00" }));
-    }
-  }, [formProximaVisita.fecha, horariosDisponiblesTurno]);
 
   const saveNota = async () => {
     if (!addNotaMascota?.cliente.id || !addNotaMascota?.mascota.id) {
@@ -645,11 +596,29 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
 
     setSavingNota(true);
     try {
-      await createHistoria(tenantId, addNotaMascota.cliente.id, addNotaMascota.mascota.id, payloadHistoria);
+      // Upload archivos si hay
+      let archivosUrls: string[] | undefined;
+      if (archivosNota.length > 0) {
+        setUploadingArchivos(true);
+        try {
+          archivosUrls = await Promise.all(
+            archivosNota.map((file) =>
+              uploadArchivoHistoria(tenantId, addNotaMascota.cliente.id!, addNotaMascota.mascota.id!, file)
+            )
+          );
+        } finally {
+          setUploadingArchivos(false);
+        }
+      }
+      await createHistoria(tenantId, addNotaMascota.cliente.id, addNotaMascota.mascota.id, {
+        ...payloadHistoria,
+        ...(archivosUrls?.length ? { archivos: archivosUrls } : {}),
+      } as typeof payloadHistoria);
       toast({ title: "Nota clínica agregada" });
       setAddNotaOpen(false);
       setAddNotaMascota(null);
       setFormNota(emptyHistoriaForm);
+      setArchivosNota([]);
       if (clienteExpandido?.cliente.id === addNotaMascota.cliente.id && selectedMascotaId === addNotaMascota.mascota.id) {
         loadTimeline(addNotaMascota.cliente.id, addNotaMascota.mascota.id);
       }
@@ -660,112 +629,6 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         description: "Verificá que Diagnóstico y Tratamiento estén completos e intentá de nuevo.",
         variant: "destructive",
       });
-    } finally {
-      setSavingNota(false);
-    }
-  };
-
-  const saveProximaVisita = async () => {
-    if (!addNotaMascota?.cliente.id || !addNotaMascota?.mascota.id) {
-      toast({ title: "Error", description: "No se pudo identificar cliente o mascota.", variant: "destructive" });
-      return;
-    }
-    const fecha = formProximaVisita.fecha.trim();
-    const hora = formProximaVisita.hora.trim();
-    if (!fecha || !hora) {
-      toast({
-        title: "Campos obligatorios",
-        description: "Completá Fecha y Hora de la próxima visita.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSavingNota(true);
-    try {
-      await createTurno(tenantId, {
-        clienteId: addNotaMascota.cliente.id,
-        mascotaId: addNotaMascota.mascota.id,
-        cliente: {
-          nombre: addNotaMascota.cliente.nombre ?? "",
-          telefono: addNotaMascota.cliente.telefono ?? "",
-          email: addNotaMascota.cliente.email ?? "",
-          dni: addNotaMascota.cliente.dni ?? "",
-          domicilio: addNotaMascota.cliente.domicilio ?? "",
-        },
-        mascota: {
-          nombre: addNotaMascota.mascota.nombre ?? "",
-          tipo: addNotaMascota.mascota.tipo ?? "",
-          motivo: formProximaVisita.motivo.trim() || "Próxima visita programada",
-        },
-        servicio: formProximaVisita.servicio || "consulta-general",
-        fecha,
-        hora,
-        estado: "pendiente",
-      });
-      toast({ title: "Próxima visita programada" });
-      setAddNotaOpen(false);
-      const mascotaNombre = addNotaMascota.mascota.nombre ?? "";
-      const duenoNombre = addNotaMascota.cliente.nombre ?? "";
-      const clienteEmail = addNotaMascota.cliente.email ?? "";
-      const clienteDomicilio = addNotaMascota.cliente.domicilio ?? "";
-      const tipoMascota = addNotaMascota.mascota.tipo ?? "";
-      const servicioKey = formProximaVisita.servicio || "consulta-general";
-      const servicioLabels: Record<string, string> = {
-        "consulta-general": "Consulta general",
-        telemedicina: "Telemedicina",
-        vacunacion: "Vacunación",
-        urgencias: "Urgencias",
-      };
-      const servicioRequerido = servicioLabels[servicioKey] ?? servicioKey;
-      const clienteIdRef = addNotaMascota.cliente.id;
-      const mascotaIdRef = addNotaMascota.mascota.id;
-      setAddNotaMascota(null);
-      setFormProximaVisita({ fecha: "", hora: "09:00", motivo: "", servicio: "consulta-general" });
-      setFechaTurnoSeleccionada(undefined);
-      if (clienteExpandido?.cliente.id === clienteIdRef) {
-        const turnos = await getTurnosByClienteId(tenantId, clienteExpandido.cliente.id);
-        setClienteExpandido((prev) => (prev ? { ...prev, turnos } : null));
-        if (selectedMascotaId === mascotaIdRef) loadTimeline(clienteIdRef, mascotaIdRef);
-      }
-      try {
-        const res = await fetch("/api/calendar/create-event", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mascotaNombre,
-            duenoNombre,
-            motivo: formProximaVisita.motivo.trim() || "Próxima visita",
-            fecha,
-            hora,
-            servicio: formProximaVisita.servicio || "consulta-general",
-          }),
-        });
-        if (res.ok) {
-          toast({ title: "Evento agregado al calendario", description: "Recordatorio 14 h antes." });
-        } else {
-          toast({ title: "Turno guardado", description: "No se pudo agregar al calendario.", variant: "destructive" });
-        }
-      } catch {
-        toast({ title: "Turno guardado", description: "No se pudo agregar al calendario.", variant: "destructive" });
-      }
-      if (clienteEmail) {
-        const [y, m, d] = fecha.split("-");
-        const fechaFormato = `${d}/${m}/${y}`;
-        const enviado = await enviarEmailConfirmacion({
-          nombre_y_apellido: duenoNombre,
-          fecha: fechaFormato,
-          hora,
-          direccion: clienteDomicilio,
-          nombre_mascota: mascotaNombre,
-          tipo_mascota: tipoMascota,
-          servicio_requerido: servicioRequerido,
-          email: clienteEmail,
-        });
-        if (!enviado) toast({ title: "Aviso", description: "No se pudo enviar el correo de confirmación.", variant: "destructive" });
-      }
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "No se pudo programar la visita. Intentá de nuevo.", variant: "destructive" });
     } finally {
       setSavingNota(false);
     }
@@ -986,7 +849,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-[10px]">{visitasReales.length} visitas</Badge>
                           {proximos > 0 && <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">{proximos} próximo{proximos !== 1 ? "s" : ""}</Badge>}
-                          <Button size="sm" className="h-11 w-11 p-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0" onClick={() => openAddNota(clienteExpandido.cliente, m)} title={mascotaContentTab === "historia" ? "Agregar historia clínica" : "Agendar nueva cita"}><Plus className="h-6 w-6" /></Button>
+                          <Button size="sm" className="h-11 w-11 p-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0" onClick={() => openAddNota(clienteExpandido.cliente, m)} title="Agregar nota clínica"><Plus className="h-6 w-6" /></Button>
                         </div>
                       </div>
 
@@ -1003,7 +866,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           ) : visitasReales.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10">
                               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sin visitas registradas para esta mascota.</p>
-                              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-6 rounded-xl shadow-lg" onClick={() => openAddNota(clienteExpandido.cliente, m, "historia")}>
+                              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-6 rounded-xl shadow-lg" onClick={() => openAddNota(clienteExpandido.cliente, m)}>
                                 <Plus className="h-5 w-5 mr-2" />
                                 + Añadir nota clínica
                               </Button>
@@ -1020,13 +883,19 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                       <div className="flex items-start justify-between gap-2">
                                         <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{h.motivo || "Consulta"}</p>
                                         <div className="flex items-center gap-0.5 shrink-0">
-                                          <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { setDetailModalItem({ type: "historia", data: h }); setDetailModalOpen(true); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
+                                          <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: h }); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
                                           <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => openEditHistoria(h, clienteExpandido.cliente.id!, m.id!)} title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                                         </div>
                                       </div>
                                       <div className="text-xs text-slate-600 dark:text-slate-400">
                                         <p><span className="font-semibold">Diagnóstico:</span> {(h.diagnostico || "—").slice(0, 120)}{(h.diagnostico?.length ?? 0) > 120 ? "…" : ""}</p>
                                         <p className="mt-0.5"><span className="font-semibold">Tratamiento:</span> {(h.tratamiento || "—").slice(0, 120)}{(h.tratamiento?.length ?? 0) > 120 ? "…" : ""}</p>
+                                        {h.archivos && h.archivos.length > 0 && (
+                                          <p className="mt-1 flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                            <Paperclip className="h-3 w-3" />
+                                            {h.archivos.length} adjunto{h.archivos.length !== 1 ? "s" : ""}
+                                          </p>
+                                        )}
                                       </div>
                                     </div>
                                   ))}
@@ -1042,10 +911,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           ) : turnosMascota.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10">
                               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">No hay turnos para esta mascota.</p>
-                              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-6 rounded-xl shadow-lg" onClick={() => openAddNota(clienteExpandido.cliente, m, "turno")}>
-                                <Plus className="h-5 w-5 mr-2" />
-                                Agendar cita
-                              </Button>
+                              <p className="text-xs text-slate-400">Los turnos se agendan desde Gestión de Turnos.</p>
                             </div>
                           ) : (
                             <div className="space-y-2">
@@ -1055,12 +921,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                 const esFuturo = fecha && fecha > new Date();
                                 const historiaAsociada = (timelineData?.historias ?? []).find((h) => h.fechaAtencion === fechaStr) ?? null;
                                 const openDetailTurno = () => {
+                                  if (isMobile) setDetailSheetOpen(false);
                                   setDetailModalItem({ type: "turno", data: t });
                                   setDetailTurnoHistoriaAsociada(historiaAsociada);
-                                  setDetailModalOpen(true);
+                                  setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0);
                                 };
                                 return (
-                                  <div key={t.id} className={`rounded-xl border p-3 shadow-sm ${esFuturo ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 border-dashed" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"}`}>
+                                  <div key={t.id} className={`rounded-xl border p-3 shadow-sm ${t.estado === "cancelado" ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 opacity-70" : esFuturo ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 border-dashed" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"}`}>
                                     <div className="flex items-start justify-between gap-2">
                                       <div
                                         className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
@@ -1069,15 +936,15 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         tabIndex={0}
                                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetailTurno(); } }}
                                       >
-                                        {esFuturo ? <Clock className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
+                                        {t.estado === "cancelado" ? <XCircle className="h-4 w-4 text-red-500 shrink-0" /> : esFuturo ? <Clock className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
                                         <div>
-                                          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{fecha ? fecha.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" }) : "—"}{t.turno?.hora ? ` · ${t.turno.hora}` : ""}</p>
-                                          <p className="text-[11px] text-slate-600 dark:text-slate-400">{esFuturo ? "Próximo turno" : "Realizado"} {t.servicio && `· ${t.servicio}`}</p>
+                                          <p className={`text-xs font-semibold ${t.estado === "cancelado" ? "line-through text-slate-500 dark:text-slate-400" : "text-slate-900 dark:text-slate-100"}`}>{fecha ? fecha.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" }) : "—"}{t.turno?.hora ? ` · ${t.turno.hora}` : ""}</p>
+                                          <p className="text-[11px] text-slate-600 dark:text-slate-400">{t.estado === "cancelado" ? "Cancelado" : esFuturo ? "Próximo turno" : "Realizado"} {t.servicio && `· ${t.servicio}`}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-0.5 shrink-0">
                                         {t.estado === "completado" && historiaAsociada && (
-                                          <button type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); setDetailModalItem({ type: "historia", data: historiaAsociada }); setDetailTurnoHistoriaAsociada(null); setDetailModalOpen(true); }} title="Ver Nota Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
+                                          <button type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: historiaAsociada }); setDetailTurnoHistoriaAsociada(null); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver Nota Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
                                         )}
                                         {t.estado === "pendiente" && (
                                           <button type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); openGenerarHistoriaFromTurno(t, clienteExpandido.cliente, m); }} title="Generar Historia Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
@@ -1104,10 +971,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   ) : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 sm:p-3 lg:p-4">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 h-[calc(100vh-180px)] min-h-[400px]">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 sm:p-3 md:p-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 h-[calc(100vh-180px)] min-h-[400px]">
         {/* Panel izquierdo: lista */}
-        <div className="lg:col-span-4 flex flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
+        <div className="md:col-span-4 flex flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
           <div className="p-2 sm:p-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -1175,7 +1042,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         </div>
 
         {/* Panel derecho: detalle o empty */}
-        <div className="hidden lg:flex lg:col-span-8 flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
+        <div className="hidden md:flex md:col-span-8 flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-4">
               {!expandedClienteId ? (
@@ -1197,6 +1064,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="sr-only">
             <SheetTitle>Detalle del cliente</SheetTitle>
+            <SheetDescription>Información del cliente y su libreta sanitaria</SheetDescription>
           </SheetHeader>
           <div className="pt-6">
             {expandedClienteId && detailContent}
@@ -1212,7 +1080,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         return (
           <LibretaDetallesModal
             open={detailModalOpen}
-            onOpenChange={setDetailModalOpen}
+            onOpenChange={(open) => {
+              setDetailModalOpen(open);
+              if (!open && isMobile && expandedClienteId) setDetailSheetOpen(true);
+            }}
             tipo={detailModalItem.type}
             cliente={clienteExpandido.cliente}
             mascota={mascota}
@@ -1298,7 +1169,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       </Dialog>
 
       {/* Modal editar entrada (historia o turno) */}
-      <Dialog open={editEntradaOpen} onOpenChange={setEditEntradaOpen}>
+      <Dialog open={editEntradaOpen} onOpenChange={(open) => {
+          setEditEntradaOpen(open);
+          if (!open && isMobile && expandedClienteId) setDetailSheetOpen(true);
+        }}>
         <DialogContent className="sm:max-w-lg border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-slate-900 dark:text-slate-100">
@@ -1442,8 +1316,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Nueva Entrada: pestaña Historia Clínica o Turnos (Próxima visita) */}
-      <Dialog open={addNotaOpen} onOpenChange={(open) => !open && setAddNotaMascota(null)}>
+      {/* Modal Nueva Nota Clínica */}
+      <Dialog open={addNotaOpen} onOpenChange={(open) => {
+          if (!open) {
+            setAddNotaMascota(null);
+            if (isMobile && expandedClienteId) setDetailSheetOpen(true);
+          }
+        }}>
         <DialogContent className="sm:max-w-lg border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -1453,12 +1332,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               {addNotaMascota ? `${addNotaMascota.cliente.nombre} – ${addNotaMascota.mascota.nombre}` : ""}
             </DialogDescription>
           </DialogHeader>
-          <Tabs value={formNotaTab} onValueChange={(v) => setFormNotaTab(v as "historia" | "turno")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-200/80 dark:bg-slate-800/80">
-              <TabsTrigger value="historia" className="text-xs">Nueva Nota Clínica</TabsTrigger>
-              <TabsTrigger value="turno" className="text-xs">Agendar Turno</TabsTrigger>
-            </TabsList>
-            <TabsContent value="historia" className="space-y-3 py-3 mt-2">
+          <div className="space-y-3 py-3 mt-2">
               <div>
                 <Label className="text-xs font-semibold">Diagnóstico *</Label>
                 <Textarea
@@ -1510,109 +1384,62 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   placeholder="Notas adicionales (opcional)"
                 />
               </div>
-            </TabsContent>
-            <TabsContent value="turno" className="space-y-3 py-3 mt-2">
-              {addNotaMascota && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Cliente: <strong>{addNotaMascota.cliente.nombre}</strong> (DNI {addNotaMascota.cliente.dni ?? "—"}) · Mascota: <strong>{addNotaMascota.mascota.nombre}</strong>
-                </p>
-              )}
+              {/* Adjuntos */}
               <div>
-                <Label className="text-xs font-semibold">Servicio Requerido *</Label>
-                <Select value={formProximaVisita.servicio} onValueChange={(v) => setFormProximaVisita((f) => ({ ...f, servicio: v }))}>
-                  <SelectTrigger className="mt-1 h-9">
-                    <SelectValue placeholder="Selecciona el servicio..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="consulta-general">🩺 Consulta general</SelectItem>
-                    <SelectItem value="telemedicina">💻 Telemedicina</SelectItem>
-                    <SelectItem value="vacunacion">💉 Vacunación</SelectItem>
-                    <SelectItem value="urgencias">🚨 Urgencias</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Motivo de la consulta</Label>
-                <Input
-                  value={formProximaVisita.motivo}
-                  onChange={(e) => setFormProximaVisita((f) => ({ ...f, motivo: e.target.value }))}
-                  className="mt-1 h-9"
-                  placeholder="Ej. Control, vacuna, etc."
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Fecha *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full mt-1 h-9 justify-start text-left font-normal", !formProximaVisita.fecha && "text-muted-foreground")}>
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {formProximaVisita.fecha ? format(new Date(formProximaVisita.fecha + "T12:00:00"), "PPP", { locale: es }) : "Selecciona una fecha"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <DateCalendar
-                      mode="single"
-                      selected={fechaTurnoSeleccionada ?? (formProximaVisita.fecha ? new Date(formProximaVisita.fecha + "T12:00:00") : undefined)}
-                      onSelect={(date) => {
-                        setFechaTurnoSeleccionada(date ?? undefined);
-                        if (date) setFormProximaVisita((f) => ({ ...f, fecha: format(date, "yyyy-MM-dd") }));
+                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Adjuntos
+                </Label>
+                <div className="mt-1.5 space-y-2">
+                  <label className="flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-600 cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/30">
+                    <Upload className="h-4 w-4 text-slate-400" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Arrastrá o hacé click para adjuntar fotos, videos o PDFs
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files ?? []);
+                        if (files.length > 0) setArchivosNota((prev) => [...prev, ...files]);
+                        e.target.value = "";
                       }}
-                      disabled={(date) => {
-                        if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
-                        if (date.getDay() === 0) return true;
-                        const fechaStr = format(date, "yyyy-MM-dd");
-                        if (blockedDatesLibreta.includes(fechaStr)) return true;
-                        const turnosDelDia = turnosParaDisponibilidad.filter((t) => (t.turno?.fecha ?? t.fecha) === fechaStr && t.estado !== "cancelado");
-                        if (turnosDelDia.length >= 13) return true;
-                        return false;
-                      }}
-                      locale={es}
                     />
-                  </PopoverContent>
-                </Popover>
+                  </label>
+                  {archivosNota.length > 0 && (
+                    <div className="space-y-1">
+                      {archivosNota.map((file, idx) => {
+                        const isImage = file.type.startsWith("image/");
+                        const isVideo = file.type.startsWith("video/");
+                        const FileIcon = isImage ? Image : isVideo ? Film : File;
+                        return (
+                          <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">
+                            <FileIcon className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                            <span className="flex-1 truncate text-slate-700 dark:text-slate-300">{file.name}</span>
+                            <span className="text-slate-400 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                            <button
+                              type="button"
+                              onClick={() => setArchivosNota((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label className="text-xs font-semibold">Horario * (8:00 a 20:00 hs)</Label>
-                <Select value={formProximaVisita.hora} onValueChange={(v) => setFormProximaVisita((f) => ({ ...f, hora: v }))}>
-                  <SelectTrigger className="mt-1 h-9">
-                    <SelectValue placeholder="Selecciona un horario..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {horariosDisponiblesTurno.length === 0 ? (
-                      <div className="py-2 px-2 text-xs text-slate-500">Elegí una fecha primero o no hay horarios libres.</div>
-                    ) : (
-                      horariosDisponiblesTurno.map((h) => (
-                        <SelectItem key={h} value={h}>
-                          {h}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {formProximaVisita.fecha && (
-                  <p className="text-[10px] text-slate-500 mt-0.5">{horariosDisponiblesTurno.length} horario(s) disponible(s)</p>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+          </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" size="sm" onClick={() => setAddNotaOpen(false)}>Cancelar</Button>
-            {formNotaTab === "historia" ? (
-              <Button size="sm" onClick={saveNota} disabled={savingNota} className="bg-emerald-600 hover:bg-emerald-700">
-                {savingNota ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                Guardar nota
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={saveProximaVisita}
-                disabled={savingNota}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                {savingNota ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                Confirmar Turno para {addNotaMascota?.mascota?.nombre ?? "mascota"}
-              </Button>
-            )}
+            <Button size="sm" onClick={saveNota} disabled={savingNota} className="bg-emerald-600 hover:bg-emerald-700">
+              {savingNota ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              {uploadingArchivos ? "Subiendo archivos..." : "Guardar nota"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
+import { getTenantConfig } from "@/lib/firebase/firestore";
 
 /**
  * Crea un evento en Google Calendar al confirmar un turno.
@@ -9,7 +10,8 @@ import { google } from "googleapis";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { mascotaNombre, duenoNombre, motivo, fecha, hora, servicio } = body as {
+    const { tenantId, mascotaNombre, duenoNombre, motivo, fecha, hora, servicio } = body as {
+      tenantId?: string;
       mascotaNombre?: string;
       duenoNombre?: string;
       motivo?: string;
@@ -26,13 +28,19 @@ export async function POST(request: NextRequest) {
     }
 
     const clientEmail = process.env.GOOGLE_CALENDAR_CLIENT_EMAIL ?? process.env.CLIENT_EMAIL;
-    const calendarId = process.env.GOOGLE_CALENDAR_CALENDAR_ID ?? process.env.CALENDAR_ID;
     const privateKeyRaw = process.env.GOOGLE_CALENDAR_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
+
+    // calendarId: primero busca en la config del tenant, luego fallback a env var
+    let calendarId = process.env.GOOGLE_CALENDAR_CALENDAR_ID ?? process.env.CALENDAR_ID;
+    if (tenantId) {
+      const tenantConfig = await getTenantConfig(tenantId);
+      if (tenantConfig?.calendarId) calendarId = tenantConfig.calendarId;
+    }
 
     if (!clientEmail || !privateKeyRaw || !calendarId) {
       console.error("Faltan variables de Google Calendar:", { clientEmail: !!clientEmail, privateKey: !!privateKeyRaw, calendarId: !!calendarId });
       return NextResponse.json(
-        { error: "Configuración de calendario incompleta (CLIENT_EMAIL, PRIVATE_KEY y CALENDAR_ID)" },
+        { error: "Configuración de calendario incompleta. Configurá el Calendar ID en el panel de tu veterinaria." },
         { status: 503 }
       );
     }

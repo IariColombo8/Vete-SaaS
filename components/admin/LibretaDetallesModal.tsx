@@ -21,6 +21,11 @@ import {
   Dog,
   Cat,
   Bird,
+  Paperclip,
+  Image,
+  Film,
+  File,
+  ExternalLink,
 } from "lucide-react";
 import type { Cliente, Mascota, Historia, Turno } from "@/lib/firebase/firestore";
 
@@ -275,6 +280,48 @@ export default function LibretaDetallesModal({
               </div>
             ) : null}
           </div>
+
+          {/* Archivos adjuntos */}
+          {isHistoria && h?.archivos && h.archivos.length > 0 && (
+            <div className="p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                <Paperclip className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700 dark:text-slate-300" />
+                <h3 className="font-bold text-xs sm:text-sm lg:text-base text-slate-900 dark:text-slate-100">
+                  Adjuntos ({h.archivos.length})
+                </h3>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {h.archivos.map((url, idx) => {
+                  const isImage = /\.(jpg|jpeg|png|gif|webp|svg)/i.test(url);
+                  const isVideo = /\.(mp4|webm|mov|avi)/i.test(url);
+                  const isPdf = /\.pdf/i.test(url);
+                  const IconFile = isImage ? Image : isVideo ? Film : isPdf ? FileText : File;
+                  const label = isImage ? "Imagen" : isVideo ? "Video" : isPdf ? "PDF" : "Archivo";
+                  return (
+                    <a
+                      key={idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+                    >
+                      {isImage ? (
+                        <img src={url} alt={`Adjunto ${idx + 1}`} className="h-10 w-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="h-10 w-10 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                          <IconFile className="h-5 w-5 text-slate-500" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{label} {idx + 1}</p>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-500 shrink-0" />
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Acciones: Ver Nota Clínica / Generar Historia (solo para turnos) + Editar */}
           <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-slate-200 dark:border-slate-800">

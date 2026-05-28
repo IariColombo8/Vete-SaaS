@@ -13,7 +13,7 @@ export function TurnoHeader() {
         <CalendarIcon className="h-8 w-8 text-primary" />
       </div>
       <CardTitle className="text-3xl md:text-4xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-        Agendar Turno a Domicilio
+        Agendar Turno
       </CardTitle>
       <CardDescription className="text-base md:text-lg max-w-2xl mx-auto">
         Completa el formulario y nos pondremos en contacto para confirmar tu

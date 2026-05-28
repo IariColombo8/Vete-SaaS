@@ -1,38 +1,40 @@
 import { useCallback, useMemo, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { getClienteByDNI, getMascotas, getTurnosByClienteId, updateTurno } from "@/lib/firebase/firestore"
-import type { Cliente, Mascota, Turno } from "@/lib/firebase/firestore"
-import { DEFAULT_TENANT_ID } from "@/lib/config"
+import { getTurnosByClienteEmail, updateTurno } from "@/lib/firebase/firestore"
+import type { Turno } from "@/lib/firebase/firestore"
+import { auth } from "@/lib/firebase/config"
 
 function getFechaTurno(t: Turno) {
   return t.turno?.fecha ?? t.fecha ?? ""
 }
 
-export function useMisTurnosCliente(tenantId = DEFAULT_TENANT_ID) {
+/**
+ * Hook para que un cliente autenticado vea y cancele sus turnos.
+ * Usa el email del usuario autenticado para buscar turnos (protegido por Firestore Rules).
+ * Opcionalmente acepta un DNI para búsqueda legacy (solo si el usuario está autenticado).
+ */
+export function useMisTurnosCliente(tenantId: string) {
   const { toast } = useToast()
   const [loading, setLoading]   = useState(false)
-  const [dniActual, setDniActual] = useState("")
-  const [cliente, setCliente]   = useState<Cliente | null>(null)
-  const [mascotas, setMascotas] = useState<Mascota[]>([])
   const [turnos, setTurnos]     = useState<Turno[]>([])
   const [error, setError]       = useState<string | null>(null)
+  const [emailActual, setEmailActual] = useState("")
 
-  const buscarPorDni = useCallback(async (dni: string) => {
-    const clean = dni.trim()
-    if (!clean || clean.length < 7) { setError("Ingresá un DNI válido."); return false }
+  const buscarMisTurnos = useCallback(async () => {
+    const user = auth.currentUser
+    if (!user?.email) {
+      setError("Debés iniciar sesión para ver tus turnos.")
+      return false
+    }
     setLoading(true); setError(null)
     try {
-      const clienteData = await getClienteByDNI(tenantId, clean)
-      if (!clienteData?.id) {
-        setCliente(null); setMascotas([]); setTurnos([])
-        setError("Cliente no encontrado."); return false
+      const turnosData = await getTurnosByClienteEmail(tenantId, user.email)
+      setEmailActual(user.email)
+      setTurnos(turnosData)
+      if (turnosData.length === 0) {
+        setError("No se encontraron turnos para tu cuenta.")
+        return false
       }
-      setDniActual(clean); setCliente(clienteData)
-      const [mascotasData, turnosData] = await Promise.all([
-        getMascotas(tenantId, clienteData.id),
-        getTurnosByClienteId(tenantId, clienteData.id),
-      ])
-      setMascotas(mascotasData); setTurnos(turnosData)
       return true
     } catch (e) {
       console.error(e); setError("No se pudo cargar la información."); return false
@@ -42,21 +44,23 @@ export function useMisTurnosCliente(tenantId = DEFAULT_TENANT_ID) {
   }, [tenantId])
 
   const refrescar = useCallback(async () => {
-    if (!cliente?.id) return
+    if (!emailActual) return
     try {
-      const [mascotasData, turnosData] = await Promise.all([
-        getMascotas(tenantId, cliente.id),
-        getTurnosByClienteId(tenantId, cliente.id),
-      ])
-      setMascotas(mascotasData); setTurnos(turnosData)
+      const turnosData = await getTurnosByClienteEmail(tenantId, emailActual)
+      setTurnos(turnosData)
     } catch (e) {
       console.error(e)
       toast({ title: "Error", description: "No se pudo actualizar.", variant: "destructive" })
     }
-  }, [cliente?.id, tenantId, toast])
+  }, [emailActual, tenantId, toast])
 
   const cancelarTurno = useCallback(async (turno: Turno) => {
     if (!turno.id) return
+    const user = auth.currentUser
+    if (!user?.email || user.email !== turno.cliente?.email) {
+      toast({ title: "Error", description: "Solo podés cancelar tus propios turnos.", variant: "destructive" })
+      return
+    }
     const fecha = getFechaTurno(turno)
     const manana = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
     if (turno.estado !== "pendiente" || !fecha || fecha < manana) {
@@ -80,8 +84,8 @@ export function useMisTurnosCliente(tenantId = DEFAULT_TENANT_ID) {
     }), [turnos])
 
   return {
-    loading, error, dniActual, cliente, mascotas, turnos, turnosOrdenados,
-    buscarPorDni, cancelarTurno, refrescar,
-    reset: () => { setDniActual(""); setCliente(null); setMascotas([]); setTurnos([]); setError(null) },
+    loading, error, emailActual, turnos, turnosOrdenados,
+    buscarMisTurnos, cancelarTurno, refrescar,
+    reset: () => { setEmailActual(""); setTurnos([]); setError(null) },
   }
 }

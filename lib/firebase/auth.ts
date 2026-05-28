@@ -45,20 +45,25 @@ const createOrUpdateUser = async (user: User) => {
 
     if (existing) {
       await updateDoc(existing.ref, { lastLogin: serverTimestamp() })
+
+      // Migración: si el doc existente no tiene el UID como ID, crear uno nuevo con UID
+      // y dejar el viejo como está (no se borra para no perder datos)
+      if (existing.ref.id !== user.uid) {
+        const uidRef = doc(db, "usuarios", user.uid)
+        const uidSnap = await getDoc(uidRef)
+        if (!uidSnap.exists()) {
+          await setDoc(uidRef, {
+            ...existing.data,
+            uid: user.uid,
+            lastLogin: serverTimestamp(),
+          })
+        }
+      }
       return
     }
 
-    // Nuevo usuario: ID legible "{n}-{displayName}"
-    // El contador se obtiene contando los docs existentes (no requiere config/contadores)
-    const displayName = (user.displayName || user.email?.split("@")[0] || "Usuario")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9 ]/g, "").trim()
-
-    const snap = await getDocs(collection(db, "usuarios"))
-    const count = snap.size + 1
-    const newDocId = `${count}-${displayName}`
-
-    await setDoc(doc(db, "usuarios", newDocId), {
+    // Nuevo usuario: doc ID = UID de Firebase Auth (requerido por Firestore Rules)
+    await setDoc(doc(db, "usuarios", user.uid), {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,

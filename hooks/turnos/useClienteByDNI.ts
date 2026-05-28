@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react"
 import { getClienteByDNI, getMascotas } from "@/lib/firebase/firestore"
-import { DEFAULT_TENANT_ID } from "@/lib/config"
 
-export function useClienteByDNI(dni: string, tenantId = DEFAULT_TENANT_ID) {
+export function useClienteByDNI(dni: string, tenantId: string) {
   const [clienteExistente, setClienteExistente] = useState<any>(null)
   const [mascotas, setMascotas] = useState<any[]>([])
   const [mostrarNuevaMascota, setMostrarNuevaMascota] = useState(true)

@@ -7,13 +7,16 @@ import { TurnoHeader } from "./TurnoHeader";
 import { ClienteSection } from "./ClienteSection";
 import { MascotaSection } from "./MascotaSection";
 import { ServicioSection } from "./ServicioSection";
-import { VacunaSection } from "./VacunaSection"; // NUEVO
+import { VacunaSection } from "./VacunaSection";
+import { LugarSection } from "./LugarSection";
 import { FechaHoraSection } from "./FechaHoraSection";
 import { TurnoSubmitButton } from "./TurnoSubmitButton";
 import { ModalConfirmacion } from "./ModalConfirmacion";
 import { useTurnoForm } from "@/hooks/turnos/useTurnoForm";
 import { useTenant } from "@/hooks/useTenant";
+import { useSlug } from "@/context/slug-context";
 import { Heart, Clock, PauseCircle } from "lucide-react";
+import { VACUNAS_DEFAULT } from "@/lib/turno-defaults";
 
 interface TurnoFormProps {
   tenantId?: string;
@@ -24,12 +27,14 @@ interface TurnoFormProps {
 }
 
 export function TurnoForm({
-  tenantId,
+  tenantId: tenantIdProp,
   defaultDni,
   lockDni,
   redirectOnSuccess = true,
   onSuccess,
 }: TurnoFormProps) {
+  const slug = useSlug()
+  const tenantId = tenantIdProp || slug
   const { tenant, loading: tenantLoading } = useTenant(tenantId)
 
   const {
@@ -38,6 +43,7 @@ export function TurnoForm({
     handleSubmit,
     handleConfirmedSubmit,
     handleVacunasChange,
+    handleLugarChange,
     loading,
     clienteExistente,
     mascotas,
@@ -52,9 +58,12 @@ export function TurnoForm({
     setShowConfirmModal,
     closedDays,
     tenantHorarios,
+    turnoConfig,
   } = useTurnoForm({ tenantId, defaultDni, lockDni, redirectOnSuccess, onSuccess });
 
-  const mostrarVacunas = formData.servicio === "vacunacion" && formData.tipoMascota;
+  const vacunasMap = turnoConfig?.vacunas ?? VACUNAS_DEFAULT;
+  const mostrarVacunas = formData.servicio === "vacunacion" && formData.tipoMascota &&
+    (vacunasMap[formData.tipoMascota]?.length ?? 0) > 0;
 
   if (!tenantLoading && tenant?.status === "pausado") {
     return (
@@ -65,7 +74,7 @@ export function TurnoForm({
           </div>
           <h2 className="text-xl font-extrabold">Servicio pausado</h2>
           <p className="text-muted-foreground text-sm max-w-xs">
-            Esta veterinaria no está recibiendo turnos en este momento. Por favor, contactate directamente con la clínica.
+            Esta veterinaria no esta recibiendo turnos en este momento. Por favor, contactate directamente con la clinica.
           </p>
         </CardContent>
       </Card>
@@ -107,12 +116,17 @@ export function TurnoForm({
               mascotas={mascotas}
               mostrarNuevaMascota={mostrarNuevaMascota}
               setMostrarNuevaMascota={setMostrarNuevaMascota}
+              mascotasConfig={turnoConfig?.mascotas}
             />
 
             {/* Servicio */}
-            <ServicioSection formData={formData} handleChange={handleChange} />
+            <ServicioSection
+              formData={formData}
+              handleChange={handleChange}
+              serviciosConfig={turnoConfig?.servicios}
+            />
 
-            {/* NUEVO: Sección de Vacunas - Solo se muestra si el servicio es vacunación */}
+            {/* Vacunas - Solo se muestra si el servicio es vacunacion y hay vacunas para ese animal */}
             {mostrarVacunas && (
               <>
                 <div className="relative">
@@ -120,13 +134,23 @@ export function TurnoForm({
                     <div className="w-full border-t border-border/50" />
                   </div>
                 </div>
-                
+
                 <VacunaSection
                   tipoMascota={formData.tipoMascota}
                   vacunasSeleccionadas={formData.vacunas}
                   onVacunasChange={handleVacunasChange}
+                  vacunasConfig={turnoConfig?.vacunas}
                 />
               </>
+            )}
+
+            {/* Lugar de atencion (solo si modalidad es "ambos") */}
+            {tenant?.modalidad === "ambos" && (
+              <LugarSection
+                modalidad={tenant.modalidad}
+                lugar={formData.lugar}
+                onLugarChange={handleLugarChange}
+              />
             )}
 
             {/* Divider */}
@@ -159,7 +183,7 @@ export function TurnoForm({
         </CardContent>
       </Card>
 
-      {/* Modal de Confirmación */}
+      {/* Modal de Confirmacion */}
       <ModalConfirmacion
         open={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}

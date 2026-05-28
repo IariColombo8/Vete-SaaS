@@ -9,6 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Heart, PlusCircle, Edit3 } from "lucide-react";
+import type { MascotaTurnoConfig } from "@/lib/firebase/firestore";
+import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults";
 
 interface MascotaSectionProps {
   formData: {
@@ -20,9 +22,10 @@ interface MascotaSectionProps {
     pesoMascota: string;
   };
   handleChange: (field: string, value: string) => void;
-  mascotas: any[];
+  mascotas: { id?: string; nombre: string; tipo: string; raza?: string }[];
   mostrarNuevaMascota: boolean;
   setMostrarNuevaMascota: (value: boolean) => void;
+  mascotasConfig?: MascotaTurnoConfig[];
 }
 
 export function MascotaSection({
@@ -31,7 +34,9 @@ export function MascotaSection({
   mascotas,
   mostrarNuevaMascota,
   setMostrarNuevaMascota,
+  mascotasConfig,
 }: MascotaSectionProps) {
+  const tiposMascota = mascotasConfig?.length ? mascotasConfig : MASCOTAS_DEFAULT;
   const mascotaSeleccionada = mascotas.find(
     (m) => m.id === formData.mascotaExistenteId
   );
@@ -47,7 +52,7 @@ export function MascotaSection({
         <div className="p-2 rounded-lg bg-primary/10">
           <Heart className="h-5 w-5 text-primary fill-current" />
         </div>
-        <h3 className="text-xl font-bold">Información de la Mascota</h3>
+        <h3 className="text-xl font-bold">Informacion de la Mascota</h3>
       </div>
 
       {/* Selector OBLIGATORIO de mascota */}
@@ -71,7 +76,7 @@ export function MascotaSection({
             <SelectValue placeholder="Selecciona una mascota..." />
           </SelectTrigger>
           <SelectContent>
-            {/* Opción de registrar nueva mascota PRIMERO */}
+            {/* Opcion de registrar nueva mascota PRIMERO */}
             <SelectItem value="nueva">
               <div className="flex items-center gap-2">
                 <PlusCircle className="h-4 w-4 text-primary" />
@@ -86,7 +91,7 @@ export function MascotaSection({
 
             {/* Mascotas existentes */}
             {mascotas.map((mascota) => (
-              <SelectItem key={mascota.id} value={mascota.id}>
+              <SelectItem key={mascota.id} value={mascota.id!}>
                 <div className="flex items-center gap-2">
                   <Heart className="h-4 w-4 text-muted-foreground" />
                   <span>
@@ -108,8 +113,8 @@ export function MascotaSection({
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            No tienes mascotas registradas. Selecciona "+ Registrar nueva
-            mascota"
+            No tienes mascotas registradas. Selecciona &quot;+ Registrar nueva
+            mascota&quot;
           </p>
         )}
       </div>
@@ -125,7 +130,7 @@ export function MascotaSection({
         </div>
       )}
 
-      {/* Formulario de mascota (solo se muestra si seleccionó "nueva" o una existente) */}
+      {/* Formulario de mascota (solo se muestra si selecciono "nueva" o una existente) */}
       {formData.mascotaExistenteId && (
         <>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -155,11 +160,11 @@ export function MascotaSection({
                   <SelectValue placeholder="Selecciona..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="perro">🐕 Perro</SelectItem>
-                  <SelectItem value="gato">🐈 Gato</SelectItem>
-                  <SelectItem value="conejo">🐰 Conejo</SelectItem>
-                  <SelectItem value="ave">🦜 Ave</SelectItem>
-                  <SelectItem value="otro">🐾 Otro</SelectItem>
+                  {tiposMascota.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.emoji} {m.nombre}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

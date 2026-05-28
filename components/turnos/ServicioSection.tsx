@@ -8,6 +8,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileText } from "lucide-react";
+import type { ServicioTurnoConfig } from "@/lib/firebase/firestore";
+import { SERVICIOS_DEFAULT } from "@/lib/turno-defaults";
 
 interface ServicioSectionProps {
   formData: {
@@ -15,12 +17,16 @@ interface ServicioSectionProps {
     motivo: string;
   };
   handleChange: (field: string, value: string) => void;
+  serviciosConfig?: ServicioTurnoConfig[];
 }
 
 export function ServicioSection({
   formData,
   handleChange,
+  serviciosConfig,
 }: ServicioSectionProps) {
+  const servicios = serviciosConfig?.length ? serviciosConfig : SERVICIOS_DEFAULT;
+
   return (
     <>
       {/* Selector de Servicio */}
@@ -41,42 +47,20 @@ export function ServicioSection({
             <SelectValue placeholder="Selecciona el servicio que necesitas..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="consulta-general">
-              <div className="flex flex-col items-start py-2">
-                <span className="font-semibold text-sm">
-                  🩺 Consultas Generales
-                </span>
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  Exámenes completos y diagnósticos profesionales para tu
-                  mascota
-                </span>
-              </div>
-            </SelectItem>
-            <SelectItem value="telemedicina">
-              <div className="flex flex-col items-start py-2">
-                <span className="font-semibold text-sm">💻 Telemedicina</span>
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  Procedimientos para detectar online y con rapidez el
-                  diagnóstico
-                </span>
-              </div>
-            </SelectItem>
-            <SelectItem value="vacunacion">
-              <div className="flex flex-col items-start py-2">
-                <span className="font-semibold text-sm">💉 Vacunación</span>
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  Plan de vacunación completo para proteger a tu mascota
-                </span>
-              </div>
-            </SelectItem>
-            <SelectItem value="urgencias">
-              <div className="flex flex-col items-start py-2">
-                <span className="font-semibold text-sm">🚨 Urgencias</span>
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  Atención de emergencia las 24 horas del día
-                </span>
-              </div>
-            </SelectItem>
+            {servicios.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                <div className="flex flex-col items-start py-2">
+                  <span className="font-semibold text-sm">
+                    {s.emoji} {s.nombre}
+                  </span>
+                  {s.descripcion && (
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      {s.descripcion}
+                    </span>
+                  )}
+                </div>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
