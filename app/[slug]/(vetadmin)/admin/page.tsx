@@ -7,6 +7,7 @@ import { DashboardCharts } from "@/components/admin/dashboard-charts"
 import { getTenantConfig, getTurnosDelMes } from "@/lib/firebase/firestore"
 import type { TenantConfig } from "@/lib/firebase/firestore"
 import { getPlanLimits } from "@/lib/plans"
+import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -164,6 +165,9 @@ export default function DashboardPage() {
                     ? "No se pueden agendar más turnos este mes. Mejorá tu plan para ampliar el límite."
                     : `Te quedan ${restantes} turno${restantes === 1 ? "" : "s"} disponibles en el plan ${pi.label}.`}
                 </p>
+                <div className="mt-2">
+                  <UpgradePlanButton tenantId={slug} planActual={plan} />
+                </div>
               </div>
               <div className="shrink-0 w-24">
                 <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">

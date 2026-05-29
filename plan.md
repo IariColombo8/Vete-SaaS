@@ -9,7 +9,7 @@
 | Fase | Estado | Progreso |
 |------|--------|----------|
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
-| 2. Features SaaS Core | PENDIENTE | 0/8 |
+| 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | PENDIENTE | 0/8 |
 | 4. Infraestructura y DevOps | PENDIENTE | 0/8 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
@@ -43,23 +43,23 @@
 
 ### 2.1 Planes y billing
 
-- [ ] **2.1.1** Colección `planes` con feature flags por plan
-- [ ] **2.1.2** Middleware de feature-gating: `canUseFeature(tenantId, feature)`
-- [ ] **2.1.3** Integración Mercado Pago / Stripe para billing recurrente
-- [ ] **2.1.4** Página `/pricing` en el landing
+- [x] **2.1.1** Catálogo de planes con feature flags y límites en `lib/plans.ts` (fuente única en código; evita lectura extra por chequeo). Límite de turnos por plan ya no hardcodeado.
+- [x] **2.1.2** Feature-gating: `canUseFeature(tenantId, feature)` (async) + `planAllows(plan, feature)` (síncrono). Usado por WhatsApp y dashboard.
+- [x] **2.1.3** Billing recurrente con Mercado Pago (suscripciones/preapproval): `lib/billing/mercadopago.ts`, `/api/billing/checkout` (verifica dueño vía ID token), `/api/billing/webhook` (actualiza plan vía Admin SDK), botón "Mejorar plan" en dashboard. Env-gated (`MP_ACCESS_TOKEN`).
+- [x] **2.1.4** Página `/pricing` con tarjetas (componente `PricingCards` reutilizado en landing), comparativa de features y FAQ.
 
 ### 2.2 Notificaciones
 
-- [ ] **2.2.1** Migrar EmailJS (client-side) a API route server-side (Resend/SendGrid)
-- [ ] **2.2.2** Integración WhatsApp (recordatorio 24h antes, confirmación de reserva)
+- [x] **2.2.1** EmailJS → API route server-side `/api/email/send` con Resend (REST, sin SDK). Dep `@emailjs/browser` removida. Env-gated (`RESEND_API_KEY`, `EMAIL_FROM`).
+- [x] **2.2.2** WhatsApp Cloud API (Meta): `lib/notifications/whatsapp.ts` (texto + plantillas), `/api/whatsapp/notify` (confirmación gated por plan), `/api/cron/recordatorios` (24h antes, protegido por `CRON_SECRET`), cron diario en `vercel.json`.
 
 ### 2.3 Multi-usuario por tenant
 
-- [ ] **2.3.1** Rol `empleado` con permisos granulares + invitación por email
+- [x] **2.3.1** Rol `empleado` con permisos granulares (`lib/auth/permissions.ts`) + invitaciones por email (colección `invitaciones`, auto-aceptación server-side vía Admin SDK al loguear, UI en config → Equipo). Reglas Firestore: empleado opera turnos/clientes/días pero no config.
 
 ### 2.4 Página pública mejorada
 
-- [ ] **2.4.1** SEO dinámico: `generateMetadata` con datos del tenant + Open Graph
+- [x] **2.4.1** SEO dinámico: `generateMetadata` en `/[slug]` (split server/client: `page.tsx` server + `vet-public-view.tsx` client) con título, descripción y Open Graph por tenant.
 
 ---
 
@@ -147,3 +147,10 @@
 | 2026-05-29 | 1.2.4 firestore.indexes.json + índice compuesto turnos | Completado |
 | 2026-05-29 | 1.2.2 onSnapshot real-time turnos admin + dashboard | Completado |
 | 2026-05-29 | 1.2.3 Paginación cursor-based clientes | Completado |
+| 2026-05-29 | 2.1.1/2.1.2 Catálogo de planes + feature-gating | Completado |
+| 2026-05-29 | 2.1.4 Página /pricing + componente compartido | Completado |
+| 2026-05-29 | 2.4.1 SEO dinámico por tenant | Completado |
+| 2026-05-29 | 2.2.1 Email server-side (Resend) | Completado |
+| 2026-05-29 | 2.2.2 WhatsApp (Cloud API) + cron recordatorios | Completado |
+| 2026-05-29 | 2.3.1 Rol empleado + invitaciones | Completado |
+| 2026-05-29 | 2.1.3 Billing Mercado Pago | Completado |
