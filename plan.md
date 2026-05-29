@@ -12,7 +12,7 @@
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | EN CURSO | 7/8 |
 | 4. Infraestructura y DevOps | EN CURSO | 5/11 |
-| 5. Growth y Comercialización | PENDIENTE | 0/6 |
+| 5. Growth y Comercialización | EN CURSO | 3/8 |
 
 ---
 
@@ -120,14 +120,14 @@
 
 ### 5.2 Landing SaaS
 
-- [ ] **5.2.1** Pricing section con planes
+- [x] **5.2.1** Pricing section con planes (cubierto en 2.1.4: sección en landing + página `/pricing`).
 - [ ] **5.2.2** Demo interactiva (tenant de ejemplo)
 - [ ] **5.2.3** Blog/SEO para tráfico orgánico
 
 ### 5.3 Integraciones
 
-- [ ] **5.3.1** WhatsApp Business API
-- [ ] **5.3.2** Mercado Pago (pagos online)
+- [x] **5.3.1** WhatsApp (cubierto en 2.2.2: Cloud API, confirmación + recordatorios).
+- [x] **5.3.2** Mercado Pago (cubierto en 2.1.3: suscripciones + webhook).
 - [ ] **5.3.3** Export contable (formatos locales)
 
 ---
