@@ -237,9 +237,28 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
     totalTurnos > 0
       ? ((estadosTurnos.completado / totalTurnos) * 100).toFixed(1)
       : 0;
+  const tasaCancelacion =
+    totalTurnos > 0
+      ? ((estadosTurnos.cancelado / totalTurnos) * 100).toFixed(1)
+      : 0;
   const promedioTurnosDia = (
     totalTurnos / Object.keys(turnosPorDia).length || 0
   ).toFixed(1);
+
+  // Servicios más solicitados (top 6)
+  const turnosPorServicio = turnos.reduce((acc, turno) => {
+    const servicio = (turno.servicio || "").trim();
+    if (servicio) acc[servicio] = (acc[servicio] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const serviciosTopData = Object.entries(turnosPorServicio)
+    .map(([servicio, cantidad]) => ({
+      servicio: servicio.charAt(0).toUpperCase() + servicio.slice(1),
+      cantidad,
+    }))
+    .sort((a, b) => b.cantidad - a.cantidad)
+    .slice(0, 6);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -885,6 +904,91 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tercera fila: servicios top + métricas clave */}
+      <div className="grid gap-6 lg:grid-cols-12 mt-6">
+        {/* Servicios más solicitados */}
+        <Card className="lg:col-span-8 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg">
+                <Sparkles className="h-5 w-5 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Servicios más solicitados
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                  Top servicios por cantidad de turnos
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {serviciosTopData.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-12">
+                Sin datos de servicios todavía.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={serviciosTopData}
+                  layout="vertical"
+                  margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.3} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="servicio" width={110} tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="cantidad" fill="#f59e0b" radius={[0, 8, 8, 0]} barSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Métricas clave */}
+        <Card className="lg:col-span-4 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+                <TrendingUp className="h-5 w-5 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Métricas clave
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                  Tasas sobre el total de turnos
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tasa de éxito</span>
+              </div>
+              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{tasaCompletado}%</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tasa de cancelación</span>
+              </div>
+              <span className="text-xl font-black text-rose-600 dark:text-rose-400">{tasaCancelacion}%</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Promedio diario</span>
+              </div>
+              <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{promedioTurnosDia}</span>
+            </div>
           </CardContent>
         </Card>
       </div>
