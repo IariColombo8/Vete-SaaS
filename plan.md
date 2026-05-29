@@ -10,7 +10,7 @@
 |------|--------|----------|
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
-| 3. Producto Completo | PENDIENTE | 0/8 |
+| 3. Producto Completo | EN CURSO | 3/8 |
 | 4. Infraestructura y DevOps | PENDIENTE | 0/8 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
 
@@ -68,19 +68,19 @@
 ### 3.1 Libreta sanitaria digital
 
 - [ ] **3.1.1** PDF exportable de libreta sanitaria
-- [ ] **3.1.2** QR code por mascota con enlace público a su libreta
-- [ ] **3.1.3** Recordatorios automáticos de vacunas
-- [ ] **3.1.4** Visualización de fotos en historial clínico
+- [ ] **3.1.2** QR code por mascota con enlace público a su libreta (requiere ruta pública + diseño de privacidad; feature `qrMascota` plan Pro)
+- [ ] **3.1.3** Recordatorios automáticos de vacunas (requiere modelo de calendario de vacunas por mascota; reutilizará cron de `vercel.json`)
+- [x] **3.1.4** Visualización de fotos en historial clínico — ya implementado: `LibretaDetallesModal` muestra adjuntos de imagen como miniaturas con enlace; upload en `libreta-sanitaria-management`.
 
 ### 3.2 Dashboard analytics
 
-- [ ] **3.2.1** Gráficos de tendencia, tasa cancelación, servicios top, horarios pico
+- [x] **3.2.1** Dashboard analytics: tendencia, horarios pico, estados (ya existían) + servicios top y tasa de cancelación (agregados en `dashboard-charts.tsx`).
 
 ### 3.3 Agenda avanzada
 
 - [ ] **3.3.1** Múltiples profesionales por veterinaria con agendas independientes
 - [ ] **3.3.2** Duración variable por servicio (hoy todo es 1h)
-- [ ] **3.3.3** Confirmación por parte del vet (pendiente -> confirmado -> completado)
+- [x] **3.3.3** Confirmación por parte del vet: estado `confirmado` añadido (pendiente → confirmado → completado). Disponibilidad considera ambos estados como ocupados.
 
 ---
 
@@ -154,3 +154,6 @@
 | 2026-05-29 | 2.2.2 WhatsApp (Cloud API) + cron recordatorios | Completado |
 | 2026-05-29 | 2.3.1 Rol empleado + invitaciones | Completado |
 | 2026-05-29 | 2.1.3 Billing Mercado Pago | Completado |
+| 2026-05-29 | 3.3.3 Estado confirmado en turnos | Completado |
+| 2026-05-29 | 3.2.1 Analytics: servicios top + tasa cancelación | Completado |
+| 2026-05-29 | 3.1.4 Fotos en historial (ya existía) | Completado |
