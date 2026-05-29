@@ -73,6 +73,7 @@ import {
 } from "lucide-react";
 import LibretaDetallesModal from "./LibretaDetallesModal";
 import { generarLibretaPDF } from "@/lib/pdf/libreta-pdf";
+import { QrLibretaButton } from "./qr-libreta-button";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -860,6 +861,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           >
                             <FileDown className="h-5 w-5" />
                           </Button>
+                          {clienteExpandido.cliente.id && m.id && (
+                            <QrLibretaButton
+                              tenantId={tenantId}
+                              clienteId={clienteExpandido.cliente.id}
+                              mascotaId={m.id}
+                            />
+                          )}
                           <Button size="sm" className="h-11 w-11 p-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0" onClick={() => openAddNota(clienteExpandido.cliente, m)} title="Agregar nota clínica"><Plus className="h-6 w-6" /></Button>
                         </div>
                       </div>

@@ -10,7 +10,7 @@
 |------|--------|----------|
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
-| 3. Producto Completo | EN CURSO | 4/8 |
+| 3. Producto Completo | EN CURSO | 5/8 |
 | 4. Infraestructura y DevOps | EN CURSO | 4/11 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
 
@@ -68,7 +68,7 @@
 ### 3.1 Libreta sanitaria digital
 
 - [x] **3.1.1** PDF exportable de libreta sanitaria: `lib/pdf/libreta-pdf.ts` (jsPDF) genera datos de mascota + dueño + historial cronológico. Botón de descarga en la cabecera de cada mascota en `libreta-sanitaria-management`.
-- [ ] **3.1.2** QR code por mascota con enlace público a su libreta (requiere ruta pública + diseño de privacidad; feature `qrMascota` plan Pro)
+- [x] **3.1.2** QR por mascota con libreta pública: token aleatorio (`libretaToken`) + snapshot curado en `veterinarias/{slug}/libretasPublicas/{token}` (lectura pública, sin datos del dueño). Ruta `/[slug]/libreta/[token]`, botón QR en libreta-management (gated por feature `qrMascota` del plan Pro). Reglas + sin exponer subárbol de clientes.
 - [ ] **3.1.3** Recordatorios automáticos de vacunas (requiere modelo de calendario de vacunas por mascota; reutilizará cron de `vercel.json`)
 - [x] **3.1.4** Visualización de fotos en historial clínico — ya implementado: `LibretaDetallesModal` muestra adjuntos de imagen como miniaturas con enlace; upload en `libreta-sanitaria-management`.
 
@@ -161,3 +161,4 @@
 | 2026-05-29 | 4.1.1/4.1.2 Vitest + tests unitarios (19) | Completado |
 | 2026-05-29 | 4.2.1 GitHub Actions CI | Completado |
 | 2026-05-29 | 4.4.1 Rename package a vetpanel | Completado |
+| 2026-05-29 | 3.1.2 QR + libreta pública con token | Completado |

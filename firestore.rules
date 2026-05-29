@@ -155,6 +155,13 @@ service cloud.firestore {
         allow write: if canOperateTenant(tenantId);
       }
 
+      // Libreta pública por QR: snapshot curado, lectura pública (token no adivinable),
+      // escritura solo del staff del tenant.
+      match /libretasPublicas/{token} {
+        allow read: if true;
+        allow write: if canOperateTenant(tenantId);
+      }
+
       // Clientes y toda su jerarquía: staff del tenant (vet, empleado) o superadmin
       match /clientes/{clienteId} {
         allow read, write: if canOperateTenant(tenantId);

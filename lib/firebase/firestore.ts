@@ -323,6 +323,8 @@ export interface Mascota {
   edad?: string
   raza?: string
   peso?: string
+  /** Token aleatorio para la libreta pública por QR (no adivinable). */
+  libretaToken?: string
 }
 
 export interface Turno {
@@ -536,6 +538,69 @@ export async function updateMascota(tenantId: string, clienteId: string, mascota
     console.error("Error actualizando mascota:", error)
     throw error
   }
+}
+
+// ============ LIBRETA PÚBLICA (QR) ============
+const libretasPublicasCol = (t: string) => collection(db, "veterinarias", t, "libretasPublicas")
+
+/** Snapshot público de la libreta de una mascota, accesible por QR sin login. */
+export interface LibretaPublica {
+  token: string
+  mascota: { nombre: string; tipo: string; raza?: string; edad?: string }
+  vetNombre?: string
+  historias: { fecha: string; motivo: string; diagnostico?: string; tratamiento?: string }[]
+  generadoEl: string
+}
+
+/**
+ * Genera (o regenera) la libreta pública de una mascota: crea un token aleatorio,
+ * escribe un snapshot público curado y guarda el token en la mascota.
+ * Solo expone un resumen del historial (sin datos del dueño). La ejecuta el
+ * staff del tenant (autenticado).
+ */
+export async function generarLibretaPublica(
+  tenantId: string,
+  clienteId: string,
+  mascotaId: string,
+  vetNombre?: string,
+): Promise<string> {
+  const mascotas = await getMascotas(tenantId, clienteId)
+  const mascota = mascotas.find((m) => m.id === mascotaId)
+  if (!mascota) throw new Error("Mascota no encontrada")
+
+  const token = mascota.libretaToken || (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, "")
+
+  const historias = await getHistorias(tenantId, clienteId, mascotaId)
+  const historiasResumen = historias
+    .filter((h) => h.tipoVisita !== "turno_programado")
+    .slice(0, 30)
+    .map((h) => ({
+      fecha: h.fechaAtencion ?? "",
+      motivo: h.motivo ?? "Consulta",
+      diagnostico: h.diagnostico,
+      tratamiento: h.tratamiento,
+    }))
+
+  const snapshot: LibretaPublica = {
+    token,
+    mascota: { nombre: mascota.nombre, tipo: mascota.tipo, raza: mascota.raza, edad: mascota.edad },
+    vetNombre,
+    historias: historiasResumen,
+    generadoEl: new Date().toISOString(),
+  }
+
+  await setDoc(doc(libretasPublicasCol(tenantId), token), snapshot)
+  if (!mascota.libretaToken) {
+    await updateMascota(tenantId, clienteId, mascotaId, { libretaToken: token })
+  }
+  return token
+}
+
+/** Lee el snapshot público de una libreta por token. */
+export async function getLibretaPublica(tenantId: string, token: string): Promise<LibretaPublica | null> {
+  const snap = await getDoc(doc(libretasPublicasCol(tenantId), token))
+  if (!snap.exists()) return null
+  return snap.data() as LibretaPublica
 }
 
 // ============ HISTORIA CLÍNICA (DOCUMENTO REGISTRO) ============
