@@ -37,7 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getTurnos, getClientesBasic } from "@/lib/firebase/firestore";
+import { subscribeTurnos, getClientesBasic } from "@/lib/firebase/firestore";
 import type { Turno } from "@/lib/firebase/firestore";
 import {
   Calendar,
@@ -67,23 +67,24 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
   const [pendientesDialogOpen, setPendientesDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [turnosData, clientesData] = await Promise.all([
-          getTurnos(tenantId),
-          getClientesBasic(tenantId),
-        ]);
-        setTurnos(turnosData);
-        setClientes(clientesData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!tenantId) return;
 
-    fetchData();
-  }, []);
+    // Clientes: carga puntual (cambian poco). Turnos: suscripción real-time.
+    getClientesBasic(tenantId)
+      .then(setClientes)
+      .catch((error) => console.error("Error cargando clientes:", error));
+
+    const unsubscribe = subscribeTurnos(
+      tenantId,
+      (data) => { setTurnos(data); setLoading(false); },
+      (error) => {
+        console.error("Error en suscripción de turnos:", error);
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [tenantId]);
 
   if (loading) {
     return (

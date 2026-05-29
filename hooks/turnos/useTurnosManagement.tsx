@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import {
   getTurnos, updateTurno, deleteTurno, getMascotas,
-  getDiasBloqueados, bloquearDia, desbloquearDia,
+  bloquearDia, desbloquearDia,
+  subscribeTurnos, subscribeDiasBloqueados,
 } from "@/lib/firebase/firestore"
 import type { Turno, Mascota } from "@/lib/firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
@@ -16,6 +17,7 @@ export function useTurnosManagement(tenantId: string) {
   const [blockedDates, setBlockedDates]     = useState<string[]>([])
   const [selectedDate, setSelectedDate]     = useState<string>(new Date().toISOString().split("T")[0])
 
+  // Refetch manual puntual (fallback); la fuente de verdad es la suscripción real-time.
   const fetchTurnos = async () => {
     try {
       setTurnos(await getTurnos(tenantId))
@@ -24,15 +26,6 @@ export function useTurnosManagement(tenantId: string) {
       toast({ title: "Error", description: "No se pudieron cargar los turnos", variant: "destructive" })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchBlockedDates = async () => {
-    try {
-      const dias = await getDiasBloqueados(tenantId)
-      setBlockedDates(dias.map((d: any) => d.fecha ?? d.id))
-    } catch (error) {
-      console.error("Error fetching blocked dates:", error)
     }
   }
 
@@ -52,7 +45,28 @@ export function useTurnosManagement(tenantId: string) {
     }
   }
 
-  useEffect(() => { fetchTurnos(); fetchBlockedDates() }, [tenantId])
+  useEffect(() => {
+    if (!tenantId) return
+    setLoading(true)
+
+    const unsubTurnos = subscribeTurnos(
+      tenantId,
+      (data) => { setTurnos(data); setLoading(false) },
+      (error) => {
+        console.error("Error en suscripción de turnos:", error)
+        toast({ title: "Error", description: "No se pudieron cargar los turnos", variant: "destructive" })
+        setLoading(false)
+      },
+    )
+
+    const unsubDias = subscribeDiasBloqueados(
+      tenantId,
+      (dias) => setBlockedDates(dias.map((d) => d.fecha ?? d.id)),
+      (error) => console.error("Error en suscripción de días bloqueados:", error),
+    )
+
+    return () => { unsubTurnos(); unsubDias() }
+  }, [tenantId, toast])
 
   const handleToggleBlockDate = async (dateStr: string) => {
     try {
@@ -120,7 +134,7 @@ export function useTurnosManagement(tenantId: string) {
     try {
       await updateTurno(tenantId, turnoId, { estado: "completado" })
       toast({ title: "Turno completado" })
-      await fetchTurnos(); onSuccess()
+      onSuccess() // turnos se actualizan via suscripción real-time
     } catch (error) {
       console.error("Error updating turno:", error)
       toast({ title: "Error", description: "No se pudo actualizar el turno", variant: "destructive" })
@@ -131,7 +145,7 @@ export function useTurnosManagement(tenantId: string) {
     try {
       await updateTurno(tenantId, turnoId, { estado: "cancelado" })
       toast({ title: "Turno cancelado" })
-      await fetchTurnos(); onSuccess()
+      onSuccess() // turnos se actualizan via suscripción real-time
     } catch (error) {
       console.error("Error canceling turno:", error)
       toast({ title: "Error", description: "No se pudo cancelar el turno", variant: "destructive" })
@@ -143,7 +157,7 @@ export function useTurnosManagement(tenantId: string) {
     try {
       await deleteTurno(tenantId, turnoId)
       toast({ title: "Turno eliminado" })
-      await fetchTurnos(); onSuccess()
+      onSuccess() // turnos se actualizan via suscripción real-time
     } catch (error) {
       console.error("Error deleting turno:", error)
       toast({ title: "Error", description: "No se pudo eliminar el turno", variant: "destructive" })
@@ -154,7 +168,7 @@ export function useTurnosManagement(tenantId: string) {
     try {
       await updateTurno(tenantId, turnoId, { turno: { ...turno.turno, fecha: editData.fecha, hora: editData.hora } })
       toast({ title: "Turno actualizado" })
-      await fetchTurnos(); onSuccess()
+      onSuccess() // turnos se actualizan via suscripción real-time
     } catch (error) {
       console.error("Error updating turno:", error)
       toast({ title: "Error", description: "No se pudo actualizar el turno", variant: "destructive" })

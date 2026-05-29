@@ -166,14 +166,8 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
     if (!selectedDate) return
     const fechaSeleccionada = format(selectedDate, "yyyy-MM-dd")
     const ocupados = turnosExistentes
-      .filter((t: Record<string, unknown>) => {
-        const turno = t.turno as { fecha?: string } | undefined
-        return turno?.fecha === fechaSeleccionada && t.estado !== "cancelado"
-      })
-      .map((t: Record<string, unknown>) => {
-        const turno = t.turno as { hora?: string } | undefined
-        return turno?.hora
-      })
+      .filter((t) => t.turno?.fecha === fechaSeleccionada && t.estado !== "cancelado")
+      .map((t) => t.turno?.hora)
 
     let todos: string[]
     if (tenantHorarios.length > 0) {

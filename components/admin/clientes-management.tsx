@@ -30,12 +30,13 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  getClientesBasic,
+  getClientesPaginated,
   getClienteCompleto,
   getMascotas,
   createCliente,
   updateCliente,
   type HistorialDato,
+  type ClientesCursor,
 } from "@/lib/firebase/firestore";
 import type { Cliente, Mascota } from "@/lib/firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +66,9 @@ const emptyForm = {
   dni: "",
   domicilio: "",
 };
+
+/** Tamaño de página para la paginación cursor-based de clientes. */
+const PAGE_SIZE = 20;
 
 function buildMapsUrl(direccion: string): string {
   if (!direccion?.trim()) return "#";
@@ -110,6 +114,9 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [mascotasByClienteId, setMascotasByClienteId] = useState<Record<string, Mascota[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [cursor, setCursor] = useState<ClientesCursor>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingMascotas, setLoadingMascotas] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -135,25 +142,31 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
     toLoad.forEach((c) => c.id && loadMascotasForCliente(c.id));
   }, [searchTerm, clientes]);
 
-  // Carga inicial optimizada: solo campos básicos
+  // Precarga las mascotas de una lista de clientes (para el resumen en la tabla).
+  const precargarMascotas = async (lista: Cliente[]) => {
+    const map: Record<string, Mascota[]> = {};
+    for (const c of lista) {
+      if (c.id) {
+        try {
+          map[c.id] = await getMascotas(tenantId, c.id);
+        } catch {
+          map[c.id] = [];
+        }
+      }
+    }
+    setMascotasByClienteId((prev) => ({ ...prev, ...map }));
+  };
+
+  // Carga inicial: primera página cursor-based.
   const loadClientes = async () => {
     setLoading(true);
     try {
-      const data = await getClientesBasic(tenantId);
-      setClientes(data);
-      // Cargar mascotas solo para los primeros 10 clientes (lazy load el resto)
-      const primeros = data.slice(0, 10);
-      const map: Record<string, Mascota[]> = {};
-      for (const c of primeros) {
-        if (c.id) {
-          try {
-            map[c.id] = await getMascotas(tenantId, c.id);
-          } catch {
-            map[c.id] = [];
-          }
-        }
-      }
-      setMascotasByClienteId(map);
+      const page = await getClientesPaginated(tenantId, PAGE_SIZE);
+      setClientes(page.clientes);
+      setCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+      // Precargar mascotas de los primeros 10 (lazy load el resto en hover/búsqueda)
+      await precargarMascotas(page.clientes.slice(0, 10));
     } catch (error) {
       console.error("Error fetching clientes:", error);
       toast({
@@ -163,6 +176,27 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Carga la siguiente página y la concatena.
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getClientesPaginated(tenantId, PAGE_SIZE, cursor);
+      setClientes((prev) => [...prev, ...page.clientes]);
+      setCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+    } catch (error) {
+      console.error("Error cargando más clientes:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar más clientes",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -186,7 +220,8 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
 
   useEffect(() => {
     loadClientes();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
 
   const filtered = useMemo(() => {
     if (!searchTerm.trim()) return clientes;
@@ -532,6 +567,32 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
               </Table>
             )}
           </div>
+
+          {/* Paginación / cargar más */}
+          {filtered.length > 0 && (
+            <div className="flex flex-col items-center gap-2 py-4">
+              {searchTerm && hasMore && (
+                <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 text-center">
+                  La búsqueda solo abarca los clientes ya cargados. Cargá más para ampliarla.
+                </p>
+              )}
+              {hasMore ? (
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="h-8 sm:h-9 text-[10px] sm:text-xs border-slate-300 dark:border-slate-700"
+                >
+                  {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {loadingMore ? "Cargando..." : "Cargar más clientes"}
+                </Button>
+              ) : (
+                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-500">
+                  {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} cargado{clientes.length !== 1 ? "s" : ""} · no hay más
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

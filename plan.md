@@ -8,7 +8,7 @@
 
 | Fase | Estado | Progreso |
 |------|--------|----------|
-| 1. Fundamentos de Producción | EN CURSO | 6/10 |
+| 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | PENDIENTE | 0/8 |
 | 3. Producto Completo | PENDIENTE | 0/8 |
 | 4. Infraestructura y DevOps | PENDIENTE | 0/8 |
@@ -27,10 +27,10 @@
 
 ### 1.2 Rendimiento: queries que no escalan
 
-- [ ] **1.2.1** `useDisponibilidadTurnos`: filtrar turnos por rango de fechas en vez de full collection scan
-- [ ] **1.2.2** Implementar `onSnapshot` real-time en turnos del admin y dashboard
-- [ ] **1.2.3** Paginación cursor-based en listados de clientes y turnos admin
-- [ ] **1.2.4** Crear `firestore.indexes.json` con índices compuestos necesarios
+- [x] **1.2.1** `useDisponibilidadTurnos` refactoreado: nueva función `getTurnosByDateRange` filtra por mes actual + siguiente, solo pendientes. Tipado `any[]` → `Turno[]` en hook y consumers. Tipado `getDiasBloqueados` → `DiaBloqueado[]`.
+- [x] **1.2.2** `onSnapshot` real-time: nuevas funciones `subscribeTurnos` y `subscribeDiasBloqueados` en `firestore.ts`. `useTurnosManagement` y `DashboardCharts` ahora se actualizan en vivo (sin refetch manual tras mutaciones). Corregido bug de deps `[]` en dashboard.
+- [x] **1.2.3** Paginación cursor-based en clientes: `getClientesPaginated` (orderBy nombre, `startAfter`, `limit`) + tipo `ClientesCursor`/`ClientesPage`. UI con botón "Cargar más" (page size 20) y aviso de alcance de búsqueda. Turnos admin usan suscripción real-time (1.2.2) en vez de paginación dado el volumen single-tenant actual.
+- [x] **1.2.4** `firestore.indexes.json` creado y registrado en `firebase.json`. Índice compuesto `turnos (estado ASC, turno.fecha ASC)` para `getTurnosByDateRange`. El resto de queries son single-field (índices automáticos).
 
 ### 1.3 Auth: hardening
 
@@ -137,3 +137,13 @@
 | Fecha | Tarea | Estado |
 |-------|-------|--------|
 | 2026-05-27 | Plan creado | Completado |
+| 2026-05-27 | 1.1.1 Firestore Rules: restringir update usuarios | Completado |
+| 2026-05-27 | 1.1.2 Config lectura pública | Completado |
+| 2026-05-27 | 1.1.3 Validación create turnos | Completado |
+| 2026-05-27 | 1.1.4 Proteger cancelación (auth email) | Completado |
+| 2026-05-27 | 1.3.1 Eliminar DEFAULT_TENANT_ID | Completado |
+| 2026-05-27 | 1.3.2 Extraer resolveUserDashboard | Completado |
+| 2026-05-28 | 1.2.1 useDisponibilidadTurnos: filtro por rango | Completado |
+| 2026-05-29 | 1.2.4 firestore.indexes.json + índice compuesto turnos | Completado |
+| 2026-05-29 | 1.2.2 onSnapshot real-time turnos admin + dashboard | Completado |
+| 2026-05-29 | 1.2.3 Paginación cursor-based clientes | Completado |

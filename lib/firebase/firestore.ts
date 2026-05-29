@@ -10,8 +10,14 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
   serverTimestamp,
   runTransaction,
+  onSnapshot,
+  type Unsubscribe,
+  type QueryDocumentSnapshot,
+  type DocumentData,
 } from "firebase/firestore"
 
 // ============ ROLES ============
@@ -354,19 +360,57 @@ export async function getClientes(tenantId: string): Promise<Cliente[]> {
 
 export async function getClientesBasic(tenantId: string): Promise<Cliente[]> {
   const snapshot = await getDocs(clientesCol(tenantId))
-  return snapshot.docs.map((d) => {
-    const data = d.data()
-    return {
-      id: d.id,
-      nombre: data.nombre || "",
-      telefono: data.telefono || "",
-      email: data.email || "",
-      dni: data.dni || "",
-      domicilio: data.domicilio || "",
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    } as Cliente
-  })
+  return snapshot.docs.map((d) => clienteBasicFromDoc(d))
+}
+
+/** Mapea un doc de Firestore a Cliente con solo campos básicos. */
+function clienteBasicFromDoc(d: QueryDocumentSnapshot<DocumentData>): Cliente {
+  const data = d.data()
+  return {
+    id: d.id,
+    nombre: data.nombre || "",
+    telefono: data.telefono || "",
+    email: data.email || "",
+    dni: data.dni || "",
+    domicilio: data.domicilio || "",
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  } as Cliente
+}
+
+/** Cursor opaco para paginación de clientes. */
+export type ClientesCursor = QueryDocumentSnapshot<DocumentData> | null
+
+export interface ClientesPage {
+  clientes: Cliente[]
+  /** Cursor para la siguiente página; pasar a la próxima llamada. */
+  nextCursor: ClientesCursor
+  /** true si la página vino llena (probablemente hay más). */
+  hasMore: boolean
+}
+
+/**
+ * Paginación cursor-based de clientes ordenados por nombre.
+ * @param cursor Resultado `nextCursor` de la llamada anterior, o null para la primera página.
+ */
+export async function getClientesPaginated(
+  tenantId: string,
+  pageSize: number,
+  cursor: ClientesCursor = null,
+): Promise<ClientesPage> {
+  const constraints = [orderBy("nombre"), limit(pageSize)]
+  const q = cursor
+    ? query(clientesCol(tenantId), orderBy("nombre"), startAfter(cursor), limit(pageSize))
+    : query(clientesCol(tenantId), ...constraints)
+
+  const snapshot = await getDocs(q)
+  const clientes = snapshot.docs.map((d) => clienteBasicFromDoc(d))
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null
+  return {
+    clientes,
+    nextCursor: lastDoc,
+    hasMore: snapshot.docs.length === pageSize,
+  }
 }
 
 export async function getClienteCompleto(tenantId: string, clienteId: string) {
@@ -630,6 +674,39 @@ export async function getTurnos(tenantId: string): Promise<Turno[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Turno)
 }
 
+/**
+ * Suscripción real-time a los turnos del tenant (ordenados por timestamp desc).
+ * Devuelve la función `Unsubscribe` — llamarla al desmontar para evitar fugas.
+ */
+export function subscribeTurnos(
+  tenantId: string,
+  onData: (turnos: Turno[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe {
+  const q = query(turnosCol(tenantId), orderBy("turno.timestamp", "desc"))
+  return onSnapshot(
+    q,
+    (snapshot) => onData(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Turno)),
+    (error) => onError?.(error),
+  )
+}
+
+/** Turnos filtrados por rango de fechas (YYYY-MM-DD). Solo pendientes para disponibilidad. */
+export async function getTurnosByDateRange(
+  tenantId: string,
+  fechaDesde: string,
+  fechaHasta: string,
+): Promise<Turno[]> {
+  const q = query(
+    turnosCol(tenantId),
+    where("turno.fecha", ">=", fechaDesde),
+    where("turno.fecha", "<=", fechaHasta),
+    where("estado", "==", "pendiente"),
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Turno)
+}
+
 /** Query directa por clienteId — no trae todos los turnos */
 export async function getTurnosByClienteId(tenantId: string, clienteId: string): Promise<Turno[]> {
   if (!clienteId) return []
@@ -672,9 +749,31 @@ export async function deleteTurno(tenantId: string, turnoId: string) {
 }
 
 // ============ DISPONIBILIDAD ============
-export async function getDiasBloqueados(tenantId: string) {
+export interface DiaBloqueado {
+  id: string
+  fecha?: string
+  motivo?: string
+}
+
+export async function getDiasBloqueados(tenantId: string): Promise<DiaBloqueado[]> {
   const snapshot = await getDocs(diasCol(tenantId))
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as DiaBloqueado)
+}
+
+/**
+ * Suscripción real-time a los días bloqueados del tenant.
+ * Devuelve la función `Unsubscribe` — llamarla al desmontar para evitar fugas.
+ */
+export function subscribeDiasBloqueados(
+  tenantId: string,
+  onData: (dias: DiaBloqueado[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    diasCol(tenantId),
+    (snapshot) => onData(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as DiaBloqueado)),
+    (error) => onError?.(error),
+  )
 }
 
 export async function bloquearDia(tenantId: string, fecha: string, motivo?: string) {

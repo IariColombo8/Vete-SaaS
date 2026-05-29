@@ -110,10 +110,7 @@ export function FechaHoraSection({
 
                   // Dias llenos (todos los turnos ocupados)
                   const turnosDelDia = turnosExistentes.filter(
-                    (t: Record<string, unknown>) => {
-                      const turno = t.turno as { fecha?: string } | undefined;
-                      return turno?.fecha === fechaStr && t.estado !== "cancelado";
-                    }
+                    (t) => t.turno?.fecha === fechaStr && t.estado !== "cancelado"
                   );
                   const horario = tenantHorarios.length > 0
                     ? getHorarioForDay(date.getDay(), tenantHorarios)
