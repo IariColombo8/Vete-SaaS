@@ -22,7 +22,7 @@ import {
 } from "firebase/firestore"
 
 // ============ ROLES ============
-export type UserRole = "superadmin" | "veterinario" | "usuario"
+export type UserRole = "superadmin" | "veterinario" | "empleado" | "usuario"
 
 export interface Usuario {
   uid: string
@@ -41,6 +41,54 @@ export async function getUsuarios(): Promise<Usuario[]> {
   const ref = collection(db, "usuarios")
   const snapshot = await getDocs(ref)
   return snapshot.docs.map((d) => ({ uid: d.id, ...d.data() }) as Usuario)
+}
+
+// ============ INVITACIONES ============
+/** Invitación de un dueño para sumar veterinario/empleado a su tenant. */
+export interface Invitacion {
+  id?: string
+  email: string
+  tenantId: string
+  role: "veterinario" | "empleado"
+  estado: "pendiente" | "aceptada"
+  invitedBy?: string
+  createdAt?: unknown
+}
+
+const invitacionesCol = () => collection(db, "invitaciones")
+
+/** ID determinístico para idempotencia: tenant + email normalizado. */
+function invitacionId(tenantId: string, email: string): string {
+  return `${tenantId}__${email.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, "_")}`
+}
+
+export async function createInvitacion(
+  tenantId: string,
+  email: string,
+  role: "veterinario" | "empleado",
+  invitedBy?: string,
+): Promise<Invitacion> {
+  const id = invitacionId(tenantId, email)
+  const invitacion: Invitacion = {
+    email: email.trim().toLowerCase(),
+    tenantId,
+    role,
+    estado: "pendiente",
+    invitedBy: invitedBy ?? "",
+    createdAt: new Date().toISOString(),
+  }
+  await setDoc(doc(invitacionesCol(), id), invitacion)
+  return { id, ...invitacion }
+}
+
+export async function getInvitacionesByTenant(tenantId: string): Promise<Invitacion[]> {
+  const q = query(invitacionesCol(), where("tenantId", "==", tenantId))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Invitacion)
+}
+
+export async function deleteInvitacion(id: string): Promise<void> {
+  await deleteDoc(doc(invitacionesCol(), id))
 }
 
 // ============ TENANT ============

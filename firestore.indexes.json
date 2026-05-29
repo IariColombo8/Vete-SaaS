@@ -7,6 +7,14 @@
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "turno.fecha", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "invitaciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "email", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

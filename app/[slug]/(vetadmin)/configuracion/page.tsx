@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin, Home, PawPrint, FileText, Syringe } from "lucide-react"
+import { EquipoManagement } from "@/components/admin/equipo-management"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
   { dia: "Lunes a Viernes", apertura: "09:00", cierre: "18:00", cerrado: false },
@@ -32,7 +33,7 @@ export default function ConfiguracionPage() {
   const { toast } = useToast()
   const [loadingData, setLoadingData] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"datos" | "turnos">("datos")
+  const [activeTab, setActiveTab] = useState<"datos" | "turnos" | "equipo">("datos")
 
   // ── Datos de la veterinaria ──
   const [basic, setBasic] = useState({ nombre: "", telefono: "", email: "", direccion: "", ciudad: "" })
@@ -338,10 +339,11 @@ export default function ConfiguracionPage() {
           <p className="text-sm text-muted-foreground">Gestiona los datos de tu veterinaria y la configuracion de turnos.</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "datos" | "turnos")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="datos">Datos de la veterinaria</TabsTrigger>
-            <TabsTrigger value="turnos">Configuracion de turnos</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "datos" | "turnos" | "equipo")}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="datos">Datos</TabsTrigger>
+            <TabsTrigger value="turnos">Turnos</TabsTrigger>
+            <TabsTrigger value="equipo">Equipo</TabsTrigger>
           </TabsList>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -1073,6 +1075,13 @@ export default function ConfiguracionPage() {
               </CardContent>
             </Card>
 
+          </TabsContent>
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/*  TAB: EQUIPO                                                        */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <TabsContent value="equipo" className="space-y-6 mt-6">
+            <EquipoManagement tenantId={slug} />
           </TabsContent>
         </Tabs>
 

@@ -13,10 +13,22 @@ import {
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type React from "react"
+import type { UserRole } from "@/lib/firebase/firestore"
+import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
 
 interface Props {
   slug: string
   children: React.ReactNode
+}
+
+/** Mapea una ruta del panel a su sección para el control de acceso. */
+function sectionFromPath(pathname: string, slug: string): AdminSection | null {
+  if (pathname.startsWith(`/${slug}/configuracion`)) return "configuracion"
+  if (pathname.startsWith(`/${slug}/turnoadmin`)) return "turnos"
+  if (pathname.startsWith(`/${slug}/libretasanitaria`)) return "libreta"
+  if (pathname.startsWith(`/${slug}/clientes`)) return "clientes"
+  if (pathname.startsWith(`/${slug}/admin`)) return "dashboard"
+  return null
 }
 
 export function VetAdminLayout({ slug, children }: Props) {
@@ -25,6 +37,7 @@ export function VetAdminLayout({ slug, children }: Props) {
   const pathname = usePathname()
   const [checking, setChecking] = useState(true)
   const [vetNombre, setVetNombre] = useState<string>("")
+  const [role, setRole] = useState<UserRole | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -34,14 +47,23 @@ export function VetAdminLayout({ slug, children }: Props) {
       getUserRole(user.uid),
       getUsuarioData(user.uid),
       getDoc(doc(db, "veterinarias", slug, "config", "datos")),
-    ]).then(([role, userData, cfgSnap]) => {
+    ]).then(([userRole, userData, cfgSnap]) => {
       const userTenantId = userData?.tenantId as string | undefined
-      const isOwner = userTenantId === slug || role === "superadmin"
+      // Acceso: superadmin, o pertenece al tenant (veterinario/empleado con tenantId === slug)
+      const perteneceAlTenant = userTenantId === slug && (userRole === "veterinario" || userRole === "empleado")
+      const isOwner = perteneceAlTenant || userRole === "superadmin"
       if (!isOwner) { router.push("/"); return }
+      setRole(userRole)
+      // Guard de sección: empleado no accede a configuración
+      const section = sectionFromPath(pathname, slug)
+      if (section && !canAccessSection(userRole, section)) {
+        router.push(`/${slug}/admin`)
+        return
+      }
       setVetNombre(cfgSnap.exists() ? (cfgSnap.data().nombre || slug) : slug)
       setChecking(false)
     })
-  }, [user, authLoading, slug, router])
+  }, [user, authLoading, slug, router, pathname])
 
   if (authLoading || checking) {
     return (
@@ -51,13 +73,13 @@ export function VetAdminLayout({ slug, children }: Props) {
     )
   }
 
-  const navItems = [
-    { href: `/${slug}/admin`,            label: "Dashboard",    icon: LayoutDashboard },
-    { href: `/${slug}/turnoadmin`,       label: "Turnos",       icon: Calendar },
-    { href: `/${slug}/libretasanitaria`, label: "Libreta",      icon: FileText },
-    { href: `/${slug}/clientes`,         label: "Clientes",     icon: Users },
-    { href: `/${slug}/configuracion`,    label: "Configuracion", icon: Settings },
-  ]
+  const navItems = ([
+    { href: `/${slug}/admin`,            label: "Dashboard",     icon: LayoutDashboard, section: "dashboard" as const },
+    { href: `/${slug}/turnoadmin`,       label: "Turnos",        icon: Calendar,        section: "turnos" as const },
+    { href: `/${slug}/libretasanitaria`, label: "Libreta",       icon: FileText,        section: "libreta" as const },
+    { href: `/${slug}/clientes`,         label: "Clientes",      icon: Users,           section: "clientes" as const },
+    { href: `/${slug}/configuracion`,    label: "Configuracion", icon: Settings,        section: "configuracion" as const },
+  ]).filter((item) => canAccessSection(role, item.section))
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">

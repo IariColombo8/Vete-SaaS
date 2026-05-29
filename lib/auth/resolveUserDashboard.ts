@@ -19,13 +19,18 @@ export async function resolveUserDashboard(uid: string): Promise<DashboardResolu
     return { role, tenantId: null, redirectTo: "/superadmin" }
   }
 
-  if (role === "veterinario") {
+  if (role === "veterinario" || role === "empleado") {
     const data = await getUsuarioData(uid)
     const tenantId = (data?.tenantId as string) || null
     return {
       role,
       tenantId,
-      redirectTo: tenantId ? `/${tenantId}/admin` : "/registro",
+      // El empleado sin tenant no debería existir; si pasa, lo mandamos a sus turnos.
+      redirectTo: tenantId
+        ? `/${tenantId}/admin`
+        : role === "veterinario"
+        ? "/registro"
+        : "/mis-turnos",
     }
   }
 

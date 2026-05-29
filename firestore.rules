@@ -33,9 +33,21 @@ service cloud.firestore {
           && userTenantId() == tenantId;
     }
 
-    // Puede acceder al tenant (dueño o superadmin)
+    // Pertenece al staff del tenant (veterinario o empleado)
+    function isTenantStaff(tenantId) {
+      return isSignedIn()
+          && (userRole() == 'veterinario' || userRole() == 'empleado')
+          && userTenantId() == tenantId;
+    }
+
+    // Puede acceder a la configuración del tenant (solo dueño o superadmin)
     function canAccessTenant(tenantId) {
       return isSuperAdmin() || isTenantOwner(tenantId);
+    }
+
+    // Puede operar el tenant: turnos, clientes, días (incluye empleados)
+    function canOperateTenant(tenantId) {
+      return isSuperAdmin() || isTenantStaff(tenantId);
     }
 
     // ── usuarios ─────────────────────────────────────────────────────────────
@@ -113,7 +125,7 @@ service cloud.firestore {
       //   - update: tenant owner/superadmin full, o cliente solo para cancelar
       //   - delete: solo tenant owner o superadmin
       match /turnos/{turnoId} {
-        allow read: if canAccessTenant(tenantId)
+        allow read: if canOperateTenant(tenantId)
           || (isSignedIn() && resource.data.cliente.email == request.auth.token.email);
 
         allow create: if isSignedIn()
@@ -125,14 +137,14 @@ service cloud.firestore {
           && request.resource.data.estado == 'pendiente';
 
         // Cliente puede cancelar su propio turno (cambiar solo estado a cancelado)
-        allow update: if canAccessTenant(tenantId)
+        allow update: if canOperateTenant(tenantId)
           || (isSignedIn()
               && resource.data.cliente.email == request.auth.token.email
               && request.resource.data.estado == 'cancelado'
               && resource.data.estado == 'pendiente'
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']));
 
-        allow delete: if canAccessTenant(tenantId);
+        allow delete: if canOperateTenant(tenantId);
       }
 
       // Días bloqueados:
@@ -140,25 +152,37 @@ service cloud.firestore {
       //   - escritura: solo el tenant
       match /diasBloqueados/{diaId} {
         allow read: if true;
-        allow write: if canAccessTenant(tenantId);
+        allow write: if canOperateTenant(tenantId);
       }
 
-      // Clientes y toda su jerarquía: solo el tenant
+      // Clientes y toda su jerarquía: staff del tenant (vet, empleado) o superadmin
       match /clientes/{clienteId} {
-        allow read, write: if canAccessTenant(tenantId);
+        allow read, write: if canOperateTenant(tenantId);
 
         match /mascotas/{mascotaId} {
-          allow read, write: if canAccessTenant(tenantId);
+          allow read, write: if canOperateTenant(tenantId);
 
           match /historias/{historiaId} {
-            allow read, write: if canAccessTenant(tenantId);
+            allow read, write: if canOperateTenant(tenantId);
           }
 
           match /historiaClinica/{doc} {
-            allow read, write: if canAccessTenant(tenantId);
+            allow read, write: if canOperateTenant(tenantId);
           }
         }
       }
+    }
+
+    // ── invitaciones ───────────────────────────────────────────────────────────
+    // Las crea/gestiona el dueño del tenant (veterinario) o superadmin.
+    // La aceptación (cambio a "aceptada" + asignación de rol) ocurre server-side
+    // vía Admin SDK, que ignora estas reglas.
+    match /invitaciones/{invId} {
+      allow read: if isSuperAdmin() || isTenantOwner(resource.data.tenantId);
+      allow create: if isSuperAdmin() || isTenantOwner(request.resource.data.tenantId);
+      allow delete: if isSuperAdmin() || isTenantOwner(resource.data.tenantId);
+      // Update solo superadmin desde cliente; el server usa Admin SDK.
+      allow update: if isSuperAdmin();
     }
   }
 }

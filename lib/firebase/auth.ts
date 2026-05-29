@@ -80,10 +80,27 @@ const createOrUpdateUser = async (user: User) => {
 
 // ── Exports públicos ──────────────────────────────────────────────────────────
 
+/**
+ * Si hay una invitación pendiente para este usuario, la acepta server-side
+ * (asigna role/tenantId). Best-effort: no bloquea el login si falla.
+ */
+const aceptarInvitacionPendiente = async (user: User) => {
+  try {
+    const token = await user.getIdToken()
+    await fetch("/api/invitaciones/aceptar", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch (error) {
+    console.error("Error al aceptar invitación pendiente:", error)
+  }
+}
+
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider()
   const result = await signInWithPopup(auth, provider)
   await createOrUpdateUser(result.user)
+  await aceptarInvitacionPendiente(result.user)
   return result
 }
 
@@ -138,10 +155,10 @@ export const updateUsuario = async (uid: string, data: Record<string, unknown>):
   }
 }
 
-/** Verifica si el usuario tiene rol admin (veterinario o superadmin). */
+/** Verifica si el usuario tiene acceso al panel admin (veterinario, empleado o superadmin). */
 export const checkIfUserIsAdmin = async (uid: string): Promise<boolean> => {
   const role = await getUserRole(uid)
-  return role === "veterinario" || role === "superadmin"
+  return role === "veterinario" || role === "empleado" || role === "superadmin"
 }
 
 export { onAuthStateChanged }
