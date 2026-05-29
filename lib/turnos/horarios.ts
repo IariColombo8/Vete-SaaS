@@ -60,3 +60,54 @@ export function generateTimeSlotsConSiesta(
 export function getHorarioForDay(dayOfWeek: number, horarios: HorarioTenant[]): HorarioTenant | null {
   return horarios.find((h) => diaToWeekdays(h.dia).includes(dayOfWeek)) ?? null
 }
+
+/** Cantidad de slots horarios (de 1h) que ocupa una duración en minutos. */
+export function slotsParaDuracion(duracionMin: number | undefined): number {
+  return Math.max(1, Math.ceil((duracionMin ?? 60) / 60))
+}
+
+function horaToNum(hora: string): number {
+  return parseInt(hora.split(":")[0], 10)
+}
+
+export interface TurnoOcupado {
+  hora: string
+  duracionMin?: number
+}
+
+/**
+ * Calcula los slots de inicio disponibles considerando duración variable.
+ * Un slot S está disponible si los `slotsParaDuracion(newDuracionMin)` slots
+ * consecutivos desde S existen en `slots` (horario laboral) y ninguno está
+ * ocupado por un turno existente (cada uno expande según su propia duración).
+ */
+export function computeAvailableSlots(
+  slots: string[],
+  ocupados: TurnoOcupado[],
+  newDuracionMin: number,
+): string[] {
+  const slotSet = new Set(slots)
+  const horasSlots = slots.map(horaToNum)
+
+  // Horas ocupadas (expandidas por la duración de cada turno existente)
+  const horasOcupadas = new Set<number>()
+  for (const o of ocupados) {
+    const inicio = horaToNum(o.hora)
+    const bloques = slotsParaDuracion(o.duracionMin)
+    for (let i = 0; i < bloques; i++) horasOcupadas.add(inicio + i)
+  }
+
+  const bloquesNuevo = slotsParaDuracion(newDuracionMin)
+
+  return slots.filter((slot) => {
+    const inicio = horaToNum(slot)
+    for (let i = 0; i < bloquesNuevo; i++) {
+      const h = inicio + i
+      // Cada hora del nuevo turno debe ser un slot laboral válido y estar libre
+      const horaStr = `${h.toString().padStart(2, "0")}:00`
+      if (!slotSet.has(horaStr)) return false
+      if (horasOcupadas.has(h)) return false
+    }
+    return true
+  }).filter((slot) => horasSlots.includes(horaToNum(slot)))
+}

@@ -4,6 +4,8 @@ import {
   generateTimeSlots,
   generateTimeSlotsConSiesta,
   getHorarioForDay,
+  computeAvailableSlots,
+  slotsParaDuracion,
 } from "./horarios"
 import type { HorarioTenant } from "@/lib/firebase/firestore"
 
@@ -75,5 +77,45 @@ describe("getHorarioForDay", () => {
 
   it("devuelve null para un día sin horario (domingo = 0)", () => {
     expect(getHorarioForDay(0, horarios)).toBeNull()
+  })
+})
+
+describe("slotsParaDuracion", () => {
+  it("redondea hacia arriba a bloques de 1h, mínimo 1", () => {
+    expect(slotsParaDuracion(60)).toBe(1)
+    expect(slotsParaDuracion(90)).toBe(2)
+    expect(slotsParaDuracion(120)).toBe(2)
+    expect(slotsParaDuracion(30)).toBe(1)
+    expect(slotsParaDuracion(undefined)).toBe(1)
+  })
+})
+
+describe("computeAvailableSlots", () => {
+  const slots = ["09:00", "10:00", "11:00", "12:00"]
+
+  it("sin ocupados y duración 60, todos disponibles", () => {
+    expect(computeAvailableSlots(slots, [], 60)).toEqual(slots)
+  })
+
+  it("bloquea el slot ocupado (duración 60)", () => {
+    const r = computeAvailableSlots(slots, [{ hora: "10:00", duracionMin: 60 }], 60)
+    expect(r).toEqual(["09:00", "11:00", "12:00"])
+  })
+
+  it("un turno de 120 min ocupa dos horas", () => {
+    const r = computeAvailableSlots(slots, [{ hora: "10:00", duracionMin: 120 }], 60)
+    expect(r).toEqual(["09:00", "12:00"])
+  })
+
+  it("un servicio nuevo de 120 min necesita dos slots consecutivos libres", () => {
+    // 11:00 ocupado → 10:00 no sirve (10-12 choca), 11:00 ocupado, 12:00 no tiene 13:00
+    const r = computeAvailableSlots(slots, [{ hora: "11:00", duracionMin: 60 }], 120)
+    expect(r).toEqual(["09:00"])
+  })
+
+  it("no ofrece un inicio cuyo bloque excede el horario laboral", () => {
+    const r = computeAvailableSlots(slots, [], 120)
+    // 12:00 no tiene 13:00 disponible
+    expect(r).toEqual(["09:00", "10:00", "11:00"])
   })
 })

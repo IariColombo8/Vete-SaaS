@@ -10,7 +10,7 @@
 |------|--------|----------|
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
-| 3. Producto Completo | EN CURSO | 5/8 |
+| 3. Producto Completo | EN CURSO | 7/8 |
 | 4. Infraestructura y DevOps | EN CURSO | 4/11 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
 
@@ -78,8 +78,8 @@
 
 ### 3.3 Agenda avanzada
 
-- [ ] **3.3.1** Múltiples profesionales por veterinaria con agendas independientes
-- [ ] **3.3.2** Duración variable por servicio (hoy todo es 1h)
+- [x] **3.3.1** Múltiples profesionales con agendas independientes: `Profesional` en `TurnoConfig.profesionales`, selector en booking (`ServicioSection`), disponibilidad filtrada por profesional, persistido en turno (`profesionalId`/`profesionalNombre`), visible en admin. Backward-compatible (sin profesionales = agenda única).
+- [x] **3.3.2** Duración variable por servicio: `ServicioTurnoConfig.duracionMin`, helper puro `computeAvailableSlots` (consciente de duración, con tests), persistido en turno (`duracionMin`), config UI con campo de duración, mostrado en booking y admin.
 - [x] **3.3.3** Confirmación por parte del vet: estado `confirmado` añadido (pendiente → confirmado → completado). Disponibilidad considera ambos estados como ocupados.
 
 ---
@@ -162,3 +162,4 @@
 | 2026-05-29 | 4.2.1 GitHub Actions CI | Completado |
 | 2026-05-29 | 4.4.1 Rename package a vetpanel | Completado |
 | 2026-05-29 | 3.1.2 QR + libreta pública con token | Completado |
+| 2026-05-29 | 3.3.1/3.3.2 Agenda avanzada (profesionales + duración) | Completado |

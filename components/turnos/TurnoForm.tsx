@@ -124,6 +124,7 @@ export function TurnoForm({
               formData={formData}
               handleChange={handleChange}
               serviciosConfig={turnoConfig?.servicios}
+              profesionales={turnoConfig?.profesionales}
             />
 
             {/* Vacunas - Solo se muestra si el servicio es vacunacion y hay vacunas para ese animal */}

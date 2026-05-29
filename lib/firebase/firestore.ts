@@ -133,6 +133,16 @@ export interface ServicioTurnoConfig {
   emoji: string
   nombre: string
   descripcion?: string
+  /** Duración del turno en minutos (default 60). Define cuántos slots ocupa. */
+  duracionMin?: number
+}
+
+/** Profesional con agenda propia dentro de la veterinaria */
+export interface Profesional {
+  id: string
+  nombre: string
+  /** false = no recibe turnos nuevos. Default true. */
+  activo?: boolean
 }
 
 /** Vacuna disponible para un tipo de mascota */
@@ -148,6 +158,8 @@ export interface TurnoConfig {
   servicios?: ServicioTurnoConfig[]
   /** Vacunas agrupadas por tipo de mascota: { perro: [...], gato: [...] } */
   vacunas?: Record<string, VacunaTurnoConfig[]>
+  /** Profesionales con agendas independientes. Vacío/ausente = agenda única. */
+  profesionales?: Profesional[]
 }
 
 /** Todo vive en veterinarias/{slug}/config/datos */
@@ -346,6 +358,11 @@ export interface Turno {
   servicio?: string
   fecha?: string
   hora?: string
+  /** Duración del turno en minutos (snapshot del servicio al reservar; default 60). */
+  duracionMin?: number
+  /** Profesional asignado (agenda independiente). Ausente = agenda única. */
+  profesionalId?: string
+  profesionalNombre?: string
   turno: {
     fecha: string
     hora: string
@@ -757,6 +774,9 @@ export async function createTurno(tenantId: string, turnoData: Partial<Turno>): 
       vacunas:  turnoData.vacunas  || [],
       fecha:    turnoData.fecha    || turnoData.turno?.fecha || "",
       hora:     turnoData.hora     || turnoData.turno?.hora  || "",
+      duracionMin: turnoData.duracionMin ?? 60,
+      profesionalId:     turnoData.profesionalId     ?? "",
+      profesionalNombre: turnoData.profesionalNombre ?? "",
       turno: {
         fecha:     turnoData.fecha || turnoData.turno?.fecha || "",
         hora:      turnoData.hora  || turnoData.turno?.hora  || "",

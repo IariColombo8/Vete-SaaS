@@ -7,25 +7,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText } from "lucide-react";
-import type { ServicioTurnoConfig } from "@/lib/firebase/firestore";
+import { FileText, UserRound } from "lucide-react";
+import type { ServicioTurnoConfig, Profesional } from "@/lib/firebase/firestore";
 import { SERVICIOS_DEFAULT } from "@/lib/turno-defaults";
 
 interface ServicioSectionProps {
   formData: {
     servicio: string;
     motivo: string;
+    profesionalId?: string;
   };
   handleChange: (field: string, value: string) => void;
   serviciosConfig?: ServicioTurnoConfig[];
+  profesionales?: Profesional[];
 }
 
 export function ServicioSection({
   formData,
   handleChange,
   serviciosConfig,
+  profesionales,
 }: ServicioSectionProps) {
   const servicios = serviciosConfig?.length ? serviciosConfig : SERVICIOS_DEFAULT;
+  const profesionalesActivos = (profesionales ?? []).filter((p) => p.activo !== false);
 
   return (
     <>
@@ -52,6 +56,9 @@ export function ServicioSection({
                 <div className="flex flex-col items-start py-2">
                   <span className="font-semibold text-sm">
                     {s.emoji} {s.nombre}
+                    {s.duracionMin && s.duracionMin !== 60 ? (
+                      <span className="ml-1 text-xs text-muted-foreground">({s.duracionMin} min)</span>
+                    ) : null}
                   </span>
                   {s.descripcion && (
                     <span className="text-xs text-muted-foreground mt-0.5">
@@ -64,6 +71,30 @@ export function ServicioSection({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Selector de profesional (solo si la veterinaria configuró profesionales) */}
+      {profesionalesActivos.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="profesional" className="text-sm font-semibold flex items-center gap-2">
+            <UserRound className="h-4 w-4" />
+            Profesional
+          </Label>
+          <Select
+            value={formData.profesionalId || "cualquiera"}
+            onValueChange={(value) => handleChange("profesionalId", value === "cualquiera" ? "" : value)}
+          >
+            <SelectTrigger id="profesional" className="h-auto min-h-[44px] border-2">
+              <SelectValue placeholder="Cualquier profesional disponible" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cualquiera">Cualquier profesional disponible</SelectItem>
+              {profesionalesActivos.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="motivo" className="text-sm font-semibold">

@@ -281,8 +281,20 @@ export function TurnoDetailsModal({
               </p>
               <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">
                 {turno.servicio || "No especificado"}
+                {turno.duracionMin && turno.duracionMin !== 60 ? ` · ${turno.duracionMin} min` : ""}
               </p>
             </div>
+
+            {turno.profesionalNombre && (
+              <div className="mt-2 sm:mt-3">
+                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Profesional
+                </p>
+                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {turno.profesionalNombre}
+                </p>
+              </div>
+            )}
 
             {/* NUEVO: Mostrar vacunas si el servicio es vacunación */}
             {turno.servicio === "vacunacion" && turno.vacunas && turno.vacunas.length > 0 && (

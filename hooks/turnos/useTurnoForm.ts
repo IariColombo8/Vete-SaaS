@@ -17,6 +17,7 @@ import {
   generateTimeSlots,
   generateTimeSlotsConSiesta,
   getHorarioForDay,
+  computeAvailableSlots,
 } from "@/lib/turnos/horarios"
 
 // ── Horario helpers (exported for use in FechaHoraSection) ───────────────────
@@ -77,6 +78,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
     servicio: "", motivo: "", fecha: "", hora: "",
     vacunas: [] as string[],
     lugar: "" as string,
+    profesionalId: "" as string,
   })
 
   const { clienteExistente, mascotas, mostrarNuevaMascota, setMostrarNuevaMascota, loadingCliente } =
@@ -119,9 +121,13 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
   useEffect(() => {
     if (!selectedDate) return
     const fechaSeleccionada = format(selectedDate, "yyyy-MM-dd")
+
+    // Turnos del día que ocupan agenda. Si hay profesional seleccionado, solo los suyos.
     const ocupados = turnosExistentes
       .filter((t) => t.turno?.fecha === fechaSeleccionada && t.estado !== "cancelado")
-      .map((t) => t.turno?.hora)
+      .filter((t) => !formData.profesionalId || (t.profesionalId ?? "") === formData.profesionalId)
+      .map((t) => ({ hora: t.turno?.hora ?? "", duracionMin: t.duracionMin }))
+      .filter((o) => o.hora)
 
     let todos: string[]
     if (tenantHorarios.length > 0) {
@@ -144,10 +150,14 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       todos = filtrarHorariosHoy(todos, minHoras)
     }
 
-    const disponibles = todos.filter(h => !ocupados.includes(h))
+    // Duración del servicio seleccionado (define cuántos slots ocupa el nuevo turno)
+    const servicioSel = turnoConfig?.servicios?.find((s) => s.id === formData.servicio)
+    const duracionNueva = servicioSel?.duracionMin ?? 60
+
+    const disponibles = computeAvailableSlots(todos, ocupados, duracionNueva)
     setHorariosDisponibles(disponibles)
     if (formData.hora && !disponibles.includes(formData.hora)) handleChange("hora", "")
-  }, [selectedDate, turnosExistentes, tenantHorarios, turnoConfig, tenantConfig])
+  }, [selectedDate, turnosExistentes, tenantHorarios, turnoConfig, tenantConfig, formData.profesionalId, formData.servicio])
 
   const handleChange = (field: string, value: string) => {
     if (lockDni && field === "dni") return
@@ -226,12 +236,18 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
         })
       }
 
+      const servicioSel = turnoConfig?.servicios?.find((s) => s.id === formData.servicio)
+      const profesionalSel = turnoConfig?.profesionales?.find((p) => p.id === formData.profesionalId)
+
       await createTurno(tenantId, {
         clienteId,
         mascotaId: mascotaId || "",
         cliente: { nombre: formData.nombre, telefono: formData.telefono, email: formData.email, dni: formData.dni, domicilio: formData.domicilio },
         mascota: { nombre: formData.nombreMascota, tipo: formData.tipoMascota, motivo: formData.motivo },
         servicio: formData.servicio, fecha: formData.fecha, hora: formData.hora,
+        duracionMin: servicioSel?.duracionMin ?? 60,
+        profesionalId: formData.profesionalId || "",
+        profesionalNombre: profesionalSel?.nombre ?? "",
         estado: "pendiente", vacunas: formData.vacunas,
       })
 

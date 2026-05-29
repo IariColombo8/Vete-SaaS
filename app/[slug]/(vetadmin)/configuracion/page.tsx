@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useSlug } from "@/context/slug-context"
 import { getTenantConfig, updateTenantConfig, getTurnoConfig, updateTurnoConfig } from "@/lib/firebase/firestore"
-import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig } from "@/lib/firebase/firestore"
+import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional } from "@/lib/firebase/firestore"
 import { MASCOTAS_DEFAULT, SERVICIOS_DEFAULT, VACUNAS_DEFAULT } from "@/lib/turno-defaults"
 import { storage } from "@/lib/firebase/config"
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
@@ -58,6 +58,7 @@ export default function ConfiguracionPage() {
   const [mascotas, setMascotas] = useState<MascotaTurnoConfig[]>(MASCOTAS_DEFAULT)
   const [serviciosTurno, setServiciosTurno] = useState<ServicioTurnoConfig[]>(SERVICIOS_DEFAULT)
   const [vacunas, setVacunas] = useState<Record<string, VacunaTurnoConfig[]>>(VACUNAS_DEFAULT)
+  const [profesionales, setProfesionales] = useState<Profesional[]>([])
 
   useEffect(() => {
     Promise.all([getTenantConfig(slug), getTurnoConfig(slug)]).then(([cfg, turnoCfg]) => {
@@ -78,6 +79,7 @@ export default function ConfiguracionPage() {
         if (turnoCfg.mascotas?.length) setMascotas(turnoCfg.mascotas)
         if (turnoCfg.servicios?.length) setServiciosTurno(turnoCfg.servicios)
         if (turnoCfg.vacunas && Object.keys(turnoCfg.vacunas).length > 0) setVacunas(turnoCfg.vacunas)
+        if (turnoCfg.profesionales?.length) setProfesionales(turnoCfg.profesionales)
       }
       setLoadingData(false)
     })
@@ -294,6 +296,22 @@ export default function ConfiguracionPage() {
       }
       return updated
     }))
+  }
+
+  function updateServicioTurnoDuracion(i: number, value: string) {
+    const n = parseInt(value, 10)
+    setServiciosTurno(prev => prev.map((s, idx) => idx === i ? { ...s, duracionMin: Number.isNaN(n) ? undefined : n } : s))
+  }
+
+  // ── Profesionales handlers ──
+  function addProfesional() {
+    setProfesionales(prev => [...prev, { id: `prof-${Date.now()}`, nombre: "", activo: true }])
+  }
+  function removeProfesional(i: number) {
+    setProfesionales(prev => prev.filter((_, idx) => idx !== i))
+  }
+  function updateProfesional(i: number, field: keyof Profesional, value: string | boolean) {
+    setProfesionales(prev => prev.map((p, idx) => idx === i ? { ...p, [field]: value } : p))
   }
 
   // ── Vacunas handlers ──
@@ -1005,6 +1023,10 @@ export default function ConfiguracionPage() {
                           <Label className="text-xs">Descripcion</Label>
                           <Input value={s.descripcion ?? ""} onChange={e => updateServicioTurnoField(i, "descripcion", e.target.value)} placeholder="Breve descripcion..." className="h-9" />
                         </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Duracion (min)</Label>
+                          <Input type="number" min={15} step={15} value={s.duracionMin ?? 60} onChange={e => updateServicioTurnoDuracion(i, e.target.value)} placeholder="60" className="h-9 font-mono" />
+                        </div>
                       </div>
                       <Button variant="ghost" size="icon" type="button" className="h-8 w-8 text-muted-foreground hover:text-destructive mt-5" onClick={() => removeServicioTurno(i)}>
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1072,6 +1094,63 @@ export default function ConfiguracionPage() {
                     : <><Save className="mr-2 h-4 w-4" />Guardar vacunas</>
                   }
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* ── PROFESIONALES (agendas independientes) ── */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Stethoscope className="h-4 w-4" />
+                      Profesionales
+                    </CardTitle>
+                    <CardDescription>
+                      Si cargás profesionales, cada uno tiene su propia agenda y el cliente puede elegir con quién atenderse. Dejalo vacío para usar una agenda única.
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" type="button" onClick={addProfesional}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Agregar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {profesionales.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Sin profesionales. Agenda única para toda la veterinaria.
+                    </p>
+                  )}
+                  {profesionales.map((p, i) => (
+                    <div key={p.id} className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                      <div className="flex-1">
+                        <Input value={p.nombre} onChange={e => updateProfesional(i, "nombre", e.target.value)} placeholder="Ej: Dra. Priscila" className="h-9" />
+                      </div>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground select-none whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={p.activo !== false}
+                          onChange={e => updateProfesional(i, "activo", e.target.checked)}
+                          className="rounded"
+                        />
+                        Activo
+                      </label>
+                      <Button variant="ghost" size="icon" type="button" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeProfesional(i)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700" disabled={saving === "profesionales"} onClick={() => saveTurno("profesionales", { profesionales: profesionales.filter(p => p.nombre.trim()) })} type="button">
+                    {saving === "profesionales"
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                      : <><Save className="mr-2 h-4 w-4" />Guardar profesionales</>
+                    }
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
