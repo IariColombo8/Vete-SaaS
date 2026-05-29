@@ -11,7 +11,7 @@
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | EN CURSO | 7/8 |
-| 4. Infraestructura y DevOps | EN CURSO | 4/11 |
+| 4. Infraestructura y DevOps | EN CURSO | 5/11 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
 
 ---
@@ -99,7 +99,7 @@
 
 ### 4.3 Monitoring
 
-- [ ] **4.3.1** Sentry para error tracking
+- [x] **4.3.1** Sentry (env-gated): `instrumentation.ts`/`instrumentation-client.ts` + configs server/edge/client que solo inicializan con DSN; helper `lib/monitoring.ts` `captureException`. Sin DSN queda inerte.
 - [ ] **4.3.2** Eventos custom en Vercel Analytics
 
 ### 4.4 Refactoring
@@ -163,3 +163,4 @@
 | 2026-05-29 | 4.4.1 Rename package a vetpanel | Completado |
 | 2026-05-29 | 3.1.2 QR + libreta pública con token | Completado |
 | 2026-05-29 | 3.3.1/3.3.2 Agenda avanzada (profesionales + duración) | Completado |
+| 2026-05-29 | 4.3.1 Sentry scaffold env-gated | Completado |
