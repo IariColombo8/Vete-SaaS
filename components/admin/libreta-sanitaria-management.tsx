@@ -69,8 +69,10 @@ import {
   Image,
   Film,
   File,
+  FileDown,
 } from "lucide-react";
 import LibretaDetallesModal from "./LibretaDetallesModal";
+import { generarLibretaPDF } from "@/lib/pdf/libreta-pdf";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -849,6 +851,15 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-[10px]">{visitasReales.length} visitas</Badge>
                           {proximos > 0 && <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">{proximos} próximo{proximos !== 1 ? "s" : ""}</Badge>}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
+                            onClick={() => generarLibretaPDF(clienteExpandido.cliente, m, visitasReales)}
+                            title="Descargar libreta en PDF"
+                          >
+                            <FileDown className="h-5 w-5" />
+                          </Button>
                           <Button size="sm" className="h-11 w-11 p-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0" onClick={() => openAddNota(clienteExpandido.cliente, m)} title="Agregar nota clínica"><Plus className="h-6 w-6" /></Button>
                         </div>
                       </div>

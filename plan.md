@@ -10,7 +10,7 @@
 |------|--------|----------|
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
-| 3. Producto Completo | EN CURSO | 3/8 |
+| 3. Producto Completo | EN CURSO | 4/8 |
 | 4. Infraestructura y DevOps | PENDIENTE | 0/8 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
 
@@ -67,7 +67,7 @@
 
 ### 3.1 Libreta sanitaria digital
 
-- [ ] **3.1.1** PDF exportable de libreta sanitaria
+- [x] **3.1.1** PDF exportable de libreta sanitaria: `lib/pdf/libreta-pdf.ts` (jsPDF) genera datos de mascota + dueño + historial cronológico. Botón de descarga en la cabecera de cada mascota en `libreta-sanitaria-management`.
 - [ ] **3.1.2** QR code por mascota con enlace público a su libreta (requiere ruta pública + diseño de privacidad; feature `qrMascota` plan Pro)
 - [ ] **3.1.3** Recordatorios automáticos de vacunas (requiere modelo de calendario de vacunas por mascota; reutilizará cron de `vercel.json`)
 - [x] **3.1.4** Visualización de fotos en historial clínico — ya implementado: `LibretaDetallesModal` muestra adjuntos de imagen como miniaturas con enlace; upload en `libreta-sanitaria-management`.
@@ -157,3 +157,4 @@
 | 2026-05-29 | 3.3.3 Estado confirmado en turnos | Completado |
 | 2026-05-29 | 3.2.1 Analytics: servicios top + tasa cancelación | Completado |
 | 2026-05-29 | 3.1.4 Fotos en historial (ya existía) | Completado |
+| 2026-05-29 | 3.1.1 PDF de libreta sanitaria (jsPDF) | Completado |
