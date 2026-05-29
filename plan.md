@@ -11,7 +11,7 @@
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | EN CURSO | 4/8 |
-| 4. Infraestructura y DevOps | PENDIENTE | 0/8 |
+| 4. Infraestructura y DevOps | EN CURSO | 4/11 |
 | 5. Growth y Comercialización | PENDIENTE | 0/6 |
 
 ---
@@ -88,14 +88,14 @@
 
 ### 4.1 Testing
 
-- [ ] **4.1.1** Setup Vitest + React Testing Library
-- [ ] **4.1.2** Tests unitarios: `generateTimeSlots`, `diaToWeekdays`, `toId`, funciones de firestore
+- [x] **4.1.1** Setup Vitest + jsdom + Testing Library. `vitest.config.ts`, `vitest.setup.ts`, scripts `test`/`test:watch`/`test:coverage`/`typecheck`.
+- [x] **4.1.2** Tests unitarios: `diaToWeekdays`, `generateTimeSlots`, `generateTimeSlotsConSiesta`, `getHorarioForDay` (extraídos a `lib/turnos/horarios.ts`) y catálogo de planes (`planAllows`, `getPlanLimits`, `normalizePlan`). 19 tests verdes.
 - [ ] **4.1.3** Tests E2E con Playwright: booking completo, onboarding vet, login + redirect
 
 ### 4.2 CI/CD
 
-- [ ] **4.2.1** GitHub Actions: lint -> typecheck -> test -> build en cada PR
-- [ ] **4.2.2** Firestore Rules tests con `@firebase/rules-unit-testing`
+- [x] **4.2.1** GitHub Actions (`.github/workflows/ci.yml`): typecheck → test → build en push/PR a main. (Lint omitido: ESLint no está instalado en el proyecto.)
+- [ ] **4.2.2** Firestore Rules tests con `@firebase/rules-unit-testing` (requiere emulador Firebase)
 
 ### 4.3 Monitoring
 
@@ -104,7 +104,7 @@
 
 ### 4.4 Refactoring
 
-- [ ] **4.4.1** Renombrar package name a `"vetpanel"`
+- [x] **4.4.1** Package name renombrado a `"vetpanel"`.
 - [ ] **4.4.2** Eliminar rutas legacy (`/admin`, `/app/turno/page.tsx`, `/v/[slug]`)
 - [ ] **4.4.3** Tipar los `any` restantes en hooks
 - [ ] **4.4.4** Extraer `firestore.ts` en módulos: `turnos.ts`, `clientes.ts`, `tenants.ts`
@@ -158,3 +158,6 @@
 | 2026-05-29 | 3.2.1 Analytics: servicios top + tasa cancelación | Completado |
 | 2026-05-29 | 3.1.4 Fotos en historial (ya existía) | Completado |
 | 2026-05-29 | 3.1.1 PDF de libreta sanitaria (jsPDF) | Completado |
+| 2026-05-29 | 4.1.1/4.1.2 Vitest + tests unitarios (19) | Completado |
+| 2026-05-29 | 4.2.1 GitHub Actions CI | Completado |
+| 2026-05-29 | 4.4.1 Rename package a vetpanel | Completado |
