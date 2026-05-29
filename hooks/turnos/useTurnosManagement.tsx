@@ -130,6 +130,17 @@ export function useTurnosManagement(tenantId: string) {
     }
   }
 
+  const handleConfirm = async (turnoId: string, onSuccess: () => void) => {
+    try {
+      await updateTurno(tenantId, turnoId, { estado: "confirmado" })
+      toast({ title: "Turno confirmado" })
+      onSuccess() // turnos se actualizan via suscripción real-time
+    } catch (error) {
+      console.error("Error confirming turno:", error)
+      toast({ title: "Error", description: "No se pudo confirmar el turno", variant: "destructive" })
+    }
+  }
+
   const handleMarkCompleted = async (turnoId: string, onSuccess: () => void) => {
     try {
       await updateTurno(tenantId, turnoId, { estado: "completado" })
@@ -181,7 +192,7 @@ export function useTurnosManagement(tenantId: string) {
     blockedDates, selectedDate, setSelectedDate,
     fetchMascotaDetails, fetchTurnos,
     handleToggleBlockDate, handleToggleSingleDate,
-    handleToggleDateRange, handleMarkCompleted,
+    handleToggleDateRange, handleConfirm, handleMarkCompleted,
     handleCancel, handleDelete, handleSaveEdit,
   }
 }

@@ -60,6 +60,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
     handleToggleBlockDate,
     handleToggleSingleDate,
     handleToggleDateRange,
+    handleConfirm,
     handleMarkCompleted,
     handleCancel,
     handleDelete,
@@ -331,6 +332,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
         turno={selectedTurno}
         mascotaDetails={mascotaDetails}
         loadingMascota={loadingMascota}
+        onConfirm={(id) => handleConfirm(id, closeDetailsModal)}
         onMarkCompleted={(id) =>
           handleMarkCompleted(id, closeDetailsModal)
         }

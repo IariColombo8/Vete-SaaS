@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Turno, Mascota } from "@/lib/firebase/firestore";
 import {
   CheckCircle2,
+  CalendarCheck,
   XCircle,
   Edit,
   Trash2,
@@ -42,6 +43,7 @@ interface TurnoDetailsModalProps {
   turno: Turno | null;
   mascotaDetails: Mascota | null;
   loadingMascota: boolean;
+  onConfirm?: (turnoId: string) => void;
   onMarkCompleted: (turnoId: string) => void;
   onCancel: (turnoId: string) => void;
   onEdit: (turno: Turno) => void;
@@ -56,6 +58,13 @@ const getEstadoBadge = (estado: string) => {
         <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 border-0">
           <Clock className="h-3 w-3 mr-1" />
           Pendiente
+        </Badge>
+      );
+    case "confirmado":
+      return (
+        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950/50 dark:text-blue-300 border-0">
+          <CalendarCheck className="h-3 w-3 mr-1" />
+          Confirmado
         </Badge>
       );
     case "completado":
@@ -83,6 +92,7 @@ export function TurnoDetailsModal({
   turno,
   mascotaDetails,
   loadingMascota,
+  onConfirm,
   onMarkCompleted,
   onCancel,
   onEdit,
@@ -306,8 +316,17 @@ export function TurnoDetailsModal({
 
           {/* Acciones */}
           <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-slate-200 dark:border-slate-800">
-            {turno.estado === "pendiente" && (
+            {(turno.estado === "pendiente" || turno.estado === "confirmado") && (
               <>
+                {turno.estado === "pendiente" && onConfirm && (
+                  <Button
+                    onClick={() => turno.id && onConfirm(turno.id)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+                  >
+                    <CalendarCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    Confirmar
+                  </Button>
+                )}
                 <Button
                   onClick={() => turno.id && onMarkCompleted(turno.id)}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"

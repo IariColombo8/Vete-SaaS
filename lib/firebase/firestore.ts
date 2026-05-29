@@ -349,7 +349,7 @@ export interface Turno {
     hora: string
     timestamp: unknown
   }
-  estado: "pendiente" | "completado" | "cancelado"
+  estado: "pendiente" | "confirmado" | "completado" | "cancelado"
   vacunas?: string[]
   diagnostico?: string
   tratamiento?: string
@@ -751,7 +751,10 @@ export function subscribeTurnos(
   )
 }
 
-/** Turnos filtrados por rango de fechas (YYYY-MM-DD). Solo pendientes para disponibilidad. */
+/**
+ * Turnos filtrados por rango de fechas (YYYY-MM-DD). Incluye pendientes y
+ * confirmados: ambos ocupan slot para disponibilidad y aplican a recordatorios.
+ */
 export async function getTurnosByDateRange(
   tenantId: string,
   fechaDesde: string,
@@ -761,7 +764,7 @@ export async function getTurnosByDateRange(
     turnosCol(tenantId),
     where("turno.fecha", ">=", fechaDesde),
     where("turno.fecha", "<=", fechaHasta),
-    where("estado", "==", "pendiente"),
+    where("estado", "in", ["pendiente", "confirmado"]),
   )
   const snapshot = await getDocs(q)
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Turno)
