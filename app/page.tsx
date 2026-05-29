@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react"
 import { HeroCta } from "@/components/hero-cta"
+import { PricingCards } from "@/components/pricing/pricing-cards"
 
 // ─── Sección Hero ────────────────────────────────────────────────────────────
 function HeroSection() {
@@ -279,69 +280,6 @@ function FeatureGridSection() {
 
 // ─── Precios ──────────────────────────────────────────────────────────────────
 function PricingSection() {
-  type Plan = {
-    name: string
-    price: string
-    period: string
-    description: string
-    highlight: boolean
-    features: string[]
-    cta: string
-    ctaHref: string
-    muted?: boolean
-  }
-
-  const plans: Plan[] = [
-    {
-      name: "Básico",
-      price: "Gratis",
-      period: "",
-      description: "Para probar sin compromiso",
-      highlight: false,
-      features: [
-        "Hasta 10 turnos/mes",
-        "Reserva de turnos online",
-        "Confirmación por email",
-      ],
-      cta: "Empezar gratis",
-      ctaHref: "/registro",
-    },
-    {
-      name: "Plus",
-      price: "$30.000",
-      period: "/mes",
-      description: "Para clínicas en funcionamiento",
-      highlight: true,
-      features: [
-        "Turnos ilimitados",
-        "Acceso admin para veterinarios",
-        "Libreta sanitaria digital",
-        "Historial clínico completo",
-        "Gestión de clientes y mascotas",
-        "Link propio de la clínica",
-        "Confirmación por email",
-      ],
-      cta: "Contratar Plus",
-      ctaHref: "/registro",
-    },
-    {
-      name: "Pro",
-      price: "A medida",
-      period: "",
-      description: "Para clínicas que necesitan más",
-      highlight: false,
-      muted: true,
-      features: [
-        "Todo lo de Plus",
-        "Personalización total",
-        "Funciones a definir juntos",
-        "Soporte dedicado",
-      ],
-      cta: "Hablemos",
-      ctaHref: "/registro",
-    },
-  ]
-
   return (
     <section id="precios" className="bg-slate-900 py-24 border-y border-slate-800">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -351,60 +289,7 @@ function PricingSection() {
           <p className="mt-4 text-slate-400">Sin costos ocultos. Cancelás cuando quieras.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map(({ name, price, period, description, highlight, muted, features, cta, ctaHref }) => (
-            <div
-              key={name}
-              className={`relative rounded-2xl p-8 flex flex-col ${
-                highlight
-                  ? "border-2 border-emerald-500/50 bg-gradient-to-b from-emerald-500/10 to-slate-900 shadow-2xl shadow-emerald-500/10"
-                  : muted
-                  ? "border border-slate-700/50 bg-slate-800/30"
-                  : "border border-slate-700 bg-slate-800/50"
-              }`}
-            >
-              {highlight && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                    <Star className="h-3 w-3 fill-white" /> Más popular
-                  </span>
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h3 className={`text-lg font-bold mb-1 ${muted ? "text-slate-400" : "text-white"}`}>{name}</h3>
-                <p className="text-slate-500 text-sm mb-4">{description}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className={`text-4xl font-extrabold ${muted ? "text-slate-400" : "text-white"}`}>{price}</span>
-                  {period && <span className="text-slate-400 text-sm">{period}</span>}
-                </div>
-              </div>
-
-              <ul className="space-y-3 mb-8 flex-1">
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
-                    <Check className={`h-4 w-4 shrink-0 ${highlight ? "text-emerald-400" : muted ? "text-slate-600" : "text-slate-500"}`} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <Link href={ctaHref}>
-                <button
-                  className={`w-full rounded-xl py-3 text-sm font-semibold transition-all ${
-                    highlight
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-lg shadow-emerald-500/20 hover:scale-[1.02]"
-                      : muted
-                      ? "border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                      : "border border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-                  }`}
-                >
-                  {cta}
-                </button>
-              </Link>
-            </div>
-          ))}
-        </div>
+        <PricingCards />
       </div>
     </section>
   )

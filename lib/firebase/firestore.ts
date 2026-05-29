@@ -1,4 +1,5 @@
 import { db } from "./config"
+import { planAllows, getPlanLimits, type Feature } from "../plans"
 import {
   collection,
   getDocs,
@@ -144,6 +145,16 @@ export async function getTenantConfig(tenantId: string): Promise<TenantConfig | 
 
 export async function updateTenantConfig(tenantId: string, data: Partial<TenantConfig>): Promise<void> {
   await setDoc(configDoc_(tenantId), data, { merge: true })
+}
+
+/**
+ * Feature-gating: ¿el tenant puede usar la feature según su plan?
+ * Resuelve el plan desde Firestore. Para chequeos síncronos cuando ya se tiene
+ * el plan en mano, usar `planAllows(plan, feature)` de `lib/plans`.
+ */
+export async function canUseFeature(tenantId: string, feature: Feature): Promise<boolean> {
+  const config = await getTenantConfig(tenantId)
+  return planAllows(config?.plan, feature)
 }
 
 // ── Turno Config CRUD ──
@@ -606,7 +617,8 @@ export async function createTurno(tenantId: string, turnoData: Partial<Turno>): 
       throw new Error("TENANT_PAUSED")
     }
 
-    if (plan === "basico" && countMes >= 10) {
+    const maxTurnosMes = getPlanLimits(plan).maxTurnosMes
+    if (maxTurnosMes !== null && countMes >= maxTurnosMes) {
       throw new Error("PLAN_LIMIT_REACHED")
     }
 

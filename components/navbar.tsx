@@ -383,7 +383,7 @@ function VetPublicNavbar() {
 export function Navbar() {
   const pathname = usePathname()
 
-  if (pathname === "/") return <SaasNavbar />
+  if (pathname === "/" || pathname === "/pricing") return <SaasNavbar />
   if (pathname.startsWith("/superadmin")) return <SuperAdminNavbar />
 
   // Vet admin pages have their own nav via VetAdminLayout

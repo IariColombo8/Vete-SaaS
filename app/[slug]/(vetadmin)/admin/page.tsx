@@ -6,6 +6,7 @@ import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
 import { getTenantConfig, getTurnosDelMes } from "@/lib/firebase/firestore"
 import type { TenantConfig } from "@/lib/firebase/firestore"
+import { getPlanLimits } from "@/lib/plans"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -54,6 +55,7 @@ export default function DashboardPage() {
 
   const plan = config?.plan ?? "basico"
   const pi = planInfo[plan] ?? planInfo.basico
+  const maxTurnos = getPlanLimits(plan).maxTurnosMes
 
   const sections = [
     {
@@ -136,39 +138,45 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Uso del plan — solo visible en plan básico */}
-        {plan === "basico" && turnosMes !== null && (
-          <div className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-4 text-sm
-            ${turnosMes >= 10
-              ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-              : turnosMes >= 7
-              ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
-              : "bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
-            }`}
-          >
-            <div>
-              <p className={`font-semibold ${turnosMes >= 10 ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
-                {turnosMes >= 10
-                  ? "Límite del plan alcanzado"
-                  : `Turnos este mes: ${turnosMes} / 10`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {turnosMes >= 10
-                  ? "No se pueden agendar más turnos este mes. Contactá a VetPanel para subir de plan."
-                  : `Te quedan ${10 - turnosMes} turno${10 - turnosMes === 1 ? "" : "s"} disponibles en el plan Básico.`}
-              </p>
-            </div>
-            <div className="shrink-0 w-24">
-              <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${turnosMes >= 10 ? "bg-red-500" : turnosMes >= 7 ? "bg-amber-500" : "bg-emerald-500"}`}
-                  style={{ width: `${Math.min((turnosMes / 10) * 100, 100)}%` }}
-                />
+        {/* Uso del plan — visible cuando el plan tiene límite mensual */}
+        {maxTurnos !== null && turnosMes !== null && (() => {
+          const alcanzado = turnosMes >= maxTurnos
+          const cercaDelTope = turnosMes >= maxTurnos * 0.7
+          const restantes = Math.max(maxTurnos - turnosMes, 0)
+          const porcentaje = Math.min(Math.round((turnosMes / maxTurnos) * 100), 100)
+          return (
+            <div className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-4 text-sm
+              ${alcanzado
+                ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                : cercaDelTope
+                ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+                : "bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+              }`}
+            >
+              <div>
+                <p className={`font-semibold ${alcanzado ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
+                  {alcanzado
+                    ? "Límite del plan alcanzado"
+                    : `Turnos este mes: ${turnosMes} / ${maxTurnos}`}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {alcanzado
+                    ? "No se pueden agendar más turnos este mes. Mejorá tu plan para ampliar el límite."
+                    : `Te quedan ${restantes} turno${restantes === 1 ? "" : "s"} disponibles en el plan ${pi.label}.`}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground text-right mt-1">{Math.round((turnosMes / 10) * 100)}%</p>
+              <div className="shrink-0 w-24">
+                <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${alcanzado ? "bg-red-500" : cercaDelTope ? "bg-amber-500" : "bg-emerald-500"}`}
+                    style={{ width: `${porcentaje}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground text-right mt-1">{porcentaje}%</p>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Accesos rapidos */}
         <div>
