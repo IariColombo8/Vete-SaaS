@@ -1,7 +1,3 @@
-"use client";
-
-import emailjs from "@emailjs/browser";
-
 interface DatosTurno {
   nombre_y_apellido: string;
   fecha: string;
@@ -11,33 +7,26 @@ interface DatosTurno {
   tipo_mascota: string;
   servicio_requerido: string;
   email: string;
+  /** Nombre de la veterinaria (opcional, para personalizar el email). */
+  veterinaria?: string;
 }
 
+/**
+ * Envía el email de confirmación de turno vía la API route server-side
+ * (`/api/email/send`, Resend). Reemplaza a EmailJS client-side.
+ * Best-effort: devuelve `false` si no se pudo enviar, sin lanzar.
+ */
 export const enviarEmailConfirmacion = async (
   datos: DatosTurno,
 ): Promise<boolean> => {
   try {
-    emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!);
-
-    const templateParams = {
-      nombre_y_apellido: datos.nombre_y_apellido,
-      fecha: datos.fecha,
-      hora: datos.hora,
-      direccion: datos.direccion,
-      nombre_mascota: datos.nombre_mascota,
-      tipo_mascota: datos.tipo_mascota,
-      servicio_requerido: datos.servicio_requerido,
-      email: datos.email,
-    };
-
-    const response = await emailjs.send(
-      process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
-      process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
-      templateParams,
-    );
-
-    console.log("Email enviado:", response.status, response.text);
-    return true;
+    const res = await fetch("/api/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+    const json = await res.json().catch(() => ({ ok: false }));
+    return Boolean(json?.ok);
   } catch (error) {
     console.error("Error al enviar email:", error);
     return false;

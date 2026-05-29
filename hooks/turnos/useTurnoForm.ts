@@ -305,6 +305,23 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       })
       if (!emailEnviado) console.warn("No se pudo enviar el email de confirmacion")
 
+      // WhatsApp best-effort (gated por el feature del plan en el servidor)
+      try {
+        await fetch("/api/whatsapp/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tenantId,
+            telefono: formData.telefono,
+            nombre: formData.nombre,
+            fecha: formData.fecha,
+            hora: formData.hora,
+          }),
+        })
+      } catch (e) {
+        console.error("No se pudo enviar WhatsApp de confirmacion:", e)
+      }
+
       toast({ title: "Turno agendado exitosamente", description: "Te enviamos un email de confirmacion." })
       onSuccess?.()
       if (redirectOnSuccess) setTimeout(() => router.push("/"), 2000)
@@ -313,7 +330,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       if (error instanceof Error && error.message === "TENANT_PAUSED") {
         toast({ title: "Servicio pausado", description: "Esta veterinaria no esta recibiendo turnos en este momento.", variant: "destructive" })
       } else if (error instanceof Error && error.message === "PLAN_LIMIT_REACHED") {
-        toast({ title: "Limite del plan alcanzado", description: "Esta veterinaria alcanzo el limite de 10 turnos por mes del plan gratuito.", variant: "destructive" })
+        toast({ title: "Limite del plan alcanzado", description: "Esta veterinaria alcanzo el limite de turnos por mes de su plan. Intenta el proximo mes.", variant: "destructive" })
       } else {
         console.error("Error creating turno:", error)
         toast({ title: "Error al agendar turno", description: "Por favor, intenta nuevamente.", variant: "destructive" })
