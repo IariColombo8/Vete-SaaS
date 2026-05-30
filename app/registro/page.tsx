@@ -61,11 +61,11 @@ export default function RegistroPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [slugPreview, form.nombreClinica])
 
-  // Auto-redirect to dashboard when registration is complete
+  // Auto-redirect al onboarding cuando el registro se completa
   useEffect(() => {
     if (step === "listo") {
       const timer = setTimeout(() => {
-        router.push(`/${slugPreview}/admin`)
+        router.push(`/${slugPreview}/onboarding`)
       }, 2500)
       return () => clearTimeout(timer)
     }
@@ -327,8 +327,8 @@ export default function RegistroPage() {
                 <p className="text-xs text-muted-foreground">Tu link público:</p>
                 <p className="font-semibold text-emerald-600">/{slugPreview}</p>
               </div>
-              <Button className="w-full" onClick={() => router.push(`/${slugPreview}/admin`)}>
-                Ir a mi panel ahora
+              <Button className="w-full" onClick={() => router.push(`/${slugPreview}/onboarding`)}>
+                Configurar mi veterinaria
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardContent>

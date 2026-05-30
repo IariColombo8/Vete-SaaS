@@ -251,7 +251,7 @@ export function Navbar() {
   if (pathname.startsWith("/superadmin")) return <SuperAdminNavbar />
 
   // Vet admin pages have their own nav via VetAdminLayout
-  const isVetAdmin = /^\/[^/]+(\/admin|\/turnoadmin|\/libretasanitaria|\/clientes|\/configuracion)/.test(pathname)
+  const isVetAdmin = /^\/[^/]+(\/admin|\/turnoadmin|\/libretasanitaria|\/clientes|\/configuracion|\/onboarding)/.test(pathname)
   if (isVetAdmin) return null
 
   // Public vet page has its own full-page hero/footer design

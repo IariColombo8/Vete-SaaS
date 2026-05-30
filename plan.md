@@ -12,7 +12,7 @@
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
 | 4. Infraestructura y DevOps | COMPLETADO | 11/11 |
-| 5. Growth y Comercialización | EN CURSO | 4/8 |
+| 5. Growth y Comercialización | EN CURSO | 5/8 |
 
 ---
 
@@ -115,7 +115,7 @@
 
 ### 5.1 Onboarding
 
-- [ ] **5.1.1** Wizard post-registro con templates pre-configurados
+- [x] **5.1.1** Wizard post-registro con templates pre-configurados: `lib/onboarding/templates.ts` (Clínica general / Estética / A domicilio con servicios, duraciones, horarios y modalidad) + página `/[slug]/onboarding` que los aplica en un click. El registro redirige ahí; flag `onboardingCompletado` en config.
 - [ ] **5.1.2** Tour interactivo del panel admin
 
 ### 5.2 Landing SaaS
@@ -170,3 +170,5 @@
 | 2026-05-29 | 4.4.2 Eliminar rutas legacy | Completado |
 | 2026-05-29 | 4.4.4 Modularizar firestore.ts | Completado |
 | 2026-05-29 | 4.1.3/4.2.2 Scaffolds E2E (Playwright) + rules tests | Completado |
+| 2026-05-30 | 5.3.3 Export de turnos a CSV | Completado |
+| 2026-05-30 | 5.1.1 Wizard de onboarding con templates | Completado |

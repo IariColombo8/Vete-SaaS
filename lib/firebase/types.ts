@@ -128,6 +128,8 @@ export interface TenantConfig {
   minHorasAnticipacion?: number
   /** ID del Google Calendar donde se crean los eventos de turno */
   calendarId?: string
+  /** true una vez que el dueño completó (o saltó) el wizard de onboarding. */
+  onboardingCompletado?: boolean
 }
 
 /** Tenant + config merged — útil para páginas que necesitan ambos */
