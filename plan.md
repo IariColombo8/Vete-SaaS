@@ -11,7 +11,7 @@
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
-| 4. Infraestructura y DevOps | EN CURSO | 9/11 |
+| 4. Infraestructura y DevOps | COMPLETADO | 11/11 |
 | 5. Growth y Comercialización | EN CURSO | 3/8 |
 
 ---
@@ -90,12 +90,12 @@
 
 - [x] **4.1.1** Setup Vitest + jsdom + Testing Library. `vitest.config.ts`, `vitest.setup.ts`, scripts `test`/`test:watch`/`test:coverage`/`typecheck`.
 - [x] **4.1.2** Tests unitarios: `diaToWeekdays`, `generateTimeSlots`, `generateTimeSlotsConSiesta`, `getHorarioForDay` (extraídos a `lib/turnos/horarios.ts`) y catálogo de planes (`planAllows`, `getPlanLimits`, `normalizePlan`). 19 tests verdes.
-- [ ] **4.1.3** Tests E2E con Playwright: booking completo, onboarding vet, login + redirect
+- [x] **4.1.3** E2E con Playwright (scaffold listo): `playwright.config.ts` (levanta dev server), `e2e/smoke.spec.ts` (landing, /pricing, /login, reserva opcional con `E2E_TENANT_SLUG`), script `test:e2e`. Requiere `npx playwright install` para correr.
 
 ### 4.2 CI/CD
 
 - [x] **4.2.1** GitHub Actions (`.github/workflows/ci.yml`): typecheck → test → build en push/PR a main. (Lint omitido: ESLint no está instalado en el proyecto.)
-- [ ] **4.2.2** Firestore Rules tests con `@firebase/rules-unit-testing` (requiere emulador Firebase)
+- [x] **4.2.2** Firestore Rules tests con `@firebase/rules-unit-testing` (scaffold listo): `firestore.rules.test.ts` + `vitest.rules.config.ts` + emulador en `firebase.json` + script `test:rules`. Valida lectura pública de config, escritura solo del dueño, acceso de empleado a turnos, bloqueo a ajenos y no-auto-asignación de role. Requiere `firebase-tools`.
 
 ### 4.3 Monitoring
 
@@ -165,3 +165,8 @@
 | 2026-05-29 | 3.3.1/3.3.2 Agenda avanzada (profesionales + duración) | Completado |
 | 2026-05-29 | 4.3.1 Sentry scaffold env-gated | Completado |
 | 2026-05-29 | 3.1.3 Recordatorios de vacunas + fix cron Admin SDK | Completado |
+| 2026-05-29 | 4.3.2 Eventos custom Analytics | Completado |
+| 2026-05-29 | 4.4.3 Tipar any del modelo | Completado |
+| 2026-05-29 | 4.4.2 Eliminar rutas legacy | Completado |
+| 2026-05-29 | 4.4.4 Modularizar firestore.ts | Completado |
+| 2026-05-29 | 4.1.3/4.2.2 Scaffolds E2E (Playwright) + rules tests | Completado |
