@@ -22,11 +22,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Download } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { createHistoria, updateTurno } from "@/lib/firebase/firestore";
 import type { Turno } from "@/lib/firebase/firestore";
+import { descargarTurnosCSV } from "@/lib/export/turnos-csv";
 
 import { useTurnosManagement } from "@/hooks/turnos/useTurnosManagement";
 import { CalendarView } from "./calendar-view";
@@ -215,6 +216,17 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
                 })}
               </p>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-[10px] sm:text-xs gap-1.5 shrink-0"
+              onClick={() => descargarTurnosCSV(turnos)}
+              disabled={turnos.length === 0}
+              title="Exportar todos los turnos a CSV (Excel)"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
           </div>
         </div>
       </div>

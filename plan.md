@@ -12,7 +12,7 @@
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
 | 4. Infraestructura y DevOps | COMPLETADO | 11/11 |
-| 5. Growth y Comercialización | EN CURSO | 3/8 |
+| 5. Growth y Comercialización | EN CURSO | 4/8 |
 
 ---
 
@@ -128,7 +128,7 @@
 
 - [x] **5.3.1** WhatsApp (cubierto en 2.2.2: Cloud API, confirmación + recordatorios).
 - [x] **5.3.2** Mercado Pago (cubierto en 2.1.3: suscripciones + webhook).
-- [ ] **5.3.3** Export contable (formatos locales)
+- [x] **5.3.3** Export de turnos a CSV (`lib/export/turnos-csv.ts`, con BOM UTF-8 para Excel; filtrable por rango de fechas para cierre mensual) + botón "Exportar CSV" en gestión de turnos. Nota: el monto/facturación requeriría un modelo de precios por servicio (pendiente).
 
 ---
 
