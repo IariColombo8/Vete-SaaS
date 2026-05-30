@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { auth } from "@/lib/firebase/config"
 import { PLANS, normalizePlan, type PlanId } from "@/lib/plans"
+import { track } from "@vercel/analytics"
 import { Loader2, ArrowUpCircle } from "lucide-react"
 
 /** Siguiente plan pago a ofrecer según el plan actual. `null` si ya está en el tope. */
@@ -35,6 +36,7 @@ export function UpgradePlanButton({ tenantId, planActual }: Props) {
       return
     }
     setLoading(true)
+    track("plan_upgrade_click", { tenant: tenantId, desde: actual, hacia: target })
     try {
       const token = await auth.currentUser?.getIdToken()
       const res = await fetch("/api/billing/checkout", {

@@ -11,7 +11,7 @@
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
-| 4. Infraestructura y DevOps | EN CURSO | 5/11 |
+| 4. Infraestructura y DevOps | EN CURSO | 6/11 |
 | 5. Growth y Comercialización | EN CURSO | 3/8 |
 
 ---
@@ -100,7 +100,7 @@
 ### 4.3 Monitoring
 
 - [x] **4.3.1** Sentry (env-gated): `instrumentation.ts`/`instrumentation-client.ts` + configs server/edge/client que solo inicializan con DSN; helper `lib/monitoring.ts` `captureException`. Sin DSN queda inerte.
-- [ ] **4.3.2** Eventos custom en Vercel Analytics
+- [x] **4.3.2** Eventos custom en Vercel Analytics: `track("turno_reservado")` al reservar y `track("plan_upgrade_click")` al iniciar upgrade.
 
 ### 4.4 Refactoring
 

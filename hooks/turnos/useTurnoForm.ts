@@ -1,6 +1,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { track } from "@vercel/analytics"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -292,6 +293,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
         console.error("No se pudo enviar WhatsApp de confirmacion:", e)
       }
 
+      track("turno_reservado", { tenant: tenantId, servicio: formData.servicio })
       toast({ title: "Turno agendado exitosamente", description: "Te enviamos un email de confirmacion." })
       onSuccess?.()
       if (redirectOnSuccess) setTimeout(() => router.push("/"), 2000)
