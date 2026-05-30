@@ -1,13 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { signOut, checkIfUserIsAdmin } from "@/lib/firebase/auth"
+import { signOut } from "@/lib/firebase/auth"
 import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useRouter, usePathname } from "next/navigation"
-import { Menu, X, Stethoscope, LayoutDashboard, Shield, CalendarPlus } from "lucide-react"
+import { Menu, X, Stethoscope, LayoutDashboard, Shield } from "lucide-react"
 import { useState, useEffect } from "react"
 import type { UserRole } from "@/lib/firebase/firestore"
 
@@ -192,141 +191,6 @@ function SuperAdminNavbar() {
             </Button>
           </div>
         </div>
-      </div>
-    </nav>
-  )
-}
-
-// ─── Vet Navbar (todas las demás rutas) ─────────────────────────────────────
-function VetNavbar() {
-  const { user } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  useEffect(() => {
-    if (user) checkIfUserIsAdmin(user.uid).then(setIsAdmin)
-    else setIsAdmin(false)
-  }, [user])
-
-  // Si estamos en /v/[slug]/... extraemos el slug para el link de turno
-  const vetSlugMatch = pathname.match(/^\/v\/([^/]+)/)
-  const turnoHref = vetSlugMatch ? `/v/${vetSlugMatch[1]}/turno` : "/turno"
-
-  const handleSignOut = async () => {
-    await signOut()
-    setMobileMenuOpen(false)
-    router.push("/")
-  }
-
-  return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 shadow-sm">
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
-          {/* Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-3 group transition-transform hover:scale-105"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <div className="relative h-12 w-12 rounded-xl overflow-hidden shadow-md ring-2 ring-primary/10 group-hover:ring-primary/30 transition-all">
-              <Image src="/logo1.png" alt="Salud Animal Logo" fill className="object-cover" priority />
-            </div>
-            <div className="flex flex-col">
-              <span
-                className="text-lg font-bold tracking-tight sm:text-xl md:text-2xl"
-                style={{ fontFamily: "'Roboto', 'Open Sans', system-ui, sans-serif", fontWeight: "700", color: "#F08CAE", letterSpacing: "0em" }}
-              >
-                Salud Animal Domiciliaria
-              </span>
-              <span className="text-[10px] sm:text-xs font-semibold tracking-wider uppercase" style={{ color: "#2C5F4F", letterSpacing: "0.15em" }}>
-                MEDICINA Veterinaria
-              </span>
-            </div>
-          </Link>
-
-          {/* Desktop Nav */}
-          <div className="hidden items-center gap-1.5 md:flex">
-            <Link href="/">
-              <Button variant="ghost" size="default" className="font-medium hover:bg-primary/5">Inicio</Button>
-            </Link>
-            <Link href={turnoHref}>
-              <Button size="default" className="font-semibold shadow-md hover:shadow-lg bg-gradient-to-r from-primary to-primary/90">
-                Sacar Turno
-              </Button>
-            </Link>
-            {user ? (
-              <>
-                {isAdmin && (
-                  <Link href="/admin">
-                    <Button variant="outline" size="default" className="font-medium border-2 hover:bg-primary/5">
-                      Admin
-                    </Button>
-                  </Link>
-                )}
-                <Button
-                  variant="ghost"
-                  onClick={handleSignOut}
-                  size="default"
-                  className="font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5"
-                >
-                  Cerrar Sesión
-                </Button>
-              </>
-            ) : (
-              <Link href="/login">
-                <Button variant="ghost" size="default" className="font-medium hover:bg-primary/5">
-                  Iniciar Sesión
-                </Button>
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden hover:bg-primary/10"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="border-t border-border/40 py-6 md:hidden animate-in slide-in-from-top-2 duration-200">
-            <div className="flex flex-col gap-2">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="ghost" size="lg" className="w-full justify-start font-medium">Inicio</Button>
-              </Link>
-              <Link href={turnoHref} onClick={() => setMobileMenuOpen(false)}>
-                <Button size="lg" className="w-full font-semibold bg-gradient-to-r from-primary to-primary/90">Sacar Turno</Button>
-              </Link>
-              {user ? (
-                <>
-                  {isAdmin && (
-                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" size="lg" className="w-full bg-transparent border-2 font-medium">Admin</Button>
-                    </Link>
-                  )}
-                  <Button
-                    variant="ghost"
-                    onClick={handleSignOut}
-                    size="lg"
-                    className="w-full justify-start font-medium text-muted-foreground hover:text-destructive"
-                  >
-                    Cerrar Sesión
-                  </Button>
-                </>
-              ) : (
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="ghost" size="lg" className="w-full justify-start font-medium">Iniciar Sesión</Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   )

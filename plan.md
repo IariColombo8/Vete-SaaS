@@ -11,7 +11,7 @@
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
-| 4. Infraestructura y DevOps | EN CURSO | 7/11 |
+| 4. Infraestructura y DevOps | EN CURSO | 8/11 |
 | 5. Growth y Comercialización | EN CURSO | 3/8 |
 
 ---
@@ -105,7 +105,7 @@
 ### 4.4 Refactoring
 
 - [x] **4.4.1** Package name renombrado a `"vetpanel"`.
-- [ ] **4.4.2** Eliminar rutas legacy (`/admin`, `/app/turno/page.tsx`, `/v/[slug]`)
+- [x] **4.4.2** Eliminadas rutas legacy `/admin`, `/turno`, `/v/[slug]` + componentes muertos (`footer.tsx`, `hero-carousel.tsx`, `VetNavbar`). `confirmaciondeturno.tsx` movido a `lib/email/confirmacion-turno.ts`. Imports re-cableados; build limpio.
 - [x] **4.4.3** Tipados los `any` del modelo de la app: `useClienteByDNI`/`useClienteByEmail` (`Cliente`/`Mascota`), `turnos-management` handlers (`Turno`), `dashboard-charts` clientes (`Cliente[]`), `ClienteSection` (`Cliente | null`). Quedan solo los callbacks de recharts (limitación de tipos de la librería).
 - [ ] **4.4.4** Extraer `firestore.ts` en módulos: `turnos.ts`, `clientes.ts`, `tenants.ts`
 

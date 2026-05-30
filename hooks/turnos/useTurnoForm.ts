@@ -10,7 +10,7 @@ import {
   updateCliente, updateMascota, getTenantConfig, getTurnoConfig,
 } from "@/lib/firebase/firestore"
 import type { HorarioTenant, TenantConfig, TurnoConfig } from "@/lib/firebase/firestore"
-import { enviarEmailConfirmacion } from "@/app/turno/confirmaciondeturno"
+import { enviarEmailConfirmacion } from "@/lib/email/confirmacion-turno"
 import { useClienteByDNI } from "./useClienteByDNI"
 import { useDisponibilidadTurnos } from "./useDisponibilidadTurnos"
 import {
