@@ -11,7 +11,7 @@
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
-| 4. Infraestructura y DevOps | EN CURSO | 8/11 |
+| 4. Infraestructura y DevOps | EN CURSO | 9/11 |
 | 5. Growth y Comercialización | EN CURSO | 3/8 |
 
 ---
@@ -107,7 +107,7 @@
 - [x] **4.4.1** Package name renombrado a `"vetpanel"`.
 - [x] **4.4.2** Eliminadas rutas legacy `/admin`, `/turno`, `/v/[slug]` + componentes muertos (`footer.tsx`, `hero-carousel.tsx`, `VetNavbar`). `confirmaciondeturno.tsx` movido a `lib/email/confirmacion-turno.ts`. Imports re-cableados; build limpio.
 - [x] **4.4.3** Tipados los `any` del modelo de la app: `useClienteByDNI`/`useClienteByEmail` (`Cliente`/`Mascota`), `turnos-management` handlers (`Turno`), `dashboard-charts` clientes (`Cliente[]`), `ClienteSection` (`Cliente | null`). Quedan solo los callbacks de recharts (limitación de tipos de la librería).
-- [ ] **4.4.4** Extraer `firestore.ts` en módulos: `turnos.ts`, `clientes.ts`, `tenants.ts`
+- [x] **4.4.4** `firestore.ts` modularizado (993 → ~570 líneas): base extraída a `types.ts` (todos los tipos) y `collections.ts` (refs + helpers de ID); dominios autocontenidos a `usuarios.ts`, `recordatorios-vacuna.ts`, `disponibilidad.ts`. `firestore.ts` actúa de barrel (re-exporta para compat). El núcleo interconectado (tenants/clientes/mascotas/historias/libreta/turnos) se mantiene junto para evitar ciclos de imports — separable en un follow-up si se desea.
 
 ---
 

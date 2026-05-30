@@ -20,177 +20,32 @@ import {
   type QueryDocumentSnapshot,
   type DocumentData,
 } from "firebase/firestore"
+import {
+  invitacionesCol, configDoc_, turnoConfigDoc_, clientesCol, turnosCol, diasCol,
+  mascotasCol, historiasCol, historiaClinicaDoc, contadorDoc, libretasPublicasCol,
+  recordatoriosVacunaCol, toId, clienteDocId, mascotaDocId, historiaDocId, invitacionId,
+} from "./collections"
+import type {
+  UserRole, Usuario, Invitacion, ServicioTenant, HorarioTenant, Tenant, Modalidad,
+  MascotaTurnoConfig, ServicioTurnoConfig, Profesional, VacunaTurnoConfig, TurnoConfig,
+  TenantConfig, TenantFull, HistorialDato, Cliente, Mascota, Turno, Historia,
+  HistoriaClinicaRegistro, ClientesCursor, ClientesPage, LibretaPublica, RecordatorioVacuna, DiaBloqueado,
+} from "./types"
 
-// ============ ROLES ============
-export type UserRole = "superadmin" | "veterinario" | "empleado" | "usuario"
+// Re-export de tipos y helpers públicos para compatibilidad con imports existentes
+// desde "@/lib/firebase/firestore".
+export type {
+  UserRole, Usuario, Invitacion, ServicioTenant, HorarioTenant, Tenant, Modalidad,
+  MascotaTurnoConfig, ServicioTurnoConfig, Profesional, VacunaTurnoConfig, TurnoConfig,
+  TenantConfig, TenantFull, HistorialDato, Cliente, Mascota, Turno, Historia,
+  HistoriaClinicaRegistro, ClientesCursor, ClientesPage, LibretaPublica, RecordatorioVacuna, DiaBloqueado,
+} from "./types"
+export { clienteDocId, mascotaDocId } from "./collections"
 
-export interface Usuario {
-  uid: string
-  email: string | null
-  displayName?: string | null
-  photoURL?: string | null
-  role: UserRole
-  tenantId?: string
-  /** @deprecated usar role */
-  isAdmin?: boolean
-  createdAt?: unknown
-  lastLogin?: unknown
-}
-
-export async function getUsuarios(): Promise<Usuario[]> {
-  const ref = collection(db, "usuarios")
-  const snapshot = await getDocs(ref)
-  return snapshot.docs.map((d) => ({ uid: d.id, ...d.data() }) as Usuario)
-}
-
-// ============ INVITACIONES ============
-/** Invitación de un dueño para sumar veterinario/empleado a su tenant. */
-export interface Invitacion {
-  id?: string
-  email: string
-  tenantId: string
-  role: "veterinario" | "empleado"
-  estado: "pendiente" | "aceptada"
-  invitedBy?: string
-  createdAt?: unknown
-}
-
-const invitacionesCol = () => collection(db, "invitaciones")
-
-/** ID determinístico para idempotencia: tenant + email normalizado. */
-function invitacionId(tenantId: string, email: string): string {
-  return `${tenantId}__${email.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, "_")}`
-}
-
-export async function createInvitacion(
-  tenantId: string,
-  email: string,
-  role: "veterinario" | "empleado",
-  invitedBy?: string,
-): Promise<Invitacion> {
-  const id = invitacionId(tenantId, email)
-  const invitacion: Invitacion = {
-    email: email.trim().toLowerCase(),
-    tenantId,
-    role,
-    estado: "pendiente",
-    invitedBy: invitedBy ?? "",
-    createdAt: new Date().toISOString(),
-  }
-  await setDoc(doc(invitacionesCol(), id), invitacion)
-  return { id, ...invitacion }
-}
-
-export async function getInvitacionesByTenant(tenantId: string): Promise<Invitacion[]> {
-  const q = query(invitacionesCol(), where("tenantId", "==", tenantId))
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Invitacion)
-}
-
-export async function deleteInvitacion(id: string): Promise<void> {
-  await deleteDoc(doc(invitacionesCol(), id))
-}
+// ============ USUARIOS / INVITACIONES (extraído a ./usuarios) ============
+export * from "./usuarios"
 
 // ============ TENANT ============
-export interface ServicioTenant {
-  emoji: string
-  nombre: string
-  descripcion?: string
-}
-
-export interface HorarioTenant {
-  dia: string
-  apertura: string
-  cierre: string
-  cerrado: boolean
-  /** true (default) = horario corrido, false = cierra al mediodia */
-  corrido?: boolean
-  /** Cierre del primer bloque (ej: 12:00) — solo cuando corrido === false */
-  cierre1?: string
-  /** Apertura del segundo bloque (ej: 16:00) — solo cuando corrido === false */
-  apertura2?: string
-}
-
-/** Identificador mínimo — el doc raíz veterinarias/{slug} solo marca existencia */
-export interface Tenant {
-  slug: string
-}
-
-/** "local" = atiende en consultorio, "domicilio" = va a la casa, "ambos" = las dos */
-export type Modalidad = "local" | "domicilio" | "ambos"
-
-// ============ TURNO CONFIG ============
-/** Tipo de mascota que atiende la veterinaria */
-export interface MascotaTurnoConfig {
-  id: string
-  emoji: string
-  nombre: string
-}
-
-/** Servicio disponible para reservar turno */
-export interface ServicioTurnoConfig {
-  id: string
-  emoji: string
-  nombre: string
-  descripcion?: string
-  /** Duración del turno en minutos (default 60). Define cuántos slots ocupa. */
-  duracionMin?: number
-}
-
-/** Profesional con agenda propia dentro de la veterinaria */
-export interface Profesional {
-  id: string
-  nombre: string
-  /** false = no recibe turnos nuevos. Default true. */
-  activo?: boolean
-}
-
-/** Vacuna disponible para un tipo de mascota */
-export interface VacunaTurnoConfig {
-  id: string
-  nombre: string
-  descripcion?: string
-}
-
-/** Configuración de turnos — vive en veterinarias/{slug}/config/turno */
-export interface TurnoConfig {
-  mascotas?: MascotaTurnoConfig[]
-  servicios?: ServicioTurnoConfig[]
-  /** Vacunas agrupadas por tipo de mascota: { perro: [...], gato: [...] } */
-  vacunas?: Record<string, VacunaTurnoConfig[]>
-  /** Profesionales con agendas independientes. Vacío/ausente = agenda única. */
-  profesionales?: Profesional[]
-}
-
-/** Todo vive en veterinarias/{slug}/config/datos */
-export interface TenantConfig {
-  nombre?: string
-  plan?: "basico" | "plus" | "pro"
-  status?: "activo" | "pausado"
-  adminIds?: string[]
-  createdAt?: string
-  telefono?: string
-  email?: string
-  direccion?: string
-  ciudad?: string
-  slogan?: string
-  descripcion?: string
-  servicios?: ServicioTenant[]
-  horarios?: HorarioTenant[]
-  fotosHero?: string[]
-  fotosHeroMobile?: string[]
-  logo?: string
-  modalidad?: Modalidad
-  googleMapsUrl?: string
-  /** Horas mínimas de anticipación para turnos del mismo día (default 2) */
-  minHorasAnticipacion?: number
-  /** ID del Google Calendar donde se crean los eventos de turno */
-  calendarId?: string
-}
-
-const configDoc_ = (t: string) => doc(db, "veterinarias", t, "config", "datos")
-const turnoConfigDoc_ = (t: string) => doc(db, "veterinarias", t, "config", "turno")
-
 export async function getTenant(tenantId: string): Promise<Tenant | null> {
   const snap = await getDoc(doc(db, "veterinarias", tenantId))
   if (!snap.exists()) return null
@@ -228,9 +83,6 @@ export async function updateTurnoConfig(tenantId: string, data: Partial<TurnoCon
   await setDoc(turnoConfigDoc_(tenantId), data, { merge: true })
 }
 
-/** Tenant + config merged — útil para páginas que necesitan ambos */
-export type TenantFull = Tenant & TenantConfig
-
 export async function getTenantFull(tenantId: string): Promise<TenantFull | null> {
   const [tenant, config] = await Promise.all([getTenant(tenantId), getTenantConfig(tenantId)])
   if (!tenant) return null
@@ -266,136 +118,6 @@ export async function createTenant(tenantId: string, data: Partial<TenantConfig>
     createdAt: new Date().toISOString(),
     ...data,
   })
-}
-
-// ============ PATH HELPERS ============
-const clientesCol  = (t: string) => collection(db, "veterinarias", t, "clientes")
-const turnosCol    = (t: string) => collection(db, "veterinarias", t, "turnos")
-const diasCol      = (t: string) => collection(db, "veterinarias", t, "diasBloqueados")
-const mascotasCol  = (t: string, cId: string) => collection(db, "veterinarias", t, "clientes", cId, "mascotas")
-const historiasCol = (t: string, cId: string, mId: string) =>
-  collection(db, "veterinarias", t, "clientes", cId, "mascotas", mId, "historias")
-const historiaClinicaDoc = (t: string, cId: string, mId: string) =>
-  doc(db, "veterinarias", t, "clientes", cId, "mascotas", mId, "historiaClinica", "registro")
-const contadorDoc  = (t: string) => doc(db, "veterinarias", t, "config", "contadores")
-
-// ============ ID HELPERS ============
-/** Convierte texto a slug limpio sin tildes ni espacios */
-function toId(s: string): string {
-  return (s ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "") || "sin-nombre"
-}
-
-/** ID de cliente = DNI */
-export function clienteDocId(dni: string): string {
-  return dni.trim()
-}
-
-/** ID de mascota = nombre-tipo  (ej: firulais-perro) */
-export function mascotaDocId(nombre: string, tipo: string): string {
-  return `${toId(nombre)}-${toId(tipo)}`
-}
-
-/** ID de historia = fecha (YYYY-MM-DD) */
-function historiaDocId(fechaAtencion: string): string {
-  return (fechaAtencion ?? "").slice(0, 10).replace(/\//g, "-") || new Date().toISOString().slice(0, 10)
-}
-
-// ============ INTERFACES ============
-export interface HistorialDato {
-  campo: string
-  valorAnterior: string
-  valorNuevo: string
-  fechaCambio: string
-}
-
-export interface Cliente {
-  id?: string
-  nombre: string
-  telefono: string
-  email: string
-  dni?: string
-  domicilio?: string
-  historialDatos?: HistorialDato[]
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface Mascota {
-  id?: string
-  nombre: string
-  tipo: string
-  edad?: string
-  raza?: string
-  peso?: string
-  /** Token aleatorio para la libreta pública por QR (no adivinable). */
-  libretaToken?: string
-}
-
-export interface Turno {
-  id?: string
-  clienteId: string
-  mascotaId?: string
-  cliente: {
-    nombre: string
-    telefono: string
-    email: string
-    dni?: string
-    domicilio?: string
-  }
-  mascota: {
-    nombre: string
-    tipo: string
-    motivo?: string
-  }
-  servicio?: string
-  fecha?: string
-  hora?: string
-  /** Duración del turno en minutos (snapshot del servicio al reservar; default 60). */
-  duracionMin?: number
-  /** Profesional asignado (agenda independiente). Ausente = agenda única. */
-  profesionalId?: string
-  profesionalNombre?: string
-  turno: {
-    fecha: string
-    hora: string
-    timestamp: unknown
-  }
-  estado: "pendiente" | "confirmado" | "completado" | "cancelado"
-  vacunas?: string[]
-  diagnostico?: string
-  tratamiento?: string
-  medicacion?: string
-  observaciones?: string
-}
-
-export interface Historia {
-  id?: string
-  fechaAtencion: string
-  motivo?: string
-  diagnostico: string
-  tratamiento: string
-  observaciones?: string
-  proximaVisita?: string
-  archivos?: string[]
-  tipoVisita?: "consulta" | "turno_programado" | "visita_programada"
-  turnoId?: string
-}
-
-export interface HistoriaClinicaRegistro {
-  consultas: unknown[]
-  vacunas: unknown[]
-  tratamientos: unknown[]
-  alergias: unknown[]
-  cirugias: unknown[]
-  fechaCreacion: string
 }
 
 // ============ CLIENTES ============
@@ -454,17 +176,6 @@ function clienteBasicFromDoc(d: QueryDocumentSnapshot<DocumentData>): Cliente {
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   } as Cliente
-}
-
-/** Cursor opaco para paginación de clientes. */
-export type ClientesCursor = QueryDocumentSnapshot<DocumentData> | null
-
-export interface ClientesPage {
-  clientes: Cliente[]
-  /** Cursor para la siguiente página; pasar a la próxima llamada. */
-  nextCursor: ClientesCursor
-  /** true si la página vino llena (probablemente hay más). */
-  hasMore: boolean
 }
 
 /**
@@ -558,17 +269,6 @@ export async function updateMascota(tenantId: string, clienteId: string, mascota
 }
 
 // ============ LIBRETA PÚBLICA (QR) ============
-const libretasPublicasCol = (t: string) => collection(db, "veterinarias", t, "libretasPublicas")
-
-/** Snapshot público de la libreta de una mascota, accesible por QR sin login. */
-export interface LibretaPublica {
-  token: string
-  mascota: { nombre: string; tipo: string; raza?: string; edad?: string }
-  vetNombre?: string
-  historias: { fecha: string; motivo: string; diagnostico?: string; tratamiento?: string }[]
-  generadoEl: string
-}
-
 /**
  * Genera (o regenera) la libreta pública de una mascota: crea un token aleatorio,
  * escribe un snapshot público curado y guarda el token en la mascota.
@@ -620,63 +320,8 @@ export async function getLibretaPublica(tenantId: string, token: string): Promis
   return snap.data() as LibretaPublica
 }
 
-// ============ RECORDATORIOS DE VACUNAS ============
-const recordatoriosVacunaCol = (t: string) => collection(db, "veterinarias", t, "recordatoriosVacunas")
-
-/** Recordatorio programado de vacuna para una mascota (procesado por cron). */
-export interface RecordatorioVacuna {
-  id?: string
-  clienteId: string
-  mascotaId: string
-  mascotaNombre: string
-  telefono: string
-  vacuna: string
-  /** Fecha de la próxima dosis (YYYY-MM-DD). */
-  fecha: string
-  enviado?: boolean
-  createdAt?: string
-}
-
-export async function createRecordatorioVacuna(
-  tenantId: string,
-  data: Omit<RecordatorioVacuna, "id" | "enviado" | "createdAt">,
-): Promise<RecordatorioVacuna> {
-  const ref = doc(recordatoriosVacunaCol(tenantId))
-  const recordatorio: RecordatorioVacuna = { ...data, enviado: false, createdAt: new Date().toISOString() }
-  await setDoc(ref, recordatorio)
-  return { id: ref.id, ...recordatorio }
-}
-
-export async function getRecordatoriosVacunaByMascota(
-  tenantId: string,
-  mascotaId: string,
-): Promise<RecordatorioVacuna[]> {
-  const q = query(recordatoriosVacunaCol(tenantId), where("mascotaId", "==", mascotaId))
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as RecordatorioVacuna)
-}
-
-export async function deleteRecordatorioVacuna(tenantId: string, id: string): Promise<void> {
-  await deleteDoc(doc(recordatoriosVacunaCol(tenantId), id))
-}
-
-/** Recordatorios de vacuna pendientes para una fecha (usado por el cron). */
-export async function getRecordatoriosVacunaPendientes(
-  tenantId: string,
-  fecha: string,
-): Promise<RecordatorioVacuna[]> {
-  const q = query(
-    recordatoriosVacunaCol(tenantId),
-    where("fecha", "==", fecha),
-    where("enviado", "==", false),
-  )
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as RecordatorioVacuna)
-}
-
-export async function marcarRecordatorioVacunaEnviado(tenantId: string, id: string): Promise<void> {
-  await updateDoc(doc(recordatoriosVacunaCol(tenantId), id), { enviado: true, enviadoAt: new Date().toISOString() })
-}
+// ============ RECORDATORIOS DE VACUNAS (extraído a ./recordatorios-vacuna) ============
+export * from "./recordatorios-vacuna"
 
 // ============ HISTORIA CLÍNICA (DOCUMENTO REGISTRO) ============
 export async function createHistoriaClinicaRegistro(tenantId: string, clienteId: string, mascotaId: string) {
@@ -954,40 +599,5 @@ export async function deleteTurno(tenantId: string, turnoId: string) {
   return await deleteDoc(doc(turnosCol(tenantId), turnoId))
 }
 
-// ============ DISPONIBILIDAD ============
-export interface DiaBloqueado {
-  id: string
-  fecha?: string
-  motivo?: string
-}
-
-export async function getDiasBloqueados(tenantId: string): Promise<DiaBloqueado[]> {
-  const snapshot = await getDocs(diasCol(tenantId))
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as DiaBloqueado)
-}
-
-/**
- * Suscripción real-time a los días bloqueados del tenant.
- * Devuelve la función `Unsubscribe` — llamarla al desmontar para evitar fugas.
- */
-export function subscribeDiasBloqueados(
-  tenantId: string,
-  onData: (dias: DiaBloqueado[]) => void,
-  onError?: (error: Error) => void,
-): Unsubscribe {
-  return onSnapshot(
-    diasCol(tenantId),
-    (snapshot) => onData(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as DiaBloqueado)),
-    (error) => onError?.(error),
-  )
-}
-
-export async function bloquearDia(tenantId: string, fecha: string, motivo?: string) {
-  const diaRef = doc(diasCol(tenantId), fecha)
-  await setDoc(diaRef, { fecha, motivo: motivo || "Día bloqueado", fechaCreacion: new Date().toISOString() })
-  return { id: fecha }
-}
-
-export async function desbloquearDia(tenantId: string, diaId: string) {
-  return await deleteDoc(doc(diasCol(tenantId), diaId))
-}
+// ============ DISPONIBILIDAD (extraído a ./disponibilidad) ============
+export * from "./disponibilidad"
