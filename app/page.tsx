@@ -59,12 +59,12 @@ function HeroSection() {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 items-start">
             <HeroCta />
-            <a
-              href="#caracteristicas"
+            <Link
+              href="/demo"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 px-7 py-3.5 text-base font-semibold text-slate-200 transition-all hover:border-slate-600"
             >
-              Ver caracteristicas
-            </a>
+              Ver demo en vivo
+            </Link>
           </div>
 
           {/* Trust badges */}

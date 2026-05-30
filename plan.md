@@ -12,7 +12,7 @@
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
 | 4. Infraestructura y DevOps | COMPLETADO | 11/11 |
-| 5. Growth y Comercialización | EN CURSO | 6/8 |
+| 5. Growth y Comercialización | EN CURSO | 7/8 |
 
 ---
 
@@ -121,7 +121,7 @@
 ### 5.2 Landing SaaS
 
 - [x] **5.2.1** Pricing section con planes (cubierto en 2.1.4: sección en landing + página `/pricing`).
-- [ ] **5.2.2** Demo interactiva (tenant de ejemplo)
+- [x] **5.2.2** Demo: script de seed `scripts/seed-demo.mjs` (Admin SDK, `npm run seed:demo`) que crea el tenant `demo` con config/servicios/horarios + botón "Ver demo en vivo" en el hero del landing (→ `/demo`).
 - [ ] **5.2.3** Blog/SEO para tráfico orgánico
 
 ### 5.3 Integraciones
@@ -173,3 +173,4 @@
 | 2026-05-30 | 5.3.3 Export de turnos a CSV | Completado |
 | 2026-05-30 | 5.1.1 Wizard de onboarding con templates | Completado |
 | 2026-05-30 | 5.1.2 Tour interactivo (driver.js) | Completado |
+| 2026-05-30 | 5.2.2 Demo: seed script + link en landing | Completado |
