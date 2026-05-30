@@ -8,6 +8,7 @@ import { getTenantConfig, getTurnosDelMes } from "@/lib/firebase/firestore"
 import type { TenantConfig } from "@/lib/firebase/firestore"
 import { getPlanLimits } from "@/lib/plans"
 import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
+import { DashboardTour } from "@/components/admin/dashboard-tour"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -117,6 +118,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <DashboardTour slug={slug} />
       <div className="space-y-6">
         {/* Encabezado con plan */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -129,7 +131,7 @@ export default function DashboardPage() {
               <p className="text-xs text-muted-foreground font-mono">/{slug}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-tour="plan">
             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pi.color}`}>
               Plan {pi.label}
             </span>
@@ -183,7 +185,7 @@ export default function DashboardPage() {
         })()}
 
         {/* Accesos rapidos */}
-        <div>
+        <div data-tour="accesos">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Accesos rapidos
           </h2>
@@ -237,7 +239,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Tus enlaces */}
-        <div>
+        <div data-tour="enlaces">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5" />
             Tus enlaces
@@ -266,7 +268,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Graficos */}
-        <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/turnoadmin`)} />
+        <div data-tour="metricas">
+          <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/turnoadmin`)} />
+        </div>
       </div>
       <Toaster />
     </>

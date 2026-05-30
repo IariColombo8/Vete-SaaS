@@ -12,7 +12,7 @@
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
 | 4. Infraestructura y DevOps | COMPLETADO | 11/11 |
-| 5. Growth y Comercialización | EN CURSO | 5/8 |
+| 5. Growth y Comercialización | EN CURSO | 6/8 |
 
 ---
 
@@ -116,7 +116,7 @@
 ### 5.1 Onboarding
 
 - [x] **5.1.1** Wizard post-registro con templates pre-configurados: `lib/onboarding/templates.ts` (Clínica general / Estética / A domicilio con servicios, duraciones, horarios y modalidad) + página `/[slug]/onboarding` que los aplica en un click. El registro redirige ahí; flag `onboardingCompletado` en config.
-- [ ] **5.1.2** Tour interactivo del panel admin
+- [x] **5.1.2** Tour interactivo del panel admin con `driver.js`: corre una vez por tenant (flag en localStorage), resalta plan, accesos rápidos, enlaces y métricas (anclas `data-tour`). Componente `DashboardTour`.
 
 ### 5.2 Landing SaaS
 
@@ -172,3 +172,4 @@
 | 2026-05-29 | 4.1.3/4.2.2 Scaffolds E2E (Playwright) + rules tests | Completado |
 | 2026-05-30 | 5.3.3 Export de turnos a CSV | Completado |
 | 2026-05-30 | 5.1.1 Wizard de onboarding con templates | Completado |
+| 2026-05-30 | 5.1.2 Tour interactivo (driver.js) | Completado |
