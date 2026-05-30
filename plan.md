@@ -10,7 +10,7 @@
 |------|--------|----------|
 | 1. Fundamentos de Producción | COMPLETADO | 10/10 |
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
-| 3. Producto Completo | EN CURSO | 7/8 |
+| 3. Producto Completo | COMPLETADO | 8/8 |
 | 4. Infraestructura y DevOps | EN CURSO | 5/11 |
 | 5. Growth y Comercialización | EN CURSO | 3/8 |
 
@@ -69,7 +69,7 @@
 
 - [x] **3.1.1** PDF exportable de libreta sanitaria: `lib/pdf/libreta-pdf.ts` (jsPDF) genera datos de mascota + dueño + historial cronológico. Botón de descarga en la cabecera de cada mascota en `libreta-sanitaria-management`.
 - [x] **3.1.2** QR por mascota con libreta pública: token aleatorio (`libretaToken`) + snapshot curado en `veterinarias/{slug}/libretasPublicas/{token}` (lectura pública, sin datos del dueño). Ruta `/[slug]/libreta/[token]`, botón QR en libreta-management (gated por feature `qrMascota` del plan Pro). Reglas + sin exponer subárbol de clientes.
-- [ ] **3.1.3** Recordatorios automáticos de vacunas (requiere modelo de calendario de vacunas por mascota; reutilizará cron de `vercel.json`)
+- [x] **3.1.3** Recordatorios automáticos de vacunas: colección consultable `recordatoriosVacunas` por tenant + UI para programarlos (gated por feature `recordatoriosVacunas` del plan Pro). El cron diario los procesa vía Admin SDK y envía WhatsApp `RECORDATORIO_VACUNA_DIAS` (default 7) días antes. Corregido bug: el cron ahora usa Admin SDK (las reglas bloqueaban lecturas sin auth).
 - [x] **3.1.4** Visualización de fotos en historial clínico — ya implementado: `LibretaDetallesModal` muestra adjuntos de imagen como miniaturas con enlace; upload en `libreta-sanitaria-management`.
 
 ### 3.2 Dashboard analytics
@@ -164,3 +164,4 @@
 | 2026-05-29 | 3.1.2 QR + libreta pública con token | Completado |
 | 2026-05-29 | 3.3.1/3.3.2 Agenda avanzada (profesionales + duración) | Completado |
 | 2026-05-29 | 4.3.1 Sentry scaffold env-gated | Completado |
+| 2026-05-29 | 3.1.3 Recordatorios de vacunas + fix cron Admin SDK | Completado |

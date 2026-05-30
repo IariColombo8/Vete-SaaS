@@ -162,6 +162,11 @@ service cloud.firestore {
         allow write: if canOperateTenant(tenantId);
       }
 
+      // Recordatorios de vacunas: solo el staff del tenant (el cron usa Admin SDK).
+      match /recordatoriosVacunas/{recId} {
+        allow read, write: if canOperateTenant(tenantId);
+      }
+
       // Clientes y toda su jerarquía: staff del tenant (vet, empleado) o superadmin
       match /clientes/{clienteId} {
         allow read, write: if canOperateTenant(tenantId);

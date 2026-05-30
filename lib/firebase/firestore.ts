@@ -620,6 +620,64 @@ export async function getLibretaPublica(tenantId: string, token: string): Promis
   return snap.data() as LibretaPublica
 }
 
+// ============ RECORDATORIOS DE VACUNAS ============
+const recordatoriosVacunaCol = (t: string) => collection(db, "veterinarias", t, "recordatoriosVacunas")
+
+/** Recordatorio programado de vacuna para una mascota (procesado por cron). */
+export interface RecordatorioVacuna {
+  id?: string
+  clienteId: string
+  mascotaId: string
+  mascotaNombre: string
+  telefono: string
+  vacuna: string
+  /** Fecha de la próxima dosis (YYYY-MM-DD). */
+  fecha: string
+  enviado?: boolean
+  createdAt?: string
+}
+
+export async function createRecordatorioVacuna(
+  tenantId: string,
+  data: Omit<RecordatorioVacuna, "id" | "enviado" | "createdAt">,
+): Promise<RecordatorioVacuna> {
+  const ref = doc(recordatoriosVacunaCol(tenantId))
+  const recordatorio: RecordatorioVacuna = { ...data, enviado: false, createdAt: new Date().toISOString() }
+  await setDoc(ref, recordatorio)
+  return { id: ref.id, ...recordatorio }
+}
+
+export async function getRecordatoriosVacunaByMascota(
+  tenantId: string,
+  mascotaId: string,
+): Promise<RecordatorioVacuna[]> {
+  const q = query(recordatoriosVacunaCol(tenantId), where("mascotaId", "==", mascotaId))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as RecordatorioVacuna)
+}
+
+export async function deleteRecordatorioVacuna(tenantId: string, id: string): Promise<void> {
+  await deleteDoc(doc(recordatoriosVacunaCol(tenantId), id))
+}
+
+/** Recordatorios de vacuna pendientes para una fecha (usado por el cron). */
+export async function getRecordatoriosVacunaPendientes(
+  tenantId: string,
+  fecha: string,
+): Promise<RecordatorioVacuna[]> {
+  const q = query(
+    recordatoriosVacunaCol(tenantId),
+    where("fecha", "==", fecha),
+    where("enviado", "==", false),
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as RecordatorioVacuna)
+}
+
+export async function marcarRecordatorioVacunaEnviado(tenantId: string, id: string): Promise<void> {
+  await updateDoc(doc(recordatoriosVacunaCol(tenantId), id), { enviado: true, enviadoAt: new Date().toISOString() })
+}
+
 // ============ HISTORIA CLÍNICA (DOCUMENTO REGISTRO) ============
 export async function createHistoriaClinicaRegistro(tenantId: string, clienteId: string, mascotaId: string) {
   const ref = historiaClinicaDoc(tenantId, clienteId, mascotaId)
