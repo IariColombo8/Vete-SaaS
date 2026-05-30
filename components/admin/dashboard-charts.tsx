@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { subscribeTurnos, getClientesBasic } from "@/lib/firebase/firestore";
-import type { Turno } from "@/lib/firebase/firestore";
+import type { Turno, Cliente } from "@/lib/firebase/firestore";
 import {
   Calendar,
   TrendingUp,
@@ -62,7 +62,7 @@ interface DashboardChartsProps {
 
 export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChartsProps) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
-  const [clientes, setClientes] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendientesDialogOpen, setPendientesDialogOpen] = useState(false);
 

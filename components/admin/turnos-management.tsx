@@ -114,7 +114,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
     }
   }, [generateHistoriaTurno]);
 
-  const handleViewDetails = (turno: any) => {
+  const handleViewDetails = (turno: Turno) => {
     setSelectedTurno(turno);
     if (turno.mascotaId && turno.clienteId) {
       fetchMascotaDetails(turno.clienteId, turno.mascotaId);
@@ -122,7 +122,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
     setDetailsDialogOpen(true);
   };
 
-  const handleEdit = (turno: any) => {
+  const handleEdit = (turno: Turno) => {
     setSelectedTurno(turno);
     setEditData({
       fecha: turno.turno.fecha,

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react"
 import { getClienteByDNI, getMascotas } from "@/lib/firebase/firestore"
+import type { Cliente, Mascota } from "@/lib/firebase/firestore"
 
 export function useClienteByDNI(dni: string, tenantId: string) {
-  const [clienteExistente, setClienteExistente] = useState<any>(null)
-  const [mascotas, setMascotas] = useState<any[]>([])
+  const [clienteExistente, setClienteExistente] = useState<Cliente | null>(null)
+  const [mascotas, setMascotas] = useState<Mascota[]>([])
   const [mostrarNuevaMascota, setMostrarNuevaMascota] = useState(true)
   const [loadingCliente, setLoadingCliente] = useState(false)
 
