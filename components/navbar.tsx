@@ -47,9 +47,12 @@ function SaasNavbar() {
             <a href="#caracteristicas" className="text-sm text-slate-300 hover:text-white transition-colors">
               Características
             </a>
-            <a href="#precios" className="text-sm text-slate-300 hover:text-white transition-colors">
+            <a href="/#precios" className="text-sm text-slate-300 hover:text-white transition-colors">
               Precios
             </a>
+            <Link href="/blog" className="text-sm text-slate-300 hover:text-white transition-colors">
+              Blog
+            </Link>
             <div className="flex items-center gap-2 ml-4">
               {user ? (
                 <>
@@ -247,7 +250,7 @@ function VetPublicNavbar() {
 export function Navbar() {
   const pathname = usePathname()
 
-  if (pathname === "/" || pathname === "/pricing") return <SaasNavbar />
+  if (pathname === "/" || pathname === "/pricing" || pathname.startsWith("/blog")) return <SaasNavbar />
   if (pathname.startsWith("/superadmin")) return <SuperAdminNavbar />
 
   // Vet admin pages have their own nav via VetAdminLayout

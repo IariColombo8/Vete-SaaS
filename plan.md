@@ -1,6 +1,11 @@
 # Plan de Mejoras — VetPanel SaaS Multi-Tenant
 
 > Documento vivo. Se actualiza a medida que se completan tareas.
+>
+> **Estado: PLAN COMPLETO (45/45).** Las features que dependen de servicios
+> externos (email, WhatsApp, Mercado Pago, Sentry, Admin SDK) están implementadas
+> y quedan inertes hasta cargar sus credenciales (ver `.env.example`). E2E y rules
+> tests son scaffolds listos para correr con navegador/emulador (ver `TESTING.md`).
 
 ---
 
@@ -12,7 +17,7 @@
 | 2. Features SaaS Core | COMPLETADO | 8/8 |
 | 3. Producto Completo | COMPLETADO | 8/8 |
 | 4. Infraestructura y DevOps | COMPLETADO | 11/11 |
-| 5. Growth y Comercialización | EN CURSO | 7/8 |
+| 5. Growth y Comercialización | COMPLETADO | 8/8 |
 
 ---
 
@@ -122,7 +127,7 @@
 
 - [x] **5.2.1** Pricing section con planes (cubierto en 2.1.4: sección en landing + página `/pricing`).
 - [x] **5.2.2** Demo: script de seed `scripts/seed-demo.mjs` (Admin SDK, `npm run seed:demo`) que crea el tenant `demo` con config/servicios/horarios + botón "Ver demo en vivo" en el hero del landing (→ `/demo`).
-- [ ] **5.2.3** Blog/SEO para tráfico orgánico
+- [x] **5.2.3** Blog file-based para SEO: posts en `content/blog/*.md` (frontmatter), `lib/blog/posts.ts`, rutas `/blog` y `/blog/[slug]` (SSG + `generateStaticParams` + `generateMetadata` con Open Graph). 2 posts iniciales, render markdown estilado, link "Blog" en el navbar.
 
 ### 5.3 Integraciones
 
@@ -174,3 +179,5 @@
 | 2026-05-30 | 5.1.1 Wizard de onboarding con templates | Completado |
 | 2026-05-30 | 5.1.2 Tour interactivo (driver.js) | Completado |
 | 2026-05-30 | 5.2.2 Demo: seed script + link en landing | Completado |
+| 2026-05-30 | 5.2.3 Blog file-based + SEO | Completado |
+| 2026-05-30 | PLAN COMPLETO (45/45) | Completado |
