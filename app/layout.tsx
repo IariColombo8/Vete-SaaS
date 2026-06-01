@@ -1,12 +1,24 @@
 import type React from "react";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, DM_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+// Fraunces: serif display para titulares. Pesos estáticos (600/700) en vez del
+// variable completo → archivo mucho más liviano y mejor LCP en mobile.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+// DM Sans: sans limpia y cálida para el cuerpo.
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "VetPanel — Sistema de gestión para Veterinarias",
@@ -54,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${fraunces.variable} ${dmSans.variable}`}>
       <body className={`font-sans antialiased`}>
         <Navbar />
         {children}

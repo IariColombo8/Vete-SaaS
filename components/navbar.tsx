@@ -8,49 +8,78 @@ import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useRouter, usePathname } from "next/navigation"
 import { Menu, X, Stethoscope, LayoutDashboard, Shield } from "lucide-react"
 import { useState, useEffect } from "react"
-import type { UserRole } from "@/lib/firebase/firestore"
+import { Paw } from "@/components/landing/pet-art"
 
-// ─── SaaS Navbar (mostrado solo en "/") ─────────────────────────────────────
+/** Paleta del SaasNavbar según superficie: cálido en "/", oscuro en /pricing y /blog. */
+function navTheme(light: boolean) {
+  if (light) {
+    return {
+      nav: "border-warm-border bg-cream/85",
+      logoBox: "bg-coral",
+      brand: "text-ink",
+      brandAccent: "text-coral",
+      link: "text-ink-muted hover:text-coral",
+      ghost: "text-ink-muted hover:text-ink hover:bg-ink/5",
+      cta: "bg-coral hover:bg-coral-ink text-white shadow-lg shadow-coral/25 border-0",
+      toggle: "text-ink-muted hover:text-ink hover:bg-ink/5",
+      mobileBorder: "border-warm-border",
+    }
+  }
+  return {
+    nav: "border-white/10 bg-slate-950/80",
+    logoBox: "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/20",
+    brand: "text-white",
+    brandAccent: "text-emerald-400",
+    link: "text-slate-300 hover:text-white",
+    ghost: "text-slate-300 hover:text-white hover:bg-white/10",
+    cta: "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold shadow-lg shadow-emerald-500/25 border-0",
+    toggle: "text-slate-300 hover:text-white hover:bg-white/10",
+    mobileBorder: "border-white/10",
+  }
+}
+
+// ─── SaaS Navbar (mostrado en "/", /pricing, /blog) ─────────────────────────
 function SaasNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { user } = useAuth()
-  const [role, setRole] = useState<UserRole | null>(null)
-  const [tenantId, setTenantId] = useState<string | null>(null)
-
+  const pathname = usePathname()
   const [dashboardHref, setDashboardHref] = useState<string | null>(null)
 
+  const light = pathname === "/"
+  const t = navTheme(light)
+
   useEffect(() => {
-    if (!user) { setRole(null); setTenantId(null); setDashboardHref(null); return }
-    resolveUserDashboard(user.uid).then(({ role: r, tenantId: t, redirectTo }) => {
-      setRole(r)
-      setTenantId(t)
+    if (!user) { setDashboardHref(null); return }
+    resolveUserDashboard(user.uid).then(({ role: r, redirectTo }) => {
       setDashboardHref(r === "usuario" ? null : redirectTo)
     })
   }, [user])
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
+    <nav className={`sticky top-0 z-50 w-full border-b backdrop-blur-xl ${t.nav}`}>
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/20">
-              <Stethoscope className="h-4 w-4 text-white" />
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${t.logoBox}`}>
+              {light
+                ? <Paw className="h-4 w-4 text-white" />
+                : <Stethoscope className="h-4 w-4 text-white" />}
             </div>
-            <span className="text-lg font-bold text-white tracking-tight">
-              Vet<span className="text-emerald-400">Panel</span>
+            <span className={`text-lg font-bold tracking-tight ${light ? "font-display" : ""} ${t.brand}`}>
+              Vet<span className={t.brandAccent}>Panel</span>
             </span>
           </Link>
 
           {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-6">
-            <a href="#caracteristicas" className="text-sm text-slate-300 hover:text-white transition-colors">
+            <a href="/#caracteristicas" className={`text-sm transition-colors ${t.link}`}>
               Características
             </a>
-            <a href="/#precios" className="text-sm text-slate-300 hover:text-white transition-colors">
+            <a href="/#precios" className={`text-sm transition-colors ${t.link}`}>
               Precios
             </a>
-            <Link href="/blog" className="text-sm text-slate-300 hover:text-white transition-colors">
+            <Link href="/blog" className={`text-sm transition-colors ${t.link}`}>
               Blog
             </Link>
             <div className="flex items-center gap-2 ml-4">
@@ -58,33 +87,25 @@ function SaasNavbar() {
                 <>
                   {dashboardHref && (
                     <Link href={dashboardHref}>
-                      <Button size="sm" variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/10">
+                      <Button size="sm" variant="ghost" className={t.ghost}>
                         <LayoutDashboard className="h-4 w-4 mr-1.5" />
                         Mi Panel
                       </Button>
                     </Link>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-400 hover:text-white hover:bg-white/10"
-                    onClick={() => signOut()}
-                  >
+                  <Button size="sm" variant="ghost" className={t.ghost} onClick={() => signOut()}>
                     Cerrar Sesión
                   </Button>
                 </>
               ) : (
                 <>
                   <Link href="/login">
-                    <Button size="sm" variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/10">
+                    <Button size="sm" variant="ghost" className={t.ghost}>
                       Iniciar sesion
                     </Button>
                   </Link>
                   <Link href="/registro">
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold shadow-lg shadow-emerald-500/25 border-0"
-                    >
+                    <Button size="sm" className={t.cta}>
                       Registrate →
                     </Button>
                   </Link>
@@ -97,7 +118,7 @@ function SaasNavbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-slate-300 hover:text-white hover:bg-white/10"
+            className={`md:hidden ${t.toggle}`}
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -105,26 +126,21 @@ function SaasNavbar() {
         </div>
 
         {mobileOpen && (
-          <div className="border-t border-white/10 py-4 md:hidden flex flex-col gap-2">
-            <a
-              href="#caracteristicas"
-              className="px-3 py-2 text-sm text-slate-300 hover:text-white"
-              onClick={() => setMobileOpen(false)}
-            >
+          <div className={`border-t py-4 md:hidden flex flex-col gap-2 ${t.mobileBorder}`}>
+            <a href="/#caracteristicas" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Características
             </a>
-            <a
-              href="#precios"
-              className="px-3 py-2 text-sm text-slate-300 hover:text-white"
-              onClick={() => setMobileOpen(false)}
-            >
+            <a href="/#precios" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Precios
             </a>
+            <Link href="/blog" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
+              Blog
+            </Link>
             {user ? (
               <>
                 {dashboardHref && (
                   <Link href={dashboardHref} onClick={() => setMobileOpen(false)}>
-                    <Button size="sm" variant="ghost" className="w-full justify-start text-slate-300">
+                    <Button size="sm" variant="ghost" className={`w-full justify-start ${t.ghost}`}>
                       Mi Panel
                     </Button>
                   </Link>
@@ -132,7 +148,7 @@ function SaasNavbar() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="w-full justify-start text-slate-400"
+                  className={`w-full justify-start ${t.ghost}`}
                   onClick={() => { signOut(); setMobileOpen(false) }}
                 >
                   Cerrar Sesión
@@ -141,15 +157,12 @@ function SaasNavbar() {
             ) : (
               <>
                 <Link href="/login" onClick={() => setMobileOpen(false)}>
-                  <Button size="sm" variant="ghost" className="w-full justify-start text-slate-300">
+                  <Button size="sm" variant="ghost" className={`w-full justify-start ${t.ghost}`}>
                     Iniciar sesion
                   </Button>
                 </Link>
                 <Link href="/registro" onClick={() => setMobileOpen(false)}>
-                  <Button
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold border-0"
-                  >
+                  <Button size="sm" className={`w-full ${t.cta}`}>
                     Registrate →
                   </Button>
                 </Link>

@@ -75,7 +75,23 @@
 }
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  /* Tipografía: DM Sans (cuerpo) + Fraunces (display) cargadas en layout.tsx */
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+
+  /* Paleta cálida de marca (landing pet-friendly) */
+  --color-cream: #fff9f3;
+  --color-cream-deep: #fdf0e6;
+  --color-coral: #ff6b5c;
+  --color-coral-ink: #f5503f;
+  --color-coral-soft: #fff0ed;
+  --color-teal: #14b8a6;
+  --color-teal-soft: #e6faf6;
+  --color-amber: #f5a623;
+  --color-ink: #2d2a26;
+  --color-ink-muted: #7a726b;
+  --color-warm-border: #f0e7de;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -176,8 +192,77 @@
   100% { transform: translate(-20px,20px) scale(0.9); }
 }
 
+/* ═══════════════ Landing pet-friendly (cálido / claro) ═══════════════ */
+
+/* Patrón de huellas sutil como watermark de fondo. */
+.paw-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23ff6b5c' fill-opacity='1'%3E%3Cellipse cx='34' cy='40' rx='4.5' ry='6' transform='rotate(-20 34 40)'/%3E%3Cellipse cx='46' cy='33' rx='4.8' ry='6.4'/%3E%3Cellipse cx='58' cy='33' rx='4.8' ry='6.4'/%3E%3Cellipse cx='70' cy='40' rx='4.5' ry='6' transform='rotate(20 70 40)'/%3E%3Cpath d='M52 47c-7 0-12 5-12 11 0 6 5 9 12 9s12-3 12-9c0-6-5-11-12-11z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 150px 150px;
+}
+
+/* Blobs orgánicos suaves para el hero cálido. */
+.warm-blob {
+  position: absolute;
+  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  filter: blur(70px);
+  will-change: transform;
+}
+@keyframes warmFloat1 {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  50%  { transform: translate(28px, -22px) rotate(8deg); }
+  100% { transform: translate(-18px, 26px) rotate(-6deg); }
+}
+@keyframes warmFloat2 {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  50%  { transform: translate(-26px, 20px) rotate(-7deg); }
+  100% { transform: translate(20px, -24px) rotate(5deg); }
+}
+
+/* Flotación de las tarjetas/ilustraciones del hero. */
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.float-soft { animation: softFloat 5s ease-in-out infinite; }
+.float-soft-slow { animation: softFloat 7s ease-in-out infinite; }
+
+/* Coleteo sutil de las huellas decorativas. */
+@keyframes pawWiggle {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(6deg); }
+}
+.paw-wiggle { animation: pawWiggle 4s ease-in-out infinite; }
+
+/* Marquee infinito para el trust strip. */
+@keyframes marqueeScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 32s linear infinite;
+}
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Grano sutil para dar atmósfera a las bandas cálidas. */
+.grain-soft {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+/* Ventana de producto (mock estilo navegador). */
+.app-window {
+  box-shadow: 0 40px 80px -30px rgba(45, 42, 38, 0.35),
+              0 12px 28px -18px rgba(255, 107, 92, 0.25);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .vet-blob { animation: none !important; }
+  .vet-blob, .warm-blob, .float-soft, .float-soft-slow, .paw-wiggle, .marquee-track {
+    animation: none !important;
+  }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
