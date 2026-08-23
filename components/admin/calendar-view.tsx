@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Ban, Lock, Unlock, ChevronLeft, ChevronRight, Settings } from "lucide-react"
-import type { Turno } from "@/lib/firebase/firestore"
+import type { Turno } from "@/lib/supabase/queries"
 
 interface CalendarViewProps {
   currentMonth: Date

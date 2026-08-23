@@ -1,5 +1,5 @@
-import { getUserRole, getUsuarioData } from "@/lib/firebase/auth"
-import type { UserRole } from "@/lib/firebase/firestore"
+import { getUserRole, getUsuarioData } from "@/lib/supabase/auth"
+import type { UserRole } from "@/lib/supabase/queries"
 
 export interface DashboardResolution {
   role: UserRole | null

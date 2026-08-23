@@ -37,8 +37,8 @@ import {
   updateCliente,
   type HistorialDato,
   type ClientesCursor,
-} from "@/lib/firebase/firestore";
-import type { Cliente, Mascota } from "@/lib/firebase/firestore";
+} from "@/lib/supabase/queries";
+import type { Cliente, Mascota } from "@/lib/supabase/queries";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin"
+import { getAdminDb, verificarToken } from "@/lib/supabase/admin"
 import { crearSuscripcion, isMercadoPagoConfigured } from "@/lib/billing/mercadopago"
 import { getPlan, normalizePlan } from "@/lib/plans"
 
@@ -7,7 +7,7 @@ import { getPlan, normalizePlan } from "@/lib/plans"
  * Crea una suscripción de Mercado Pago para mejorar el plan de un tenant.
  *
  * Body: { tenantId, planId }
- * Auth: header `Authorization: Bearer <Firebase ID token>` — debe ser el
+ * Auth: header `Authorization: Bearer <Supabase access token>` — debe ser el
  * veterinario dueño del tenant (o superadmin).
  *
  * Responde { ok, initPoint } para redirigir al checkout de Mercado Pago.
@@ -20,10 +20,9 @@ export async function POST(request: Request) {
     )
   }
 
-  const adminAuth = getAdminAuth()
-  const adminDb = getAdminDb()
-  if (!adminAuth || !adminDb) {
-    return NextResponse.json({ ok: false, error: "Firebase Admin no configurado" }, { status: 503 })
+  const admin = getAdminDb()
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: "Supabase Admin no configurado" }, { status: 503 })
   }
 
   let payload: { tenantId?: string; planId?: string }
@@ -44,19 +43,22 @@ export async function POST(request: Request) {
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
   if (!token) return NextResponse.json({ ok: false, error: "Falta token" }, { status: 401 })
 
-  let email = ""
-  try {
-    const decoded = await adminAuth.verifyIdToken(token)
-    email = decoded.email || ""
-    const userSnap = await adminDb.collection("usuarios").doc(decoded.uid).get()
-    const userData = userSnap.data() as { role?: string; tenantId?: string } | undefined
-    const esDueño = userData?.role === "veterinario" && userData?.tenantId === tenantId
-    const esSuper = userData?.role === "superadmin"
-    if (!esDueño && !esSuper) {
-      return NextResponse.json({ ok: false, error: "Sin permiso sobre este tenant" }, { status: 403 })
-    }
-  } catch {
+  const user = await verificarToken(token)
+  if (!user) {
     return NextResponse.json({ ok: false, error: "Token inválido" }, { status: 401 })
+  }
+
+  const email = user.email || ""
+  const { data: userData } = await admin
+    .from("usuarios")
+    .select("role, tenant_id")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const esDueño = userData?.role === "veterinario" && userData?.tenant_id === tenantId
+  const esSuper = userData?.role === "superadmin"
+  if (!esDueño && !esSuper) {
+    return NextResponse.json({ ok: false, error: "Sin permiso sobre este tenant" }, { status: 403 })
   }
 
   const plan = getPlan(planId)

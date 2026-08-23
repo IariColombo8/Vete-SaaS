@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { Turno, Mascota } from "@/lib/firebase/firestore";
+import type { Turno, Mascota } from "@/lib/supabase/queries";
 import {
   CheckCircle2,
   CalendarCheck,

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { useMisTurnosCliente } from "@/hooks/turnos/useMisTurnosCliente"
 import { MisTurnosCliente } from "@/components/turnos/MisTurnosCliente"
-import { getTenantsFull, type TenantFull } from "@/lib/firebase/firestore"
+import { getTenantsFull, type TenantFull } from "@/lib/supabase/queries"
 import { useAuth } from "@/hooks/use-auth"
 import { MapPin, Phone, CalendarPlus, Stethoscope, Loader2, LogIn } from "lucide-react"
 

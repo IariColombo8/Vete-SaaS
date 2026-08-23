@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, PawPrint, ArrowRight } from "lucide-react";
-import type { Turno } from "@/lib/firebase/firestore";
+import type { Turno } from "@/lib/supabase/queries";
 
 interface NextAppointmentCardProps {
   turnos: Turno[];

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAdminDb } from "@/lib/firebase/admin"
+import { getAdminDb } from "@/lib/supabase/admin"
 import { getPreapproval } from "@/lib/billing/mercadopago"
 import { normalizePlan } from "@/lib/plans"
 
@@ -8,7 +8,7 @@ import { normalizePlan } from "@/lib/plans"
  *
  * MP notifica cambios de estado. Verificamos el estado real consultando la
  * API (no confiamos en el payload) y, si la suscripción está autorizada,
- * actualizamos el plan del tenant vía Admin SDK.
+ * actualizamos el plan del tenant con la service_role key.
  *
  * `external_reference` = "tenantId:planId".
  *
@@ -17,9 +17,9 @@ import { normalizePlan } from "@/lib/plans"
  * firma (x-signature) — pendiente de las credenciales del proyecto.
  */
 export async function POST(request: Request) {
-  const adminDb = getAdminDb()
-  if (!adminDb) {
-    return NextResponse.json({ ok: false, error: "Firebase Admin no configurado" }, { status: 503 })
+  const admin = getAdminDb()
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: "Supabase Admin no configurado" }, { status: 503 })
   }
 
   let body: { type?: string; action?: string; data?: { id?: string } }
@@ -43,17 +43,23 @@ export async function POST(request: Request) {
     const [tenantId, planIdRaw] = (info.externalReference || "").split(":")
     if (!tenantId) return NextResponse.json({ ok: true, ignored: true })
 
-    const configRef = adminDb.doc(`veterinarias/${tenantId}/config/datos`)
-
     if (info.status === "authorized") {
       const planId = normalizePlan(planIdRaw)
-      await configRef.set({ plan: planId, status: "activo", mpPreapprovalId: info.id }, { merge: true })
+      const { error } = await admin
+        .from("tenants")
+        .update({ plan: planId, status: "activo", mp_preapproval_id: info.id })
+        .eq("slug", tenantId)
+      if (error) throw error
       return NextResponse.json({ ok: true, applied: true, tenantId, plan: planId })
     }
 
     if (info.status === "cancelled" || info.status === "paused") {
       // Baja de plan: volver a básico al cancelarse la suscripción.
-      await configRef.set({ plan: "basico" }, { merge: true })
+      const { error } = await admin
+        .from("tenants")
+        .update({ plan: "basico" })
+        .eq("slug", tenantId)
+      if (error) throw error
       return NextResponse.json({ ok: true, applied: true, tenantId, plan: "basico" })
     }
 

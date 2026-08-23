@@ -1,4 +1,4 @@
-import type { MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig } from "@/lib/firebase/firestore"
+import type { MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig } from "@/lib/supabase/queries"
 
 export const MASCOTAS_DEFAULT: MascotaTurnoConfig[] = [
   { id: "perro", emoji: "🐕", nombre: "Perro" },

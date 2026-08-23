@@ -3,8 +3,8 @@ import {
   getTurnos, updateTurno, deleteTurno, getMascotas,
   bloquearDia, desbloquearDia,
   subscribeTurnos, subscribeDiasBloqueados,
-} from "@/lib/firebase/firestore"
-import type { Turno, Mascota } from "@/lib/firebase/firestore"
+} from "@/lib/supabase/queries"
+import type { Turno, Mascota } from "@/lib/supabase/queries"
 import { useToast } from "@/hooks/use-toast"
 
 export function useTurnosManagement(tenantId: string) {

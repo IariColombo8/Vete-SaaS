@@ -33,7 +33,7 @@ import type {
 } from "./types"
 
 // Re-export de tipos y helpers públicos para compatibilidad con imports existentes
-// desde "@/lib/firebase/firestore".
+// desde "@/lib/supabase/queries".
 export type {
   UserRole, Usuario, Invitacion, ServicioTenant, HorarioTenant, Tenant, Modalidad,
   MascotaTurnoConfig, ServicioTurnoConfig, Profesional, VacunaTurnoConfig, TurnoConfig,

@@ -4,8 +4,8 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
-import { getUserRole } from "@/lib/firebase/auth"
-import type { UserRole } from "@/lib/firebase/firestore"
+import { getUserRole } from "@/lib/supabase/auth"
+import type { UserRole } from "@/lib/supabase/queries"
 
 interface Props {
   children: React.ReactNode
@@ -29,7 +29,7 @@ export function ProtectedRoute({ children, requiredRole }: Props) {
       return
     }
     if (user && requiredRole) {
-      getUserRole(user.uid).then((r) => {
+      getUserRole(user.id).then((r) => {
         setRole(r)
         setRoleLoading(false)
         if (!hasRequiredRole(r, requiredRole)) {

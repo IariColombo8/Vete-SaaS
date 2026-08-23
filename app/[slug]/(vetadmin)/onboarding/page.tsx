@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
-import { updateTenantConfig, updateTurnoConfig } from "@/lib/firebase/firestore"
+import { updateTenantConfig, updateTurnoConfig } from "@/lib/supabase/queries"
 import { ONBOARDING_TEMPLATES, type OnboardingTemplate } from "@/lib/onboarding/templates"
 import { VACUNAS_DEFAULT } from "@/lib/turno-defaults"
 import { Card, CardContent } from "@/components/ui/card"

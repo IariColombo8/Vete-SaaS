@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { getTurnosByClienteEmail, updateTurno } from "@/lib/firebase/firestore"
-import type { Turno } from "@/lib/firebase/firestore"
-import { auth } from "@/lib/firebase/config"
+import { getTurnosByClienteEmail, updateTurno } from "@/lib/supabase/queries"
+import type { Turno } from "@/lib/supabase/queries"
+import { getCurrentUser } from "@/lib/supabase/auth"
 
 function getFechaTurno(t: Turno) {
   return t.turno?.fecha ?? t.fecha ?? ""
@@ -10,7 +10,7 @@ function getFechaTurno(t: Turno) {
 
 /**
  * Hook para que un cliente autenticado vea y cancele sus turnos.
- * Usa el email del usuario autenticado para buscar turnos (protegido por Firestore Rules).
+ * Usa el email del usuario autenticado para buscar turnos (protegido por RLS de Supabase).
  * Opcionalmente acepta un DNI para búsqueda legacy (solo si el usuario está autenticado).
  */
 export function useMisTurnosCliente(tenantId: string) {
@@ -21,7 +21,7 @@ export function useMisTurnosCliente(tenantId: string) {
   const [emailActual, setEmailActual] = useState("")
 
   const buscarMisTurnos = useCallback(async () => {
-    const user = auth.currentUser
+    const user = await getCurrentUser()
     if (!user?.email) {
       setError("Debés iniciar sesión para ver tus turnos.")
       return false
@@ -56,7 +56,7 @@ export function useMisTurnosCliente(tenantId: string) {
 
   const cancelarTurno = useCallback(async (turno: Turno) => {
     if (!turno.id) return
-    const user = auth.currentUser
+    const user = await getCurrentUser()
     if (!user?.email || user.email !== turno.cliente?.email) {
       toast({ title: "Error", description: "Solo podés cancelar tus propios turnos.", variant: "destructive" })
       return

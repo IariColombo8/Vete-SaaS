@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Heart, PlusCircle, Edit3 } from "lucide-react";
-import type { MascotaTurnoConfig } from "@/lib/firebase/firestore";
+import type { MascotaTurnoConfig } from "@/lib/supabase/queries";
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults";
 
 interface MascotaSectionProps {

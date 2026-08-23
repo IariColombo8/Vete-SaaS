@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnos } from "@/lib/firebase/firestore"
-import type { Usuario, TenantFull } from "@/lib/firebase/firestore"
+import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnos } from "@/lib/supabase/queries"
+import type { Usuario, TenantFull } from "@/lib/supabase/queries"
 import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Mascota, Turno } from "@/lib/firebase/firestore";
+import type { Mascota, Turno } from "@/lib/supabase/queries";
 import { Calendar, Clock, FileText } from "lucide-react";
 
 interface MiLibretaClienteProps {

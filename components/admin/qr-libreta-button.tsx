@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { generarLibretaPublica, getTenantConfig } from "@/lib/firebase/firestore"
+import { generarLibretaPublica, getTenantConfig } from "@/lib/supabase/queries"
 import { planAllows } from "@/lib/plans"
 import { QrCode, Loader2, Download, ExternalLink } from "lucide-react"
 

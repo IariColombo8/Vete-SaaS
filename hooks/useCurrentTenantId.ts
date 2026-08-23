@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { getUsuarioData } from "@/lib/firebase/auth"
+import { getUsuarioData } from "@/lib/supabase/auth"
 
 export function useCurrentTenantId() {
   const { user, loading: authLoading } = useAuth()
@@ -11,7 +11,7 @@ export function useCurrentTenantId() {
     if (authLoading) return
     if (!user) { setLoading(false); return }
 
-    getUsuarioData(user.uid).then((data) => {
+    getUsuarioData(user.id).then((data) => {
       setTenantId((data?.tenantId as string) ?? null)
       setLoading(false)
     })

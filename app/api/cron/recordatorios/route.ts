@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { getAdminDb } from "@/lib/firebase/admin"
+import { getAdminDb } from "@/lib/supabase/admin"
 import { planAllows } from "@/lib/plans"
 import { sendWhatsAppTemplate } from "@/lib/notifications/whatsapp"
 
 /**
- * Cron diario: recordatorios por WhatsApp (vía Admin SDK, bypassa reglas).
+ * Cron diario: recordatorios por WhatsApp (service_role, bypassa RLS).
  *
  *  1. Turnos de mañana (estado pendiente/confirmado) → recordatorio de turno.
  *  2. Vacunas que vencen en `RECORDATORIO_VACUNA_DIAS` días (default 7) →
@@ -15,6 +15,9 @@ import { sendWhatsAppTemplate } from "@/lib/notifications/whatsapp"
  *
  * Plantillas (env): `WHATSAPP_REMINDER_TEMPLATE` (turno, params nombre+hora),
  * `WHATSAPP_VACUNA_TEMPLATE` (vacuna, params nombre+vacuna). Idioma `WHATSAPP_TEMPLATE_LANG`.
+ *
+ * Nota: en Firestore esto hacía 1 + 3N lecturas (una tanda por tenant). Acá son
+ * 3 queries en total, filtrando por la lista de tenants habilitados.
  */
 
 function addDaysISO(days: number): string {
@@ -34,9 +37,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 })
   }
 
-  const adminDb = getAdminDb()
-  if (!adminDb) {
-    return NextResponse.json({ ok: false, error: "Firebase Admin no configurado" }, { status: 503 })
+  const admin = getAdminDb()
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: "Supabase Admin no configurado" }, { status: 503 })
   }
 
   const lang = process.env.WHATSAPP_TEMPLATE_LANG || "es_AR"
@@ -48,74 +51,79 @@ export async function GET(request: Request) {
 
   let turnosEnviados = 0
   let vacunasEnviadas = 0
-  let tenantsProcesados = 0
 
   try {
-    const tenantsSnap = await adminDb.collection("veterinarias").get()
+    const { data: tenants, error: errTenants } = await admin
+      .from("tenants")
+      .select("slug, plan")
+    if (errTenants) throw errTenants
 
-    for (const tenantDoc of tenantsSnap.docs) {
-      const slug = tenantDoc.id
-      const cfgSnap = await adminDb.doc(`veterinarias/${slug}/config/datos`).get()
-      const plan = (cfgSnap.data()?.plan as string) ?? "basico"
-      if (!planAllows(plan, "whatsapp")) continue
-      tenantsProcesados++
+    const conWhatsapp = (tenants ?? []).filter((t) => planAllows(t.plan, "whatsapp"))
+    const conVacunas = conWhatsapp.filter((t) => planAllows(t.plan, "recordatoriosVacunas"))
 
-      // 1. Recordatorios de turnos de mañana
-      const turnosSnap = await adminDb
-        .collection(`veterinarias/${slug}/turnos`)
-        .where("turno.fecha", "==", fechaTurnos)
-        .where("estado", "in", ["pendiente", "confirmado"])
-        .get()
+    if (conWhatsapp.length === 0) {
+      return NextResponse.json({
+        ok: true, tenantsProcesados: 0, turnosEnviados: 0, vacunasEnviadas: 0,
+        fechaTurnos, fechaVacunas,
+      })
+    }
 
-      for (const t of turnosSnap.docs) {
-        const data = t.data()
-        const telefono = data.cliente?.telefono
-        if (!telefono) continue
+    // 1. Turnos de mañana, de todos los tenants habilitados
+    const { data: turnos, error: errTurnos } = await admin
+      .from("turnos")
+      .select("cliente_nombre, cliente_telefono, hora")
+      .in("tenant_id", conWhatsapp.map((t) => t.slug))
+      .eq("fecha", fechaTurnos)
+      .in("estado", ["pendiente", "confirmado"])
+    if (errTurnos) throw errTurnos
+
+    for (const turno of turnos ?? []) {
+      if (!turno.cliente_telefono) continue
+      const components = [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: turno.cliente_nombre || "Cliente" },
+            { type: "text", text: turno.hora || "" },
+          ],
+        },
+      ]
+      const r = await sendWhatsAppTemplate(turno.cliente_telefono, turnoTemplate, lang, components)
+      if (r.ok) turnosEnviados++
+    }
+
+    // 2. Vacunas que vencen, de los tenants con ese feature
+    if (conVacunas.length > 0) {
+      const { data: vacunas, error: errVacunas } = await admin
+        .from("recordatorios_vacunas")
+        .select("id, telefono, mascota_nombre, vacuna")
+        .in("tenant_id", conVacunas.map((t) => t.slug))
+        .eq("fecha", fechaVacunas)
+        .eq("enviado", false)
+      if (errVacunas) throw errVacunas
+
+      for (const v of vacunas ?? []) {
+        if (!v.telefono) continue
         const components = [
           {
             type: "body",
             parameters: [
-              { type: "text", text: data.cliente?.nombre || "Cliente" },
-              { type: "text", text: data.turno?.hora || "" },
+              { type: "text", text: v.mascota_nombre || "tu mascota" },
+              { type: "text", text: v.vacuna || "" },
             ],
           },
         ]
-        const r = await sendWhatsAppTemplate(telefono, turnoTemplate, lang, components)
-        if (r.ok) turnosEnviados++
-      }
-
-      // 2. Recordatorios de vacunas (solo si el plan lo permite)
-      if (planAllows(plan, "recordatoriosVacunas")) {
-        const vacSnap = await adminDb
-          .collection(`veterinarias/${slug}/recordatoriosVacunas`)
-          .where("fecha", "==", fechaVacunas)
-          .where("enviado", "==", false)
-          .get()
-
-        for (const v of vacSnap.docs) {
-          const data = v.data()
-          if (!data.telefono) continue
-          const components = [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: data.mascotaNombre || "tu mascota" },
-                { type: "text", text: data.vacuna || "" },
-              ],
-            },
-          ]
-          const r = await sendWhatsAppTemplate(data.telefono, vacunaTemplate, lang, components)
-          if (r.ok) {
-            vacunasEnviadas++
-            await v.ref.update({ enviado: true, enviadoAt: new Date().toISOString() })
-          }
+        const r = await sendWhatsAppTemplate(v.telefono, vacunaTemplate, lang, components)
+        if (r.ok) {
+          vacunasEnviadas++
+          await admin.from("recordatorios_vacunas").update({ enviado: true }).eq("id", v.id)
         }
       }
     }
 
     return NextResponse.json({
       ok: true,
-      tenantsProcesados,
+      tenantsProcesados: conWhatsapp.length,
       turnosEnviados,
       vacunasEnviadas,
       fechaTurnos,

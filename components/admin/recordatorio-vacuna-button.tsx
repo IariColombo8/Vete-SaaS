@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { createRecordatorioVacuna, getTenantConfig } from "@/lib/firebase/firestore"
+import { createRecordatorioVacuna, getTenantConfig } from "@/lib/supabase/queries"
 import { planAllows } from "@/lib/plans"
 import { Syringe, Loader2 } from "lucide-react"
 

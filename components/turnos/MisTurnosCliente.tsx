@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Clock, Calendar, XCircle } from "lucide-react";
-import type { Turno } from "@/lib/firebase/firestore";
+import type { Turno } from "@/lib/supabase/queries";
 import { TurnoForm } from "@/components/turnos/TurnoForm";
 
 interface MisTurnosClienteProps {

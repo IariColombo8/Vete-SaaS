@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Clock, PawPrint, AlertCircle, CheckCircle2, XCircle, Dog, Cat, Bird } from "lucide-react"
-import type { Turno } from "@/lib/firebase/firestore"
+import type { Turno } from "@/lib/supabase/queries"
 
 function getMascotaIcon(tipo: string) {
   const t = tipo?.toLowerCase() || ""

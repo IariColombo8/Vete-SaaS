@@ -1,4 +1,4 @@
-import type { UserRole } from "@/lib/firebase/firestore"
+import type { UserRole } from "@/lib/supabase/queries"
 
 /** Secciones del panel admin sujetas a control de acceso por rol. */
 export type AdminSection = "dashboard" | "turnos" | "libreta" | "clientes" | "configuracion"

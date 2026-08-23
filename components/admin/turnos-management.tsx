@@ -25,8 +25,8 @@ import {
 import { CalendarIcon, Loader2, Download } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { createHistoria, updateTurno } from "@/lib/firebase/firestore";
-import type { Turno } from "@/lib/firebase/firestore";
+import { createHistoria, updateTurno } from "@/lib/supabase/queries";
+import type { Turno } from "@/lib/supabase/queries";
 import { descargarTurnosCSV } from "@/lib/export/turnos-csv";
 
 import { useTurnosManagement } from "@/hooks/turnos/useTurnosManagement";

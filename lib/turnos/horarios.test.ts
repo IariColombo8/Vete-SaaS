@@ -7,7 +7,7 @@ import {
   computeAvailableSlots,
   slotsParaDuracion,
 } from "./horarios"
-import type { HorarioTenant } from "@/lib/firebase/firestore"
+import type { HorarioTenant } from "@/lib/supabase/queries"
 
 describe("diaToWeekdays", () => {
   it("mapea un día simple a su número (0=domingo)", () => {

@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf"
-import type { Cliente, Mascota, Historia } from "@/lib/firebase/firestore"
+import type { Cliente, Mascota, Historia } from "@/lib/supabase/queries"
 
 /**
  * Genera y descarga un PDF de la libreta sanitaria de una mascota:

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { getTurnosByDateRange, getDiasBloqueados } from "@/lib/firebase/firestore"
-import type { Turno } from "@/lib/firebase/firestore"
+import { getTurnosByDateRange, getDiasBloqueados } from "@/lib/supabase/queries"
+import type { Turno } from "@/lib/supabase/queries"
 import { useToast } from "@/hooks/use-toast"
 
 /** Calcula rango: primer día del mes actual → último día del mes siguiente */

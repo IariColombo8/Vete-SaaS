@@ -17,7 +17,7 @@ import {
   PawPrint,
   Calendar,
 } from "lucide-react";
-import type { Turno } from "@/lib/firebase/firestore";
+import type { Turno } from "@/lib/supabase/queries";
 
 function getMascotaIcon(tipo: string) {
   const t = tipo?.toLowerCase() || "";

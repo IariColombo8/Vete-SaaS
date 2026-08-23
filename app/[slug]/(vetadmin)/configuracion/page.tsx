@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSlug } from "@/context/slug-context"
-import { getTenantConfig, updateTenantConfig, getTurnoConfig, updateTurnoConfig } from "@/lib/firebase/firestore"
-import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional } from "@/lib/firebase/firestore"
+import { getTenantConfig, updateTenantConfig, getTurnoConfig, updateTurnoConfig } from "@/lib/supabase/queries"
+import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional } from "@/lib/supabase/queries"
 import { MASCOTAS_DEFAULT, SERVICIOS_DEFAULT, VACUNAS_DEFAULT } from "@/lib/turno-defaults"
-import { storage } from "@/lib/firebase/config"
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
+import { uploadFotoTenant, deleteFotoTenant } from "@/lib/supabase/storage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -117,13 +116,13 @@ export default function ConfiguracionPage() {
     const file = e.target.files?.[0]
     if (!file) return
     setUploadingLogo(true)
+    const logoAnterior = logo
     try {
-      const ext = file.name.split(".").pop()
-      const storageRef = ref(storage, `veterinarias/${slug}/logo/logo.${ext}`)
-      await uploadBytes(storageRef, file)
-      const url = await getDownloadURL(storageRef)
+      const url = await uploadFotoTenant(slug, "logo", file)
       setLogo(url)
       await updateTenantConfig(slug, { logo: url })
+      // El path ahora lleva timestamp, asi que el logo viejo no se sobreescribe: lo borramos.
+      if (logoAnterior) await deleteFotoTenant(logoAnterior)
       toast({ title: "Logo actualizado" })
     } catch (err) {
       console.error(err)
@@ -136,10 +135,7 @@ export default function ConfiguracionPage() {
 
   async function handleDeleteLogo() {
     try {
-      if (logo) {
-        const storageRef = ref(storage, logo)
-        await deleteObject(storageRef).catch(() => {})
-      }
+      if (logo) await deleteFotoTenant(logo)
       setLogo("")
       await updateTenantConfig(slug, { logo: "" })
       toast({ title: "Logo eliminado" })
@@ -158,10 +154,7 @@ export default function ConfiguracionPage() {
     try {
       const nuevasUrls: string[] = []
       for (const file of files) {
-        const storageRef = ref(storage, `veterinarias/${slug}/hero/${Date.now()}-${file.name}`)
-        await uploadBytes(storageRef, file)
-        const url = await getDownloadURL(storageRef)
-        nuevasUrls.push(url)
+        nuevasUrls.push(await uploadFotoTenant(slug, "hero", file))
       }
       const updated = [...fotosHero, ...nuevasUrls]
       setFotosHero(updated)
@@ -178,8 +171,7 @@ export default function ConfiguracionPage() {
 
   async function handleDeleteFoto(url: string) {
     try {
-      const storageRef = ref(storage, url)
-      await deleteObject(storageRef).catch(() => {})
+      await deleteFotoTenant(url)
       const updated = fotosHero.filter(f => f !== url)
       setFotosHero(updated)
       await updateTenantConfig(slug, { fotosHero: updated })
@@ -200,10 +192,7 @@ export default function ConfiguracionPage() {
     try {
       const nuevasUrls: string[] = []
       for (const file of files) {
-        const storageRef = ref(storage, `veterinarias/${slug}/hero-mobile/${Date.now()}-${file.name}`)
-        await uploadBytes(storageRef, file)
-        const url = await getDownloadURL(storageRef)
-        nuevasUrls.push(url)
+        nuevasUrls.push(await uploadFotoTenant(slug, "hero-mobile", file))
       }
       const updated = [...fotosHeroMobile, ...nuevasUrls]
       setFotosHeroMobile(updated)
@@ -220,8 +209,7 @@ export default function ConfiguracionPage() {
 
   async function handleDeleteFotoMobile(url: string) {
     try {
-      const storageRef = ref(storage, url)
-      await deleteObject(storageRef).catch(() => {})
+      await deleteFotoTenant(url)
       const updated = fotosHeroMobile.filter(f => f !== url)
       setFotosHeroMobile(updated)
       await updateTenantConfig(slug, { fotosHeroMobile: updated })

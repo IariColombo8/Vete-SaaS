@@ -1,17 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { User } from "firebase/auth"
-import { onAuthStateChanged } from "@/lib/firebase/auth"
-import { auth } from "@/lib/firebase/config"
+import { onAuthStateChanged, type User } from "@/lib/supabase/auth"
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
+    // Supabase devuelve el unsubscribe directamente (no recibe `auth` como Firebase).
+    const unsubscribe = onAuthStateChanged((usuario) => {
+      setUser(usuario)
       setLoading(false)
     })
 

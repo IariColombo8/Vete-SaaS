@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { canUseFeature } from "@/lib/firebase/firestore"
+import { canUseFeature } from "@/lib/supabase/queries"
 import { sendWhatsAppTemplate } from "@/lib/notifications/whatsapp"
 
 /**

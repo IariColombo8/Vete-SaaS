@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { signInWithGoogle } from "@/lib/firebase/auth"
+import { signInWithGoogle } from "@/lib/supabase/auth"
 import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
+import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Stethoscope } from "lucide-react"
@@ -14,14 +15,29 @@ import Link from "next/link"
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
+
+  // Supabase inicia sesión por redirect: el usuario vuelve acá desde /auth/callback.
+  // Recién en ese momento podemos resolver su panel y mandarlo al destino correcto.
+  useEffect(() => {
+    if (authLoading || !user) return
+    let cancelado = false
+    resolveUserDashboard(user.id)
+      .then(({ redirectTo }) => {
+        if (!cancelado) router.replace(redirectTo)
+      })
+      .catch((error) => {
+        console.error("No se pudo resolver el panel del usuario:", error)
+      })
+    return () => { cancelado = true }
+  }, [user, authLoading, router])
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
     try {
-      const result = await signInWithGoogle()
-      const { redirectTo } = await resolveUserDashboard(result.user.uid)
-      router.push(redirectTo)
+      // Navega fuera de la página: nada de lo que venga después se ejecuta.
+      await signInWithGoogle("/login")
     } catch (error) {
       console.error("Login error:", error)
       toast({
@@ -29,7 +45,6 @@ export default function LoginPage() {
         description: "No se pudo iniciar sesión con Google. Por favor, intentá nuevamente.",
         variant: "destructive",
       })
-    } finally {
       setLoading(false)
     }
   }

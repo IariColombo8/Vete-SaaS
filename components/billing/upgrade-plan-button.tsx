@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { auth } from "@/lib/firebase/config"
+import { supabase } from "@/lib/supabase/config"
 import { PLANS, normalizePlan, type PlanId } from "@/lib/plans"
 import { track } from "@vercel/analytics"
 import { Loader2, ArrowUpCircle } from "lucide-react"
@@ -38,7 +38,8 @@ export function UpgradePlanButton({ tenantId, planActual }: Props) {
     setLoading(true)
     track("plan_upgrade_click", { tenant: tenantId, desde: actual, hacia: target })
     try {
-      const token = await auth.currentUser?.getIdToken()
+      const { data: sesion } = await supabase.auth.getSession()
+      const token = sesion.session?.access_token
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

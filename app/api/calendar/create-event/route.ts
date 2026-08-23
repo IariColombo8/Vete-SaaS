@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
-import { getTenantConfig } from "@/lib/firebase/firestore";
+import { getTenantConfig } from "@/lib/supabase/queries";
 
 /**
  * Crea un evento en Google Calendar al confirmar un turno.

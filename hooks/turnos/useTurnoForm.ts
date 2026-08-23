@@ -8,8 +8,8 @@ import { es } from "date-fns/locale"
 import {
   createTurno, createCliente, createMascota,
   updateCliente, updateMascota, getTenantConfig, getTurnoConfig,
-} from "@/lib/firebase/firestore"
-import type { HorarioTenant, TenantConfig, TurnoConfig } from "@/lib/firebase/firestore"
+} from "@/lib/supabase/queries"
+import type { HorarioTenant, TenantConfig, TurnoConfig } from "@/lib/supabase/queries"
 import { enviarEmailConfirmacion } from "@/lib/email/confirmacion-turno"
 import { useClienteByDNI } from "./useClienteByDNI"
 import { useDisponibilidadTurnos } from "./useDisponibilidadTurnos"

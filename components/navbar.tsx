@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { signOut } from "@/lib/firebase/auth"
+import { signOut } from "@/lib/supabase/auth"
 import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useRouter, usePathname } from "next/navigation"
 import { Menu, X, Stethoscope, LayoutDashboard, Shield } from "lucide-react"
@@ -50,7 +50,7 @@ function SaasNavbar() {
 
   useEffect(() => {
     if (!user) { setDashboardHref(null); return }
-    resolveUserDashboard(user.uid).then(({ role: r, redirectTo }) => {
+    resolveUserDashboard(user.id).then(({ role: r, redirectTo }) => {
       setDashboardHref(r === "usuario" ? null : redirectTo)
     })
   }, [user])
@@ -224,7 +224,7 @@ function VetPublicNavbar() {
 
   useEffect(() => {
     if (!slug) return
-    import("@/lib/firebase/firestore").then(({ getTenantConfig }) => {
+    import("@/lib/supabase/queries").then(({ getTenantConfig }) => {
       getTenantConfig(slug).then(cfg => {
         if (cfg) setTenant({ nombre: cfg.nombre || slug, logo: cfg.logo })
       })

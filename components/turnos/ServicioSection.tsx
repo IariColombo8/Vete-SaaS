@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileText, UserRound } from "lucide-react";
-import type { ServicioTurnoConfig, Profesional } from "@/lib/firebase/firestore";
+import type { ServicioTurnoConfig, Profesional } from "@/lib/supabase/queries";
 import { SERVICIOS_DEFAULT } from "@/lib/turno-defaults";
 
 interface ServicioSectionProps {

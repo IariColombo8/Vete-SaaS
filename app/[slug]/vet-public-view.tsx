@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback, type ReactNode } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { getTenant, getTenantConfig } from "@/lib/firebase/firestore"
-import type { TenantConfig, ServicioTenant, HorarioTenant, Modalidad } from "@/lib/firebase/firestore"
+import { getTenant, getTenantConfig } from "@/lib/supabase/queries"
+import type { TenantConfig, ServicioTenant, HorarioTenant, Modalidad } from "@/lib/supabase/queries"
 import { Button } from "@/components/ui/button"
 import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
@@ -366,7 +366,7 @@ export default function VetPublicPage() {
               <img
                 src={logo}
                 alt={`Logo de ${nombre}`}
-                className="w-24 h-24 rounded-3xl shadow-2xl shadow-black/40 ring-2 ring-white/20 object-cover"
+                className="w-48 h-48 rounded-[2rem] shadow-2xl shadow-black/40 ring-2 ring-white/20 object-cover"
               />
             </div>
           )}

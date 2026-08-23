@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTenantConfig } from "@/lib/firebase/firestore"
+import { getTenantConfig } from "@/lib/supabase/queries"
 import VetPublicView from "./vet-public-view"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"

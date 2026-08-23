@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server"
-import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin"
+import { getAdminDb, verificarToken } from "@/lib/supabase/admin"
 
 /**
  * Acepta automáticamente una invitación pendiente para el usuario autenticado.
  *
- * Se llama tras el login. Verifica el ID token de Firebase, busca una
+ * Se llama tras el login. Valida el access token de Supabase, busca una
  * invitación pendiente para el email del usuario y, si existe, asigna
- * `role` + `tenantId` en su documento `usuarios/{uid}` usando el Admin SDK
- * (las Firestore Rules impiden que el propio usuario se asigne rol).
+ * `role` + `tenant_id` en su fila de `usuarios` con la service_role key
+ * (las policies impiden que el propio usuario se asigne rol).
  *
- * Auth: header `Authorization: Bearer <Firebase ID token>`.
+ * Auth: header `Authorization: Bearer <Supabase access token>`.
  */
 export async function POST(request: Request) {
-  const adminDb = getAdminDb()
-  const adminAuth = getAdminAuth()
-  if (!adminDb || !adminAuth) {
+  const admin = getAdminDb()
+  if (!admin) {
     return NextResponse.json(
-      { ok: false, error: "Firebase Admin no configurado en el servidor" },
+      { ok: false, error: "Supabase Admin no configurado en el servidor" },
       { status: 503 },
     )
   }
@@ -27,42 +26,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Falta el token" }, { status: 401 })
   }
 
-  let uid: string
-  let email: string | undefined
-  try {
-    const decoded = await adminAuth.verifyIdToken(token)
-    uid = decoded.uid
-    email = decoded.email?.toLowerCase()
-  } catch {
+  const user = await verificarToken(token)
+  if (!user) {
     return NextResponse.json({ ok: false, error: "Token inválido" }, { status: 401 })
   }
 
+  const email = user.email?.toLowerCase()
   if (!email) {
     return NextResponse.json({ ok: true, applied: false, reason: "sin_email" })
   }
 
   try {
-    const snap = await adminDb
-      .collection("invitaciones")
-      .where("email", "==", email)
-      .where("estado", "==", "pendiente")
+    const { data: inv, error } = await admin
+      .from("invitaciones")
+      .select("id, tenant_id, role")
+      .eq("email", email)
+      .eq("estado", "pendiente")
       .limit(1)
-      .get()
+      .maybeSingle()
 
-    if (snap.empty) {
+    if (error) throw error
+    if (!inv) {
       return NextResponse.json({ ok: true, applied: false })
     }
 
-    const invDoc = snap.docs[0]
-    const inv = invDoc.data() as { tenantId: string; role: "veterinario" | "empleado" }
+    const { error: errUsuario } = await admin
+      .from("usuarios")
+      .update({ role: inv.role, tenant_id: inv.tenant_id })
+      .eq("id", user.id)
+    if (errUsuario) throw errUsuario
 
-    await adminDb.collection("usuarios").doc(uid).set(
-      { role: inv.role, tenantId: inv.tenantId },
-      { merge: true },
-    )
-    await invDoc.ref.update({ estado: "aceptada", aceptadaAt: new Date().toISOString() })
+    await admin
+      .from("invitaciones")
+      .update({ estado: "aceptada" })
+      .eq("id", inv.id)
 
-    return NextResponse.json({ ok: true, applied: true, role: inv.role, tenantId: inv.tenantId })
+    return NextResponse.json({
+      ok: true,
+      applied: true,
+      role: inv.role,
+      tenantId: inv.tenant_id,
+    })
   } catch (error) {
     console.error("[invitaciones/aceptar] Error:", error)
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 })

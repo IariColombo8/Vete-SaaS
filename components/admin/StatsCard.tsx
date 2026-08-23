@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Activity, Clock, CheckCircle2 } from "lucide-react";
-import type { Turno } from "@/lib/firebase/firestore";
+import type { Turno } from "@/lib/supabase/queries";
 
 interface StatsCardProps {
   selectedDate: string;

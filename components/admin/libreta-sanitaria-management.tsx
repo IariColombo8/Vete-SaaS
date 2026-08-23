@@ -34,9 +34,9 @@ import {
   updateHistoria,
   updateCliente,
   updateTurno,
-} from "@/lib/firebase/firestore";
-import type { Cliente, Mascota, Historia, Turno, HistorialDato } from "@/lib/firebase/firestore";
-import { uploadArchivoHistoria } from "@/lib/firebase/storage";
+} from "@/lib/supabase/queries";
+import type { Cliente, Mascota, Historia, Turno, HistorialDato } from "@/lib/supabase/queries";
+import { uploadArchivoHistoria } from "@/lib/supabase/storage";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";

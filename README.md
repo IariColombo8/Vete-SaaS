@@ -139,6 +139,35 @@ firebase deploy --only storage          # reglas de Storage
 Archivos involucrados: `firestore.rules`, `firestore.indexes.json`, `storage.rules`,
 `firebase.json`.
 
+### CORS de Storage (obligatorio para subir logo y fotos)
+
+Sin esto, cualquier `uploadBytes` desde el navegador falla con
+`blocked by CORS policy: Response to preflight request doesn't pass access control check`.
+Las reglas de Storage **no** arreglan esto: es configuración del bucket de GCS.
+
+La forma más rápida es [Google Cloud Shell](https://console.cloud.google.com/)
+(ya trae `gcloud`/`gsutil`, no hay que instalar nada). Subí `cors.json` y ejecutá:
+
+```bash
+gcloud storage buckets update gs://<tu-bucket> --cors-file=cors.json
+
+# alternativa con gsutil
+gsutil cors set cors.json gs://<tu-bucket>
+
+# verificar
+gcloud storage buckets describe gs://<tu-bucket> --format="default(cors_config)"
+```
+
+`<tu-bucket>` es el valor de `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+(ej. `veterinaria-prueba-001.firebasestorage.app`), sin el prefijo `gs://` duplicado.
+
+Notas sobre `cors.json`:
+
+- GCS **no acepta wildcards** en `origin` (`https://*.vercel.app` se ignora).
+  Hay que listar cada dominio exacto — reemplazá el placeholder por tu dominio real.
+- Incluí el puerto exacto del dev server. `http://localhost:3000` y
+  `http://localhost:3001` son orígenes distintos para el navegador.
+
 ### Auth
 En Firebase Console → Authentication → habilitar **Google** como proveedor y agregar
 el dominio de producción a "Authorized domains".

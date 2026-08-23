@@ -39,8 +39,8 @@ import {
   createHistoria,
   updateHistoria,
   deleteHistoria,
-} from "@/lib/firebase/firestore";
-import type { Cliente, Mascota, Historia, Turno } from "@/lib/firebase/firestore";
+} from "@/lib/supabase/queries";
+import type { Cliente, Mascota, Historia, Turno } from "@/lib/supabase/queries";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import {

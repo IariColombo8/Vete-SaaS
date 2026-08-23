@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { MapPin, Home } from "lucide-react";
-import type { Modalidad } from "@/lib/firebase/firestore";
+import type { Modalidad } from "@/lib/supabase/queries";
 
 interface LugarSectionProps {
   modalidad: Modalidad;

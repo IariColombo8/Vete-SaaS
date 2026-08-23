@@ -27,7 +27,7 @@ import {
   File,
   ExternalLink,
 } from "lucide-react";
-import type { Cliente, Mascota, Historia, Turno } from "@/lib/firebase/firestore";
+import type { Cliente, Mascota, Historia, Turno } from "@/lib/supabase/queries";
 
 function getMascotaIcon(tipo: string) {
   const t = tipo?.toLowerCase() || "";

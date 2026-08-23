@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { signInWithGoogle, updateUsuario } from "@/lib/firebase/auth"
+import { signInWithGoogle } from "@/lib/supabase/auth"
 import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
-import { createTenant, getTenant } from "@/lib/firebase/firestore"
+import { createTenant, getTenant } from "@/lib/supabase/queries"
 import { Stethoscope, ArrowRight, Check, Loader2, XCircle } from "lucide-react"
 import Link from "next/link"
 
@@ -27,6 +28,7 @@ function toSlug(s: string): string {
 export default function RegistroPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user, loading: authLoading } = useAuth()
 
   const [step, setStep] = useState<Step>("login")
   const [uid, setUid]   = useState("")
@@ -72,26 +74,40 @@ export default function RegistroPage() {
   }, [step, slugPreview, router])
 
   // ── Paso 1: Google login ────────────────────────────────────────────────
+  // Supabase inicia sesión por redirect: el usuario vuelve acá desde /auth/callback.
+  // Recién entonces resolvemos su rol y decidimos si sigue al paso "perfil".
+  useEffect(() => {
+    if (authLoading || !user || step !== "login") return
+    let cancelado = false
+
+    resolveUserDashboard(user.id)
+      .then(({ role, redirectTo }) => {
+        if (cancelado) return
+        if (role === "veterinario" || role === "superadmin") {
+          router.replace(redirectTo)
+          return
+        }
+        setUid(user.id)
+        setForm(prev => ({ ...prev, email: user.email ?? "" }))
+        setStep("perfil")
+      })
+      .catch((error) => {
+        console.error("No se pudo resolver el rol del usuario:", error)
+        if (!cancelado) {
+          toast({ title: "Error", description: "No se pudo iniciar sesión.", variant: "destructive" })
+        }
+      })
+
+    return () => { cancelado = true }
+  }, [user, authLoading, step, router, toast])
+
   async function handleGoogle() {
     setLoading(true)
     try {
-      const result = await signInWithGoogle()
-      const { role, redirectTo } = await resolveUserDashboard(result.user.uid)
-
-      if (role === "veterinario" || role === "superadmin") {
-        router.push(redirectTo)
-        return
-      }
-
-      setUid(result.user.uid)
-      setForm(prev => ({
-        ...prev,
-        email: result.user.email ?? "",
-      }))
-      setStep("perfil")
+      // Navega fuera de la página: nada de lo que venga después se ejecuta.
+      await signInWithGoogle("/registro")
     } catch {
       toast({ title: "Error", description: "No se pudo iniciar sesión.", variant: "destructive" })
-    } finally {
       setLoading(false)
     }
   }
@@ -121,7 +137,8 @@ export default function RegistroPage() {
         return
       }
 
-      // Crear el tenant — doc raíz + config/datos
+      // Crea el tenant Y asigna el rol veterinario al usuario, en una sola
+      // transacción del lado del servidor (ver supabase/003_registro_veterinaria.sql).
       await createTenant(tenantId, {
         nombre: form.nombreClinica.trim(),
         plan: "basico",
@@ -132,11 +149,19 @@ export default function RegistroPage() {
         ciudad: form.ciudad,
       })
 
-      // Asignar rol veterinario al usuario y vincular su tenantId
-      await updateUsuario(uid, { role: "veterinario", tenantId })
-
       setStep("listo")
     } catch (error) {
+      // Carrera con otro registro simultáneo: el slug se ocupó entre la
+      // validación de arriba y el alta.
+      if (error instanceof Error && error.message === "SLUG_TAKEN") {
+        setSlugStatus("taken")
+        toast({
+          title: "Ese nombre ya está en uso",
+          description: "Probá con un nombre diferente para tu clínica.",
+          variant: "destructive",
+        })
+        return
+      }
       console.error("Error al crear veterinaria:", error)
       toast({ title: "Error", description: "No se pudo crear la veterinaria. Intentá nuevamente.", variant: "destructive" })
     } finally {

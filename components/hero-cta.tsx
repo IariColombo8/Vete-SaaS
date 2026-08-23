@@ -18,7 +18,7 @@ export function HeroCta() {
     if (authLoading) return
     if (!user) { setChecking(false); return }
 
-    resolveUserDashboard(user.uid).then(({ redirectTo }) => {
+    resolveUserDashboard(user.id).then(({ redirectTo }) => {
       setPanelHref(redirectTo)
       setChecking(false)
     })

@@ -4,7 +4,7 @@ import type {
   HorarioTenant,
   MascotaTurnoConfig,
   Modalidad,
-} from "@/lib/firebase/firestore"
+} from "@/lib/supabase/queries"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 
 /**

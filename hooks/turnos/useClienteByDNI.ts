@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { getClienteByDNI, getMascotas } from "@/lib/firebase/firestore"
-import type { Cliente, Mascota } from "@/lib/firebase/firestore"
+import { getClienteByDNI, getMascotas } from "@/lib/supabase/queries"
+import type { Cliente, Mascota } from "@/lib/supabase/queries"
 
 export function useClienteByDNI(dni: string, tenantId: string) {
   const [clienteExistente, setClienteExistente] = useState<Cliente | null>(null)

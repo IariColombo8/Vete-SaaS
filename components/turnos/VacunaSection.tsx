@@ -4,7 +4,7 @@
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Syringe } from "lucide-react";
-import type { VacunaTurnoConfig } from "@/lib/firebase/firestore";
+import type { VacunaTurnoConfig } from "@/lib/supabase/queries";
 import { VACUNAS_DEFAULT } from "@/lib/turno-defaults";
 
 interface VacunaSectionProps {

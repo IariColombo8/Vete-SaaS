@@ -37,8 +37,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { subscribeTurnos, getClientesBasic } from "@/lib/firebase/firestore";
-import type { Turno, Cliente } from "@/lib/firebase/firestore";
+import { subscribeTurnos, getClientesBasic } from "@/lib/supabase/queries";
+import type { Turno, Cliente } from "@/lib/supabase/queries";
 import {
   Calendar,
   TrendingUp,

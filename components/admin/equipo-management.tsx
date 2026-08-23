@@ -12,7 +12,7 @@ import {
   getInvitacionesByTenant,
   deleteInvitacion,
   type Invitacion,
-} from "@/lib/firebase/firestore"
+} from "@/lib/supabase/queries"
 import { useAuth } from "@/hooks/use-auth"
 import { Loader2, Plus, Trash2, UserPlus, Mail, Clock, CheckCircle2 } from "lucide-react"
 
@@ -54,7 +54,7 @@ export function EquipoManagement({ tenantId }: { tenantId: string }) {
     }
     setSaving(true)
     try {
-      await createInvitacion(tenantId, emailNormalizado, role, user?.uid)
+      await createInvitacion(tenantId, emailNormalizado, role, user?.id)
       toast({
         title: "Invitación creada",
         description: `${emailNormalizado} obtendrá acceso al iniciar sesión con ese email.`,

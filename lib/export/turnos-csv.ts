@@ -1,4 +1,4 @@
-import type { Turno } from "@/lib/firebase/firestore"
+import type { Turno } from "@/lib/supabase/queries"
 
 /** Escapa un valor para CSV (comillas dobles + envoltura si hace falta). */
 function csvCell(value: unknown): string {

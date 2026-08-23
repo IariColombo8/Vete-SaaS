@@ -1,4 +1,4 @@
-import type { HorarioTenant } from "@/lib/firebase/firestore"
+import type { HorarioTenant } from "@/lib/supabase/queries"
 
 /**
  * Helpers puros de horarios y generación de slots de turnos.

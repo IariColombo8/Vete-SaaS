@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
-import { getUserRole, getUsuarioData, signOut } from "@/lib/firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { getUserRole, getUsuarioData, signOut } from "@/lib/supabase/auth"
+import { getTenantConfig } from "@/lib/supabase/queries"
 import {
   LayoutDashboard, Calendar, FileText, Users, Settings,
   ExternalLink, LogOut, Loader2, Stethoscope
@@ -13,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type React from "react"
-import type { UserRole } from "@/lib/firebase/firestore"
+import type { UserRole } from "@/lib/supabase/queries"
 import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
 
 interface Props {
@@ -44,10 +43,10 @@ export function VetAdminLayout({ slug, children }: Props) {
     if (!user) { router.push("/login"); return }
 
     Promise.all([
-      getUserRole(user.uid),
-      getUsuarioData(user.uid),
-      getDoc(doc(db, "veterinarias", slug, "config", "datos")),
-    ]).then(([userRole, userData, cfgSnap]) => {
+      getUserRole(user.id),
+      getUsuarioData(user.id),
+      getTenantConfig(slug),
+    ]).then(([userRole, userData, config]) => {
       const userTenantId = userData?.tenantId as string | undefined
       // Acceso: superadmin, o pertenece al tenant (veterinario/empleado con tenantId === slug)
       const perteneceAlTenant = userTenantId === slug && (userRole === "veterinario" || userRole === "empleado")
@@ -60,7 +59,7 @@ export function VetAdminLayout({ slug, children }: Props) {
         router.push(`/${slug}/admin`)
         return
       }
-      setVetNombre(cfgSnap.exists() ? (cfgSnap.data().nombre || slug) : slug)
+      setVetNombre(config?.nombre || slug)
       setChecking(false)
     })
   }, [user, authLoading, slug, router, pathname])

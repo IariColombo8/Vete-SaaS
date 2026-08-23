@@ -1,11 +1,53 @@
 "use client"
 
+import { AlertTriangle } from "lucide-react"
+
+/**
+ * Herramienta de migracion de datos — OBSOLETA.
+ *
+ * Migraba las colecciones raiz de Firestore (`clientes`, `turnos`,
+ * `diasBloqueados`) a la estructura multi-tenant `veterinarias/{slug}/...`.
+ *
+ * Tras la migracion del proyecto a Supabase ya no aplica: los datos de
+ * Firestore no se migran, Supabase arranca vacio. La implementacion original
+ * queda comentada al final del archivo como referencia historica.
+ */
+export default function MigratePage() {
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="container max-w-3xl mx-auto px-4 py-12">
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-6">
+          <h1 className="text-2xl font-extrabold mb-2 flex items-center gap-2 text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="h-6 w-6 shrink-0" />
+            Herramienta no disponible
+          </h1>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            La migracion de datos de Firestore quedo obsoleta tras la migracion del proyecto a Supabase.
+            La base arranca vacia, por lo que no hay nada que migrar.
+          </p>
+          <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-400/80">
+            El codigo original quedo comentado en este mismo archivo por si hace falta consultarlo.
+          </p>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * CODIGO ORIGINAL (Firestore) — desactivado.
+ *
+ * Motivo: el proyecto migro de Firebase a Supabase y los datos de Firestore
+ * no se transfieren. Este flujo dependia de `firebase/firestore` y de las
+ * colecciones raiz que ya no existen en el modelo actual.
+ * ───────────────────────────────────────────────────────────────────────────
+
 import { useState } from "react"
 import {
   collection, getDocs, doc, getDoc, setDoc, query, orderBy
 } from "firebase/firestore"
 import { db } from "@/lib/firebase/config"
-import { createTenant, clienteDocId, mascotaDocId } from "@/lib/firebase/firestore"
+import { createTenant, clienteDocId, mascotaDocId } from "@/lib/supabase/queries"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2, AlertTriangle, ArrowRight } from "lucide-react"
 
@@ -14,7 +56,7 @@ const TENANT_ID = "priscilas"
 
 function toId(s: string): string {
   return (s ?? "")
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .toLowerCase().trim()
     .replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-").replace(/^-|-$/g, "") || "sin-nombre"
@@ -231,7 +273,7 @@ export default function MigratePage() {
           </p>
         </div>
 
-        {/* Aviso orden de ejecución */}
+        // Aviso orden de ejecución
         <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6 text-sm">
           <p className="font-semibold text-amber-800 dark:text-amber-300 mb-1">
             ⚠ Correr ANTES de deployar las Firestore Security Rules
@@ -245,7 +287,7 @@ export default function MigratePage() {
           </p>
         </div>
 
-        {/* Resumen de cambios */}
+        // Resumen de cambios
         <div className="rounded-xl border bg-muted/30 p-5 mb-6 space-y-2 text-sm">
           <p className="font-semibold mb-3">Qué hará esta migración:</p>
           {[
@@ -268,7 +310,7 @@ export default function MigratePage() {
           </div>
         </div>
 
-        {/* Botón */}
+        // Botón
         {!done && (
           <Button onClick={runMigration} disabled={running} size="lg" className="mb-8 bg-emerald-600 hover:bg-emerald-700">
             {running ? (
@@ -279,7 +321,7 @@ export default function MigratePage() {
           </Button>
         )}
 
-        {/* Steps */}
+        // Steps
         {steps.length > 0 && (
           <div className="space-y-2 mb-6">
             {steps.map((s) => (
@@ -296,7 +338,7 @@ export default function MigratePage() {
           </div>
         )}
 
-        {/* Log */}
+        // Log
         {log.length > 0 && (
           <div className="rounded-xl border bg-slate-950 p-4 font-mono text-xs text-slate-300 max-h-72 overflow-y-auto space-y-0.5">
             {log.map((line, i) => <div key={i}>{line}</div>)}
@@ -316,3 +358,5 @@ export default function MigratePage() {
     </div>
   )
 }
+
+ * ─────────────────────────────────────────────────────────────────────────── */

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getLibretaPublica } from "@/lib/firebase/firestore"
+import { getLibretaPublica } from "@/lib/supabase/queries"
 import { PawPrint, Stethoscope } from "lucide-react"
 
 interface Props {

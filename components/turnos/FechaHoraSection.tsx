@@ -19,7 +19,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDisponibilidadTurnos } from "@/hooks/turnos/useDisponibilidadTurnos";
 import { useSlug } from "@/context/slug-context";
-import type { HorarioTenant } from "@/lib/firebase/firestore";
+import type { HorarioTenant } from "@/lib/supabase/queries";
 import { diaToWeekdays, generateTimeSlots, generateTimeSlotsConSiesta, getHorarioForDay } from "@/hooks/turnos/useTurnoForm";
 
 interface FechaHoraSectionProps {
