@@ -152,9 +152,18 @@ export interface ProductosPagina {
   total: number
 }
 
-/** Escapa lo que rompe el parser de `.or()` de PostgREST (comas y paréntesis). */
+/**
+ * Limpia el término y le saca los acentos, para que coincida con la columna
+ * `busqueda_normalizada` (generada en la base con `unaccent`, ver
+ * `006_busqueda_sin_acentos.sql`). Sin esto "arnes" no encuentra "Arnés".
+ */
 function limpiarBusqueda(q: string): string {
-  return q.trim().replace(/[,()]/g, " ").replace(/\s+/g, " ")
+  return q
+    .trim()
+    .replace(/[,()]/g, " ")
+    .replace(/\s+/g, " ")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
 }
 
 export async function getProductos(
@@ -181,12 +190,12 @@ export async function getProductos(
     q = q.eq("stock_bajo", true).gt("stock", 0)
   }
 
+  // Se filtra sobre `busqueda_normalizada` (columna generada sin acentos, ver
+  // 006_busqueda_sin_acentos.sql): así "arnes" encuentra "Arnés" sin importar
+  // mayúsculas ni tildes de ningún lado.
   const busqueda = limpiarBusqueda(filtro.busqueda ?? "")
   if (busqueda) {
-    q = q.or(
-      `nombre.ilike.%${busqueda}%,marca.ilike.%${busqueda}%,linea.ilike.%${busqueda}%,` +
-        `codigo.ilike.%${busqueda}%,codigo_barras.ilike.%${busqueda}%`,
-    )
+    q = q.ilike("busqueda_normalizada", `%${busqueda}%`)
   }
 
   const desde = pagina * porPagina
@@ -319,6 +328,41 @@ export async function updateProducto(
     .eq("tenant_id", tenantId).eq("id", id)
 
   if (error) throw mensajeError(error, "No se pudo actualizar el producto")
+}
+
+/** Código interno fijo del servicio de mostrador, para encontrarlo sin ambigüedad. */
+const CODIGO_SERVICIO_ATENCION = "SERVICIO-ATENCION"
+
+/**
+ * El mostrador vende "Atención veterinaria" con un precio que se carga en el
+ * momento (no hay tarifa fija), así que el producto en sí es solo una percha:
+ * un servicio sin stock que existe una vez por tenant y se reusa siempre.
+ */
+export async function getOrCrearServicioAtencion(tenantId: string): Promise<Producto> {
+  const { data: existente } = await supabase
+    .from("productos").select(COLS)
+    .eq("tenant_id", tenantId).eq("codigo", CODIGO_SERVICIO_ATENCION)
+    .maybeSingle()
+  if (existente) return aProducto(existente)
+
+  const { data: creado, error } = await supabase
+    .from("productos")
+    .insert({
+      tenant_id: tenantId,
+      codigo: CODIGO_SERVICIO_ATENCION,
+      nombre: "Atención veterinaria",
+      descripcion: "Consulta u otra atención cobrada en el mostrador",
+      categoria: "Servicios",
+      precio: 0,
+      controla_stock: false,
+      unidad: "un",
+      activo: true,
+    })
+    .select(COLS)
+    .single()
+
+  if (error) throw mensajeError(error, "No se pudo crear el servicio de atención")
+  return aProducto(creado)
 }
 
 /**

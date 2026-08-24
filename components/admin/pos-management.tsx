@@ -7,19 +7,26 @@ import { CajaBar } from "./pos/caja-bar"
 import { CantidadDialog } from "./pos/cantidad-dialog"
 import { CarritoPanel } from "./pos/carrito-panel"
 import { AlimentoSelector } from "./pos/alimento-selector"
+import { AtencionDialog } from "./pos/atencion-dialog"
 import { RemitoDialog } from "./pos/remito-dialog"
 import {
   agregarAlCarrito,
+  agregarAtencion,
   cambiarCantidad,
   itemsParaRPC,
   quitarDelCarrito,
+  subtotalLinea,
   totalesCarrito,
   SIN_DESCUENTO,
   type Descuento,
   type LineaCarrito,
+  type VinculoAtencion,
 } from "@/lib/ventas/carrito"
 import { getCajaAbierta, getVenta, registrarVenta } from "@/lib/supabase/ventas"
 import { getTenantConfig } from "@/lib/supabase/queries"
+import { getOrCrearServicioAtencion } from "@/lib/supabase/productos"
+import { createHistoria } from "@/lib/supabase/historias"
+import { formatCurrency } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import type { Caja, Cliente, MedioPago, Producto, Venta } from "@/lib/supabase/types"
 
@@ -48,6 +55,7 @@ export function PosManagement({ tenantId }: Props) {
 
   const [pendiente, setPendiente] = useState<Producto | null>(null)
   const [alimentosAbierto, setAlimentosAbierto] = useState(false)
+  const [atencionAbierto, setAtencionAbierto] = useState(false)
   const [cobrando, setCobrando] = useState(false)
   const [ventaHecha, setVentaHecha] = useState<Venta | null>(null)
 
@@ -105,6 +113,48 @@ export function PosManagement({ tenantId }: Props) {
     }
   }
 
+  const agregarAtencionVeterinaria = async (
+    costo: number,
+    motivo: string,
+    vinculo?: VinculoAtencion,
+  ) => {
+    try {
+      const servicio = await getOrCrearServicioAtencion(tenantId)
+      setCarrito((actual) => agregarAtencion(actual, servicio, costo, motivo, vinculo))
+      setAtencionAbierto(false)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo agregar la atención")
+    }
+  }
+
+  /**
+   * Cada línea de atención vinculada a una mascota deja una entrada en su
+   * historia clínica, para no tener que cargarla de nuevo a mano en Libreta
+   * Sanitaria. Es best-effort: la venta ya se cobró, así que un error acá se
+   * avisa pero no se reintenta ni bloquea el resto del mostrador.
+   */
+  const anotarHistoriasClinicas = async (vendido: LineaCarrito[]) => {
+    const atenciones = vendido.filter((l) => l.vinculo)
+    for (const linea of atenciones) {
+      const { vinculo } = linea
+      if (!vinculo) continue
+      try {
+        await createHistoria(tenantId, vinculo.clienteId, vinculo.mascotaId, {
+          fechaAtencion: new Date().toISOString().slice(0, 10),
+          motivo: linea.motivo || "Atención veterinaria",
+          diagnostico: "",
+          tratamiento: "",
+          observaciones: `Cobrado en el mostrador: ${formatCurrency(subtotalLinea(linea))}`,
+          tipoVisita: "consulta",
+        })
+      } catch {
+        toast.error(
+          `La venta se registró, pero no se pudo anotar en la historia de ${vinculo.mascotaNombre}`,
+        )
+      }
+    }
+  }
+
   const limpiar = () => {
     setCarrito([])
     setCliente(null)
@@ -138,6 +188,10 @@ export function PosManagement({ tenantId }: Props) {
         toast.success(`Venta #${resultado.numero} registrada`)
       }
 
+      // La venta ya está cobrada; si la historia clínica falla no hay que
+      // revertir nada, solo avisar para que se cargue a mano después.
+      await anotarHistoriasClinicas(carrito)
+
       limpiar()
       // El stock cambió, así que el resumen de la caja también.
       recargarCaja()
@@ -163,6 +217,7 @@ export function PosManagement({ tenantId }: Props) {
             tenantId={tenantId}
             onElegir={elegirProducto}
             onAbrirAlimentos={() => setAlimentosAbierto(true)}
+            onAbrirAtencion={() => setAtencionAbierto(true)}
           />
         </div>
 
@@ -184,6 +239,14 @@ export function PosManagement({ tenantId }: Props) {
           />
         </div>
       </div>
+
+      <AtencionDialog
+        abierto={atencionAbierto}
+        tenantId={tenantId}
+        cliente={cliente}
+        onCerrar={() => setAtencionAbierto(false)}
+        onConfirmar={agregarAtencionVeterinaria}
+      />
 
       <AlimentoSelector
         tenantId={tenantId}

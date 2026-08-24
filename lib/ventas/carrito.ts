@@ -13,11 +13,32 @@ import { precioFinal, precioLinea } from "@/lib/productos/precios"
  * que ya sabe de descuentos por monto, por porcentaje y de combos.
  */
 
+/** A quién quedó atada la línea, para anotarlo en la historia clínica al cobrar. */
+export interface VinculoAtencion {
+  clienteId: string
+  mascotaId: string
+  mascotaNombre: string
+}
+
 /** Una línea del carrito: el producto y cuánto se lleva el cliente. */
 export interface LineaCarrito {
+  /**
+   * Identifica la línea en el carrito. Para productos de catálogo es
+   * `producto.id` (así dos escaneos del mismo código suman sobre la misma
+   * línea); para servicios de precio libre como "Atención veterinaria" es un
+   * id propio, porque dos atenciones en la misma venta son líneas distintas
+   * aunque compartan el mismo producto-percha.
+   */
+  id: string
   producto: Producto
   /** Unidades, o kilos cuando `producto.unidad === "kg"`. */
   cantidad: number
+  /** Precio cargado a mano (servicios sin tarifa fija). Pisa el precio de catálogo. */
+  precioManual?: number
+  /** Motivo de la atención ("Consulta", "Control"). Solo aplica a servicios manuales. */
+  motivo?: string
+  /** Cliente/mascota a los que se les va a anotar esta atención en su historia. */
+  vinculo?: VinculoAtencion
 }
 
 export interface TotalesCarrito {
@@ -74,17 +95,42 @@ export function agregarAlCarrito(
 ): LineaCarrito[] {
   validarCantidad(producto, cantidad)
 
-  const existente = carrito.find((l) => l.producto.id === producto.id)
+  const existente = carrito.find((l) => l.id === producto.id)
   const nuevaCantidad = round3((existente?.cantidad ?? 0) + cantidad)
   validarStock(producto, nuevaCantidad)
 
   if (!existente) {
-    return [...carrito, { producto, cantidad }]
+    return [...carrito, { id: producto.id, producto, cantidad }]
   }
 
   return carrito.map((l) =>
-    l.producto.id === producto.id ? { ...l, cantidad: nuevaCantidad } : l,
+    l.id === producto.id ? { ...l, cantidad: nuevaCantidad } : l,
   )
+}
+
+/**
+ * Agrega un servicio de precio libre (p. ej. "Atención veterinaria"). A
+ * diferencia de `agregarAlCarrito`, siempre crea una línea nueva: dos
+ * atenciones en la misma venta —para dos mascotas distintas— no se pueden
+ * fusionar en una sola cantidad.
+ */
+export function agregarAtencion(
+  carrito: LineaCarrito[],
+  producto: Producto,
+  costo: number,
+  motivo?: string,
+  vinculo?: VinculoAtencion,
+): LineaCarrito[] {
+  if (!Number.isFinite(costo) || costo <= 0) {
+    throw new Error("El costo tiene que ser mayor a cero")
+  }
+  const id = typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${producto.id}-${Date.now()}`
+  return [
+    ...carrito,
+    { id, producto, cantidad: 1, precioManual: round2(costo), motivo: motivo || undefined, vinculo },
+  ]
 }
 
 /** Los kg se manejan con 3 decimales, igual que la columna `stock` en la base. */
@@ -95,28 +141,29 @@ function round3(n: number): number {
 /** Fija la cantidad de una línea. Poner cero (o menos) equivale a quitarla. */
 export function cambiarCantidad(
   carrito: LineaCarrito[],
-  productoId: string,
+  lineaId: string,
   cantidad: number,
 ): LineaCarrito[] {
-  const linea = carrito.find((l) => l.producto.id === productoId)
+  const linea = carrito.find((l) => l.id === lineaId)
   if (!linea) return carrito
-  if (cantidad <= 0) return quitarDelCarrito(carrito, productoId)
+  if (cantidad <= 0) return quitarDelCarrito(carrito, lineaId)
 
   validarCantidad(linea.producto, cantidad)
   validarStock(linea.producto, cantidad)
 
-  return carrito.map((l) => (l.producto.id === productoId ? { ...l, cantidad } : l))
+  return carrito.map((l) => (l.id === lineaId ? { ...l, cantidad } : l))
 }
 
 export function quitarDelCarrito(
   carrito: LineaCarrito[],
-  productoId: string,
+  lineaId: string,
 ): LineaCarrito[] {
-  return carrito.filter((l) => l.producto.id !== productoId)
+  return carrito.filter((l) => l.id !== lineaId)
 }
 
-/** Importe de una línea, con la oferta del catálogo ya aplicada. */
+/** Importe de una línea. Un precio cargado a mano pisa el de catálogo y sus ofertas. */
 export function subtotalLinea(linea: LineaCarrito): number {
+  if (linea.precioManual != null) return round2(linea.precioManual * linea.cantidad)
   return precioLinea(linea.producto, linea.cantidad)
 }
 
@@ -217,9 +264,11 @@ export function itemsParaRPC(carrito: LineaCarrito[]): ItemRPC[] {
     producto_id: linea.producto.id,
     cantidad: linea.cantidad,
     precio_unitario:
-      linea.producto.ofertaTipo === "combo" && linea.producto.ofertaActiva
-        ? round2(linea.producto.precio)
-        : precioFinal(linea.producto),
+      linea.precioManual != null
+        ? round2(linea.precioManual)
+        : linea.producto.ofertaTipo === "combo" && linea.producto.ofertaActiva
+          ? round2(linea.producto.precio)
+          : precioFinal(linea.producto),
     subtotal: subtotalLinea(linea),
   }))
 }

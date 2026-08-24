@@ -316,7 +316,7 @@ export function ProductosManagement({ tenantId }: Props) {
                     <TableRow key={p.id} className={cn(!p.activo && "opacity-50")}>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
-                          {p.imagenUrl ? (
+                          {p.imagenUrl && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={p.imagenUrl}
@@ -325,10 +325,6 @@ export function ProductosManagement({ tenantId }: Props) {
                               className="h-9 w-9 shrink-0 rounded-md border object-cover"
                               onError={(e) => { e.currentTarget.style.visibility = "hidden" }}
                             />
-                          ) : (
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-muted">
-                              <Package className="h-4 w-4 text-muted-foreground" />
-                            </div>
                           )}
                           <div className="min-w-0">
                         <p className="line-clamp-1 font-medium">{p.nombre}</p>

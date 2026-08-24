@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Loader2, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,8 +24,8 @@ interface Props {
   onCliente: (c: Cliente | null) => void
   onMedioPago: (m: MedioPago) => void
   onDescuento: (d: Descuento) => void
-  onCantidad: (productoId: string, cantidad: number) => void
-  onQuitar: (productoId: string) => void
+  onCantidad: (lineaId: string, cantidad: number) => void
+  onQuitar: (lineaId: string) => void
   onVaciar: () => void
   onCobrar: () => void
 }
@@ -47,6 +48,18 @@ export function CarritoPanel({
 }: Props) {
   const totales = totalesCarrito(carrito, descuento)
   const vacio = carrito.length === 0
+  const esEfectivo = medioPago === "efectivo"
+
+  // "Paga con" solo tiene sentido en efectivo, y solo mientras dure el
+  // total que motivó ese monto: si cambia el carrito o el medio de pago,
+  // el número que quedó escrito deja de significar lo que el usuario tipeó.
+  const [pagaCon, setPagaCon] = useState("")
+  useEffect(() => {
+    setPagaCon("")
+  }, [esEfectivo, totales.total])
+
+  const montoRecibido = Number(pagaCon) || 0
+  const vuelto = montoRecibido - totales.total
 
   return (
     <div className="flex h-full flex-col">
@@ -81,10 +94,10 @@ export function CarritoPanel({
           <ul className="space-y-1">
             {carrito.map((linea) => (
               <LineaItem
-                key={linea.producto.id}
+                key={linea.id}
                 linea={linea}
-                onCantidad={(c) => onCantidad(linea.producto.id, c)}
-                onQuitar={() => onQuitar(linea.producto.id)}
+                onCantidad={(c) => onCantidad(linea.id, c)}
+                onQuitar={() => onQuitar(linea.id)}
               />
             ))}
           </ul>
@@ -186,6 +199,35 @@ export function CarritoPanel({
           </div>
         </div>
 
+        {esEfectivo && !vacio && (
+          <div className="space-y-1.5 rounded-lg border bg-muted/40 p-2.5">
+            <Label htmlFor="paga-con" className="block text-xs text-muted-foreground">
+              ¿Con cuánto paga?
+            </Label>
+            <Input
+              id="paga-con"
+              type="number"
+              min={0}
+              step={50}
+              value={pagaCon}
+              placeholder={formatCurrency(totales.total)}
+              onChange={(e) => setPagaCon(e.target.value)}
+            />
+            {pagaCon !== "" && (
+              <div
+                className={`flex items-baseline justify-between text-sm ${
+                  vuelto < 0 ? "text-red-600 dark:text-red-500" : ""
+                }`}
+              >
+                <span className="font-medium">{vuelto < 0 ? "Falta" : "Vuelto"}</span>
+                <span className="text-lg font-bold tabular-nums">
+                  {formatCurrency(Math.abs(vuelto))}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <Button
           onClick={onCobrar}
           disabled={vacio || cobrando}
@@ -215,6 +257,9 @@ function LineaItem({
 }) {
   const porKg = linea.producto.unidad === "kg"
   const paso = porKg ? 0.5 : 1
+  // Los servicios de precio libre (atención veterinaria) son de cantidad fija:
+  // no tiene sentido "sumar" una segunda consulta sobre la misma línea.
+  const esServicioManual = linea.precioManual != null
 
   return (
     <li className="rounded-lg border bg-card p-2.5">
@@ -233,31 +278,43 @@ function LineaItem({
         </Button>
       </div>
 
+      {(linea.vinculo || linea.motivo) && (
+        <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-400">
+          {linea.vinculo?.mascotaNombre}
+          {linea.vinculo && linea.motivo ? " · " : ""}
+          {linea.motivo}
+        </p>
+      )}
+
       <div className="mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onCantidad(Math.max(0, linea.cantidad - paso))}
-            aria-label="Restar"
-          >
-            <Minus className="h-3 w-3" />
-          </Button>
-          <span className="min-w-[3.5rem] text-center text-sm tabular-nums">
-            {formatCantidad(linea.cantidad)}
-            {porKg ? " kg" : ""}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onCantidad(linea.cantidad + paso)}
-            aria-label="Sumar"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
+        {esServicioManual ? (
+          <span className="text-xs text-muted-foreground">1 atención</span>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onCantidad(Math.max(0, linea.cantidad - paso))}
+              aria-label="Restar"
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <span className="min-w-[3.5rem] text-center text-sm tabular-nums">
+              {formatCantidad(linea.cantidad)}
+              {porKg ? " kg" : ""}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onCantidad(linea.cantidad + paso)}
+              aria-label="Sumar"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
         <span className="font-semibold tabular-nums">
           {formatCurrency(subtotalLinea(linea))}
         </span>

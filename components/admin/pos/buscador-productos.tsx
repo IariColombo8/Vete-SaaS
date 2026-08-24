@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, PawPrint, Search } from "lucide-react"
+import { Loader2, PawPrint, Search, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ interface Props {
   tenantId: string
   onElegir: (producto: Producto) => void
   onAbrirAlimentos: () => void
+  onAbrirAtencion: () => void
 }
 
 /** Milisegundos de espera antes de consultar mientras se tipea. */
@@ -32,7 +33,7 @@ const DEBOUNCE_MS = 250
  * El foco vuelve al input después de cada agregado: si se pierde, el lector
  * escribe en el vacío y parece que el escáner está roto.
  */
-export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos }: Props) {
+export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbrirAtencion }: Props) {
   const [busqueda, setBusqueda] = useState("")
   const [resultados, setResultados] = useState<Producto[]>([])
   const [cargando, setCargando] = useState(false)
@@ -117,6 +118,14 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos }: Prop
           className="h-12 shrink-0"
         >
           <PawPrint className="mr-2 h-4 w-4" /> Alimentos
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onAbrirAtencion}
+          className="h-12 shrink-0"
+        >
+          <Stethoscope className="mr-2 h-4 w-4" /> Atención
         </Button>
       </div>
 
