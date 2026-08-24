@@ -18,6 +18,8 @@ export type Feature =
   | "qrMascota"          // QR público por mascota
   | "recordatoriosVacunas" // recordatorios automáticos de vacunas
   | "multipleProfesionales" // agendas independientes por profesional
+  | "productos"          // catálogo de mercadería y control de stock
+  | "ventas"             // punto de venta, caja y remitos
 
 export interface PlanLimits {
   /** Máximo de turnos por mes. `null` = ilimitado. */
@@ -45,6 +47,8 @@ const ALL_FEATURES_OFF: Record<Feature, boolean> = {
   qrMascota: false,
   recordatoriosVacunas: false,
   multipleProfesionales: false,
+  productos: false,
+  ventas: false,
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
@@ -72,12 +76,14 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       multiUsuario: true,
       whatsapp: true,
       pdfLibreta: true,
+      productos: true,
     },
     highlights: [
       "Hasta 150 turnos por mes",
       "Dashboard de métricas",
       "Notificaciones por WhatsApp",
       "Libreta sanitaria en PDF",
+      "Productos y control de stock",
       "Hasta 3 usuarios",
     ],
   },
@@ -94,10 +100,13 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       qrMascota: true,
       recordatoriosVacunas: true,
       multipleProfesionales: true,
+      productos: true,
+      ventas: true,
     },
     highlights: [
       "Turnos ilimitados",
       "Todo lo de Plus",
+      "Punto de venta, caja y remitos",
       "QR público por mascota",
       "Recordatorios automáticos de vacunas",
       "Múltiples profesionales con agendas",

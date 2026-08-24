@@ -13,6 +13,8 @@ export type {
   TenantConfig, TenantFull, HistorialDato, Cliente, Mascota, Turno, Historia,
   HistoriaClinicaRegistro, ClientesCursor, ClientesPage, LibretaPublica,
   RecordatorioVacuna, DiaBloqueado, Unsubscribe,
+  Producto, ProductoUnidad, OfertaTipo, MovimientoStock, MovimientoStockTipo,
+  AjusteStockTipo, CambioPrecio,
 } from "./types"
 
 // ── Helpers de ID ──
@@ -28,3 +30,4 @@ export * from "./libretas"
 export * from "./disponibilidad"
 export * from "./recordatorios-vacuna"
 export * from "./usuarios"
+export * from "./productos"

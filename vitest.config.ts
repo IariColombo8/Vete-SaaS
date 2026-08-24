@@ -8,7 +8,9 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.{test,spec}.{ts,tsx}"],
     // Los tests de rules requieren el emulador (correr con `npm run test:rules`).
-    exclude: ["node_modules", ".next", ".claude", "e2e", "**/*.rules.test.ts"],
+    // "parte de kiosko" es el proyecto de referencia que se está portando:
+    // sus tests usan `node:test`, no vitest.
+    exclude: ["node_modules", ".next", ".claude", "e2e", "parte de kiosko/**", "**/*.rules.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

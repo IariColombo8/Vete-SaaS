@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { getUserRole, getUsuarioData, signOut } from "@/lib/supabase/auth"
 import { getTenantConfig } from "@/lib/supabase/queries"
+import { VetAdminSidebar } from "@/components/vet-admin-sidebar"
 import {
-  LayoutDashboard, Calendar, FileText, Users, Settings,
-  ExternalLink, LogOut, Loader2, Stethoscope
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+  SidebarInset, SidebarProvider, SidebarTrigger,
+} from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
 import type React from "react"
 import type { UserRole } from "@/lib/supabase/queries"
 import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
@@ -26,8 +26,25 @@ function sectionFromPath(pathname: string, slug: string): AdminSection | null {
   if (pathname.startsWith(`/${slug}/turnoadmin`)) return "turnos"
   if (pathname.startsWith(`/${slug}/libretasanitaria`)) return "libreta"
   if (pathname.startsWith(`/${slug}/clientes`)) return "clientes"
+  if (pathname.startsWith(`/${slug}/productos`)) return "productos"
+  if (pathname.startsWith(`/${slug}/pos`)) return "pos"
+  if (pathname.startsWith(`/${slug}/ventas`)) return "ventas"
+  if (pathname.startsWith(`/${slug}/caja`)) return "caja"
   if (pathname.startsWith(`/${slug}/admin`)) return "dashboard"
   return null
+}
+
+/** Título de la barra superior, para saber dónde se está con el menú plegado. */
+const TITULOS: Record<AdminSection, string> = {
+  dashboard: "Dashboard",
+  turnos: "Turnos",
+  libreta: "Libreta sanitaria",
+  clientes: "Clientes",
+  productos: "Productos y stock",
+  pos: "Punto de venta",
+  ventas: "Ventas",
+  caja: "Caja",
+  configuracion: "Configuración",
 }
 
 export function VetAdminLayout({ slug, children }: Props) {
@@ -72,74 +89,36 @@ export function VetAdminLayout({ slug, children }: Props) {
     )
   }
 
-  const navItems = ([
-    { href: `/${slug}/admin`,            label: "Dashboard",     icon: LayoutDashboard, section: "dashboard" as const },
-    { href: `/${slug}/turnoadmin`,       label: "Turnos",        icon: Calendar,        section: "turnos" as const },
-    { href: `/${slug}/libretasanitaria`, label: "Libreta",       icon: FileText,        section: "libreta" as const },
-    { href: `/${slug}/clientes`,         label: "Clientes",      icon: Users,           section: "clientes" as const },
-    { href: `/${slug}/configuracion`,    label: "Configuracion", icon: Settings,        section: "configuracion" as const },
-  ]).filter((item) => canAccessSection(role, item.section))
+  const section = sectionFromPath(pathname, slug)
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Admin Nav */}
-      <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between gap-4">
-            {/* Brand */}
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                <Stethoscope className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <span className="font-bold text-sm hidden sm:block truncate max-w-[140px]">{vetNombre || slug}</span>
-              <span className="text-xs font-mono text-muted-foreground hidden md:block">· {slug}</span>
-            </div>
+    // `SidebarProvider` recuerda el estado en una cookie, así que el menú queda
+    // como lo dejó el usuario entre recargas y entre páginas. Ctrl/Cmd+B lo
+    // pliega y despliega sin tocar el mouse.
+    <SidebarProvider>
+      <VetAdminSidebar
+        slug={slug}
+        vetNombre={vetNombre}
+        role={role}
+        onSalir={async () => {
+          await signOut()
+          router.push("/")
+        }}
+      />
 
-            {/* Nav links */}
-            <nav className="flex items-center gap-0.5 overflow-x-auto">
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(href + "/")
-                return (
-                  <Link key={href} href={href}>
-                    <Button
-                      variant={active ? "default" : "ghost"}
-                      size="sm"
-                      className={`text-xs h-8 gap-1.5 ${active ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">{label}</span>
-                    </Button>
-                  </Link>
-                )
-              })}
-            </nav>
+      <SidebarInset className="bg-slate-50 dark:bg-slate-950">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <h1 className="truncate text-sm font-semibold">
+            {section ? TITULOS[section] : (vetNombre || slug)}
+          </h1>
+        </header>
 
-            {/* Actions */}
-            <div className="flex items-center gap-1 shrink-0">
-              <Link href={`/${slug}`} target="_blank">
-                <Button variant="ghost" size="sm" className="text-xs h-8 gap-1.5 text-muted-foreground">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Mi página</span>
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-8 gap-1.5 text-muted-foreground"
-                onClick={async () => { await signOut(); router.push("/") }}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Salir</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {children}
-      </main>
-    </div>
+        {/* Sin `container mx-auto`: con el sidebar plegado el contenido tiene que
+            aprovechar el ancho que se liberó, sobre todo el mostrador. */}
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

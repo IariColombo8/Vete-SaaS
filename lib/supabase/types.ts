@@ -264,3 +264,152 @@ export interface DiaBloqueado {
 
 /** Reemplaza el `Unsubscribe` de Firestore. Misma forma: llamar para cortar. */
 export type Unsubscribe = () => void
+
+// ── Productos y stock ──
+
+export type ProductoUnidad = "un" | "kg"
+export type OfertaTipo = "monto" | "porcentaje" | "combo"
+export type MovimientoStockTipo = "entrada" | "ajuste" | "rotura" | "uso" | "venta"
+
+/** Tipos de movimiento que un usuario puede generar a mano desde el panel. */
+export type AjusteStockTipo = Exclude<MovimientoStockTipo, "venta">
+
+export interface Producto {
+  id: string
+  codigo?: string
+  codigoBarras?: string
+  nombre: string
+  descripcion: string
+  categoria: string
+  imagenUrl?: string
+  precio: number
+  /** Costo de reposición. Opcional: sin esto no se puede calcular el margen. */
+  costo?: number
+  stock: number
+  stockMinimo: number
+  /** false = es un servicio (baño, peluquería): se lista pero no lleva stock. */
+  controlaStock: boolean
+  /**
+   * "un" = se vende por unidad. "kg" = se vende suelto y `precio` es el
+   * precio POR KILO: el mostrador pregunta cuántos kg se lleva el cliente.
+   */
+  unidad: ProductoUnidad
+  /** Unidades por bulto cerrado del proveedor (ej: 12 latas por caja). */
+  unidadesPorBulto?: number
+  /** Marca del alimento ("Royal Canin"). Alimenta el selector del mostrador. */
+  marca?: string
+  /** Línea dentro de la marca ("Adulto Mediano", "Cachorro"). */
+  linea?: string
+  /** Kilos de la bolsa cerrada (3, 7.5, 15). Solo tiene sentido con unidad "un". */
+  pesoKg?: number
+  /** YYYY-MM-DD */
+  fechaVencimiento?: string
+  ofertaActiva: boolean
+  ofertaTipo?: OfertaTipo
+  ofertaValor: number
+  ofertaCantidad?: number
+  activo: boolean
+  /** Lo marca la importación cuando la fila del Excel venía incompleta. */
+  revisar: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface MovimientoStock {
+  id: string
+  productoId: string
+  productoNombre?: string
+  tipo: MovimientoStockTipo
+  /** Delta con signo: positivo entra, negativo sale. */
+  cantidad: number
+  stockAnterior?: number
+  stockNuevo?: number
+  referencia?: string
+  usuarioNombre?: string
+  fecha: string
+}
+
+export interface CambioPrecio {
+  id: string
+  campo: string
+  valorAnterior: string
+  valorNuevo: string
+  usuarioNombre?: string
+  fecha: string
+}
+
+// ── Ventas, caja y remitos ──
+
+export type MedioPago = "efectivo" | "debito" | "credito" | "transferencia"
+export type VentaEstado = "completada" | "anulada"
+export type CajaEstado = "abierta" | "cerrada"
+
+/** Etiquetas para la UI. Un solo lugar, así el POS y el historial no divergen. */
+export const MEDIOS_PAGO: { id: MedioPago; label: string }[] = [
+  { id: "efectivo", label: "Efectivo" },
+  { id: "debito", label: "Débito" },
+  { id: "credito", label: "Crédito" },
+  { id: "transferencia", label: "Transferencia" },
+]
+
+/**
+ * Una línea de la venta. Los datos del producto van copiados, no referenciados:
+ * el remito de hace seis meses tiene que seguir diciendo el precio de entonces.
+ */
+export interface VentaItem {
+  id?: string
+  productoId?: string
+  nombre: string
+  marca: string
+  /** "15 kg", "por kg" o vacío. */
+  presentacion: string
+  unidad: ProductoUnidad
+  /** Kilos cuando la unidad es "kg". */
+  cantidad: number
+  /** Por kilo cuando la unidad es "kg". */
+  precioUnitario: number
+  /** Ya con la oferta aplicada. */
+  subtotal: number
+}
+
+export interface Venta {
+  id: string
+  /** Correlativo por veterinaria. Es el número que sale impreso en el remito. */
+  numero: number
+  cajaId?: string
+  clienteId?: string
+  clienteNombre: string
+  clienteTelefono: string
+  clienteDni: string
+  clienteDomicilio: string
+  medioPago: MedioPago
+  estado: VentaEstado
+  subtotal: number
+  descuento: number
+  total: number
+  anuladaAt?: string
+  anuladaMotivo?: string
+  vendedorNombre?: string
+  observaciones: string
+  createdAt: string
+  /** Solo viene cuando se pide el detalle completo. */
+  items?: VentaItem[]
+}
+
+export interface Caja {
+  id: string
+  estado: CajaEstado
+  saldoInicial: number
+  saldoDeclarado?: number
+  saldoEsperado?: number
+  diferencia?: number
+  totalEfectivo: number
+  totalOtros: number
+  totalVentas: number
+  cantidadVentas: number
+  abiertaPorNombre?: string
+  cerradaPorNombre?: string
+  observaciones: string
+  aperturaAt: string
+  cierreAt?: string
+}
