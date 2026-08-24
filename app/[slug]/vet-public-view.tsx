@@ -459,9 +459,18 @@ export default function VetPublicPage() {
           ╚══════════════════════════════════════════════════╝ */}
       <section className="py-16 bg-slate-50 dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800">
         <div className="container max-w-6xl mx-auto px-6">
-          <div className="grid sm:grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
             {FEATURES.map((f, i) => (
-              <FeaturePill key={f.label} {...f} i={i} />
+              <div
+                key={f.label}
+                className={
+                  i === FEATURES.length - 1 && FEATURES.length % 2 !== 0
+                    ? "col-span-2 sm:col-span-1 flex justify-center [&>*]:max-w-xs"
+                    : undefined
+                }
+              >
+                <FeaturePill {...f} i={i} />
+              </div>
             ))}
           </div>
         </div>
@@ -495,9 +504,11 @@ export default function VetPublicPage() {
             </div>
           </Reveal>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             {servicios.map((s, i) => (
-              <ServiceCard key={i} s={s} i={i} />
+              <div key={i} className="w-[calc(50%-12px)] lg:w-[calc(25%-18px)]">
+                <ServiceCard s={s} i={i} />
+              </div>
             ))}
           </div>
         </div>
