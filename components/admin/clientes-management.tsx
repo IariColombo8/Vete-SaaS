@@ -61,6 +61,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useReadOnly } from "@/lib/auth/read-only-context";
 
 const emptyForm = {
   nombre: "",
@@ -123,6 +124,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMascotas, setLoadingMascotas] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
+  const readOnly = useReadOnly();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -911,7 +913,8 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || readOnly}
+              title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

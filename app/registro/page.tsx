@@ -163,15 +163,19 @@ export default function RegistroPage() {
 
       // Crea el tenant Y asigna el rol veterinario al usuario, en una sola
       // transacción del lado del servidor (ver supabase/003_registro_veterinaria.sql).
-      await createTenant(tenantId, {
-        nombre: form.nombreClinica.trim(),
-        plan: "basico",
-        adminIds: [uid],
-        telefono: form.telefono,
-        email: form.email,
-        direccion: form.direccion,
-        ciudad: form.ciudad,
-      })
+      await createTenant(
+        tenantId,
+        {
+          nombre: form.nombreClinica.trim(),
+          plan: "pro",
+          adminIds: [uid],
+          telefono: form.telefono,
+          email: form.email,
+          direccion: form.direccion,
+          ciudad: form.ciudad,
+        },
+        10,
+      )
 
       setStep("listo")
     } catch (error) {
@@ -415,7 +419,8 @@ export default function RegistroPage() {
                   ¡Listo! Tu veterinaria está creada
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Plan Básico activo — redirigiendo a tu panel...
+                  Plan Pro activo por 10 días, con datos de ejemplo cargados —
+                  redirigiendo a tu panel...
                 </p>
               </div>
               <div className="rounded-lg bg-muted p-3 text-sm font-mono text-left space-y-1">

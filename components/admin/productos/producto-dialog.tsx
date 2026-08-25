@@ -14,6 +14,7 @@ import type { AjusteStockTipo, CambioPrecio, MovimientoStock, Producto, Producto
 import { margenPct } from "@/lib/productos/precios"
 import { formatCurrency, formatCantidad, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useReadOnly } from "@/lib/auth/read-only-context"
 
 interface Props {
   tenantId: string
@@ -85,6 +86,7 @@ export function ProductoDialog({
   const [historial, setHistorial] = useState<CambioPrecio[]>([])
   const [movimientos, setMovimientos] = useState<MovimientoStock[]>([])
   const [guardando, setGuardando] = useState(false)
+  const readOnly = useReadOnly()
 
   const [ajusteTipo, setAjusteTipo] = useState<AjusteStockTipo>("entrada")
   const [ajusteCantidad, setAjusteCantidad] = useState("")
@@ -457,7 +459,8 @@ export function ProductoDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
           <Button
             className="bg-emerald-600 hover:bg-emerald-700"
-            disabled={guardando || nombreInvalido}
+            disabled={guardando || nombreInvalido || readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
             onClick={guardar}
           >
             {guardando ? "Guardando…" : esNuevo ? "Crear producto" : "Guardar cambios"}

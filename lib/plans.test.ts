@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { planAllows, getPlanLimits, normalizePlan, getPlan } from "./plans"
+import { planAllows, getPlanLimits, normalizePlan, getPlan, getTrialStatus } from "./plans"
 
 describe("normalizePlan", () => {
   it("acepta planes válidos", () => {
@@ -51,5 +51,29 @@ describe("getPlan", () => {
     expect(getPlan("plus").nombre).toBe("Plus")
     expect(getPlan("plus").precioMensual).toBeGreaterThan(0)
     expect(getPlan("basico").precioMensual).toBe(0)
+  })
+})
+
+describe("getTrialStatus", () => {
+  it("sin trial_expires_at: no está en trial", () => {
+    const status = getTrialStatus({ trialExpiresAt: undefined })
+    expect(status).toEqual({ enTrial: false, vencido: false, diasRestantes: null })
+  })
+
+  it("con vencimiento futuro: en trial, no vencido", () => {
+    const futuro = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+    const status = getTrialStatus({ trialExpiresAt: futuro })
+    expect(status.enTrial).toBe(true)
+    expect(status.vencido).toBe(false)
+    expect(status.diasRestantes).toBeGreaterThanOrEqual(4)
+    expect(status.diasRestantes).toBeLessThanOrEqual(5)
+  })
+
+  it("con vencimiento pasado: en trial y vencido", () => {
+    const pasado = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const status = getTrialStatus({ trialExpiresAt: pasado })
+    expect(status.enTrial).toBe(true)
+    expect(status.vencido).toBe(true)
+    expect(status.diasRestantes).toBe(0)
   })
 })

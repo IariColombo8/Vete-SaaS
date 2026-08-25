@@ -17,6 +17,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin, Home, PawPrint, FileText, Syringe } from "lucide-react"
 import { EquipoManagement } from "@/components/admin/equipo-management"
 import { EmailProviderConfig } from "@/components/admin/email-provider-config"
+import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
   { dia: "Lunes a Viernes", apertura: "09:00", cierre: "18:00", cerrado: false },
@@ -60,6 +61,7 @@ export default function ConfiguracionPage() {
   const [serviciosTurno, setServiciosTurno] = useState<ServicioTurnoConfig[]>(SERVICIOS_DEFAULT)
   const [vacunas, setVacunas] = useState<Record<string, VacunaTurnoConfig[]>>(VACUNAS_DEFAULT)
   const [profesionales, setProfesionales] = useState<Profesional[]>([])
+  const readOnly = useReadOnly()
 
   useEffect(() => {
     Promise.all([getTenantConfig(slug), getTurnoConfig(slug)]).then(([cfg, turnoCfg]) => {
@@ -741,7 +743,13 @@ export default function ConfiguracionPage() {
                   ))}
                 </div>
                 <div className="mt-4">
-                  <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700" disabled={saving === "servicios"} onClick={() => saveDatos("servicios", { servicios })} type="button">
+                  <Button
+                    className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
+                    disabled={saving === "servicios" || readOnly}
+                    title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+                    onClick={() => saveDatos("servicios", { servicios })}
+                    type="button"
+                  >
                     {saving === "servicios"
                       ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
                       : <><Save className="mr-2 h-4 w-4" />Guardar servicios</>
@@ -1164,8 +1172,14 @@ export default function ConfiguracionPage() {
 }
 
 function SaveButton({ loading }: { loading: boolean }) {
+  const readOnly = useReadOnly()
   return (
-    <Button type="submit" disabled={loading} className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700">
+    <Button
+      type="submit"
+      disabled={loading || readOnly}
+      title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
+    >
       {loading
         ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
         : <><Save className="mr-2 h-4 w-4" />Guardar cambios</>

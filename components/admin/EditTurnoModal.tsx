@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useReadOnly } from "@/lib/auth/read-only-context";
 
 interface EditTurnoModalProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function EditTurnoModal({
   onEditDataChange,
   onSave,
 }: EditTurnoModalProps) {
+  const readOnly = useReadOnly();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
@@ -82,6 +84,8 @@ export function EditTurnoModal({
           </Button>
           <Button
             onClick={onSave}
+            disabled={readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
           >
             Guardar
