@@ -34,6 +34,7 @@ import type { AjusteStockTipo, Producto } from "@/lib/supabase/types"
 import {
   precioFinal, tieneOferta, comboLabel, margenPct, estadoStock, diasHastaVencimiento,
 } from "@/lib/productos/precios"
+import { ordenarCategorias } from "@/lib/productos/categorias"
 import { formatCurrency, formatCantidad, formatFechaISO } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -292,16 +293,14 @@ export function ProductosManagement({ tenantId }: Props) {
           />
         </div>
 
-        {categorias.length > 0 && (
-          <select
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
-            className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
-          >
-            <option value="">Todos los rubros</option>
-            {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        )}
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+        >
+          <option value="">Todos los rubros</option>
+          {ordenarCategorias(categorias).map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
 
         <Button
           variant={incluirInactivos ? "secondary" : "ghost"}

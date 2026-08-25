@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { aplicarMargen, type ResultadoMargen } from "@/lib/supabase/productos"
+import { ordenarCategorias } from "@/lib/productos/categorias"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -20,21 +21,6 @@ interface Props {
 }
 
 type Modo = "categoria" | "todos"
-
-/**
- * Las 3 categorías del import siempre se muestran, en este orden, aunque
- * todavía no tengan ningún producto cargado (el catálogo recién importado
- * puede tener Medicamentos y Accesorios pero cero en Alimentos, por ejemplo,
- * y aun así hay que poder cargarle un % de una).
- */
-const ORDEN_CATEGORIAS = ["Medicamentos", "Accesorios", "Alimentos"]
-
-function ordenarCategorias(categorias: string[]): string[] {
-  const otras = categorias
-    .filter((c) => !ORDEN_CATEGORIAS.includes(c))
-    .sort((a, b) => a.localeCompare(b, "es"))
-  return [...ORDEN_CATEGORIAS, ...otras]
-}
 
 /**
  * El % de cada categoría se guarda por tenant: casi siempre es el mismo
