@@ -108,6 +108,15 @@ function aNumero(texto: string): number {
 }
 
 /**
+ * El Excel del proveedor trae la marca/distribuidor con un asterisco colgado
+ * al final ("APM FOOD *", "GARAY S.R.L *"): es un artefacto de cómo exportan
+ * la lista, no parte del nombre.
+ */
+export function limpiarMarca(texto: string): string {
+  return texto.trim().replace(/\s*\*\s*$/, "").trim()
+}
+
+/**
  * Columnas fijas: A=código, B=descripción, C=marca, D=costo. El precio de
  * venta se inicializa igual al costo — se corrige después con la herramienta
  * de margen de ganancia, no acá.

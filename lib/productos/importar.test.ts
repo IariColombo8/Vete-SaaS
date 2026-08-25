@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import * as XLSX from "xlsx-js-style"
-import { parsearFilas } from "./importar"
+import { parsearFilas, limpiarMarca } from "./importar"
 
 function workbookDeFilas(filas: (string | number)[][]): XLSX.WorkBook {
   const hoja = XLSX.utils.aoa_to_sheet(filas)
@@ -141,5 +141,26 @@ describe("parsearFilas", () => {
     const filas = parsearFilas(wb, "Accesorios", 2)
 
     expect(filas[0].costo).toBeCloseTo(899.9)
+  })
+})
+
+describe("limpiarMarca", () => {
+  it("quita el asterisco final y los espacios", () => {
+    expect(limpiarMarca("APM FOOD *")).toBe("APM FOOD")
+    expect(limpiarMarca("GARAY S.R.L *")).toBe("GARAY S.R.L")
+  })
+
+  it("no toca una marca sin asterisco", () => {
+    expect(limpiarMarca("AUKI")).toBe("AUKI")
+    expect(limpiarMarca("Bagó")).toBe("Bagó")
+  })
+
+  it("recorta espacios sueltos aunque no haya asterisco", () => {
+    expect(limpiarMarca("  GOLOCAN  ")).toBe("GOLOCAN")
+  })
+
+  it("devuelve string vacío si no hay marca", () => {
+    expect(limpiarMarca("")).toBe("")
+    expect(limpiarMarca("   ")).toBe("")
   })
 })
