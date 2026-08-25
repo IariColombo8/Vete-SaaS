@@ -93,6 +93,15 @@ export function margenPct(precio: number, costo?: number | null): number | null 
   return ((precio - costo) / precio) * 100
 }
 
+/**
+ * Precio de venta a partir del costo y un % de ganancia.
+ * `precio = costo × (1 + porcentaje / 100)`, siempre partiendo del costo
+ * guardado — no es acumulativo sobre el precio de venta actual.
+ */
+export function calcularPrecioConMargen(costo: number, porcentaje: number): number {
+  return round2(costo * (1 + porcentaje / 100))
+}
+
 // ── Estado de stock ──
 
 export type EstadoStock = "servicio" | "agotado" | "bajo" | "ok"

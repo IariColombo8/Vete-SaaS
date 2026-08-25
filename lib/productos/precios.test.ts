@@ -6,6 +6,7 @@ import {
   precioLinea,
   comboLabel,
   margenPct,
+  calcularPrecioConMargen,
   estadoStock,
   diasHastaVencimiento,
 } from "./precios"
@@ -168,5 +169,23 @@ describe("diasHastaVencimiento", () => {
     expect(diasHastaVencimiento(null, hoy)).toBeNull()
     expect(diasHastaVencimiento(undefined, hoy)).toBeNull()
     expect(diasHastaVencimiento("no-es-fecha", hoy)).toBeNull()
+  })
+})
+
+describe("calcularPrecioConMargen", () => {
+  it("aplica el porcentaje sobre el costo", () => {
+    expect(calcularPrecioConMargen(1000, 35)).toBe(1350)
+  })
+
+  it("redondea a 2 decimales", () => {
+    expect(calcularPrecioConMargen(999.99, 33)).toBe(1329.99)
+  })
+
+  it("con 0% devuelve el mismo costo", () => {
+    expect(calcularPrecioConMargen(500, 0)).toBe(500)
+  })
+
+  it("nunca devuelve negativo aunque el porcentaje sea negativo", () => {
+    expect(calcularPrecioConMargen(500, -200)).toBe(0)
   })
 })
