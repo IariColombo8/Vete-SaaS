@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
     images: [
       {
-        url: "/34459d4c-f8b8-433a-8743-402fe3cf5f70.png",
+        url: "/metadato.jpg",
         width: 1200,
         height: 630,
         alt: "VetPanel",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VetPanel — Sistema de gestión para Veterinarias",
     description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
-    images: ["/34459d4c-f8b8-433a-8743-402fe3cf5f70.png"],
+    images: ["/metadato.jpg"],
   },
   icons: {
     icon: [
