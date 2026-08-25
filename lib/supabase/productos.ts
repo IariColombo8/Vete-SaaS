@@ -667,7 +667,6 @@ export function agruparPorMarca(productos: Producto[]): MarcaAlimento[] {
 export type AlcanceMargen =
   | { tipo: "todos" }
   | { tipo: "categoria"; categoria: string }
-  | { tipo: "seleccion"; ids: string[] }
 
 export interface ResultadoMargen {
   actualizados: number
@@ -694,8 +693,6 @@ export async function aplicarMargen(
 
   if (alcance.tipo === "categoria") {
     q = q.eq("categoria", alcance.categoria)
-  } else if (alcance.tipo === "seleccion") {
-    q = q.in("id", alcance.ids)
   }
 
   const { data, error } = await q

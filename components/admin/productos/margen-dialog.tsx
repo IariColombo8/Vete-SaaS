@@ -8,20 +8,18 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { aplicarMargen, type AlcanceMargen, type ResultadoMargen } from "@/lib/supabase/productos"
+import { aplicarMargen, type ResultadoMargen } from "@/lib/supabase/productos"
 import { cn } from "@/lib/utils"
 
 interface Props {
   tenantId: string
   categorias: string[]
-  /** Ids de los productos tildados en el listado, si hay alguno. */
-  seleccionIds: string[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onAplicado: () => void
 }
 
-type Modo = "categoria" | "todos" | "seleccion"
+type Modo = "categoria" | "todos"
 
 /**
  * Las 3 categorías del import siempre se muestran, en este orden, aunque
@@ -69,9 +67,7 @@ function guardarPorcentaje(tenantId: string, categoria: string, valor: string): 
   }
 }
 
-export function MargenDialog({
-  tenantId, categorias, seleccionIds, open, onOpenChange, onAplicado,
-}: Props) {
+export function MargenDialog({ tenantId, categorias, open, onOpenChange, onAplicado }: Props) {
   const [modo, setModo] = useState<Modo>("categoria")
   const [porcentajesPorCategoria, setPorcentajesPorCategoria] = useState<Record<string, string>>({})
   const [aplicandoCategoria, setAplicandoCategoria] = useState<string | null>(null)
@@ -80,7 +76,7 @@ export function MargenDialog({
 
   const categoriasOrdenadas = ordenarCategorias(categorias)
 
-  // Único: para los modos "A todos" y "A selección".
+  // Único: para el modo "A todos".
   const [porcentajeUnico, setPorcentajeUnico] = useState("")
   const [aplicando, setAplicando] = useState(false)
   const [resultado, setResultado] = useState<ResultadoMargen | null>(null)
@@ -128,20 +124,14 @@ export function MargenDialog({
 
   const porcentajeUnicoNumero = Number(porcentajeUnico)
   const porcentajeUnicoValido = porcentajeUnico.trim() !== "" && Number.isFinite(porcentajeUnicoNumero)
-  const modoUnicoValido = modo !== "seleccion" || seleccionIds.length > 0
 
   const confirmarUnico = async () => {
-    if (!porcentajeUnicoValido || !modoUnicoValido) return
-
-    const alcance: AlcanceMargen =
-      modo === "todos"
-        ? { tipo: "todos" }
-        : { tipo: "seleccion", ids: seleccionIds }
+    if (!porcentajeUnicoValido) return
 
     setAplicando(true)
     setError("")
     try {
-      const r = await aplicarMargen(tenantId, porcentajeUnicoNumero, alcance)
+      const r = await aplicarMargen(tenantId, porcentajeUnicoNumero, { tipo: "todos" })
       setResultado(r)
       onAplicado()
     } catch (e) {
@@ -164,7 +154,7 @@ export function MargenDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setModo("categoria")}
@@ -187,20 +177,6 @@ export function MargenDialog({
             >
               <p className="text-sm font-medium">A todos</p>
               <p className="text-xs text-muted-foreground">Todo el catálogo activo</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setModo("seleccion")}
-              disabled={seleccionIds.length === 0}
-              className={cn(
-                "rounded-lg border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                modo === "seleccion" ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40" : "hover:bg-muted",
-              )}
-            >
-              <p className="text-sm font-medium">A selección</p>
-              <p className="text-xs text-muted-foreground">
-                {seleccionIds.length > 0 ? `${seleccionIds.length} tildados` : "Tildá productos en la lista"}
-              </p>
             </button>
           </div>
 
@@ -249,7 +225,7 @@ export function MargenDialog({
             </div>
           )}
 
-          {modo !== "categoria" && (
+          {modo === "todos" && (
             resultado ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-emerald-600">
@@ -287,7 +263,7 @@ export function MargenDialog({
           ) : (
             <Button
               className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!porcentajeUnicoValido || !modoUnicoValido || aplicando}
+              disabled={!porcentajeUnicoValido || aplicando}
               onClick={confirmarUnico}
             >
               {aplicando ? "Aplicando…" : "Aplicar"}

@@ -68,7 +68,6 @@ export function ProductosManagement({ tenantId }: Props) {
   const [importOpen, setImportOpen] = useState(false)
   const [aDarDeBaja, setADarDeBaja] = useState<Producto | null>(null)
   const [exportando, setExportando] = useState(false)
-  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [margenOpen, setMargenOpen] = useState(false)
 
   useEffect(() => {
@@ -76,11 +75,9 @@ export function ProductosManagement({ tenantId }: Props) {
     return () => clearTimeout(t)
   }, [busqueda])
 
-  // Cualquier cambio de filtro invalida la página actual y la selección
-  // (evita aplicar ganancia a productos que ya no se están viendo).
+  // Cualquier cambio de filtro invalida la página actual.
   useEffect(() => {
     setPagina(0)
-    setSeleccionados(new Set())
   }, [busquedaDebounced, filtro, categoria, incluirInactivos])
 
   const cargarLista = useCallback(async () => {
@@ -127,21 +124,6 @@ export function ProductosManagement({ tenantId }: Props) {
   const abrirNuevo = () => { setEditando(null); setProductoOpen(true) }
   const abrirEdicion = (p: Producto) => { setEditando(p); setProductoOpen(true) }
   const abrirOferta = (p: Producto) => { setOfertaDe(p); setOfertaOpen(true) }
-
-  const alternarSeleccion = (id: string) => {
-    setSeleccionados((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const alternarSeleccionTodos = () => {
-    setSeleccionados((prev) =>
-      prev.size === productos.length ? new Set() : new Set(productos.map((p) => p.id)),
-    )
-  }
 
   const guardarProducto = async (input: ProductoInput) => {
     try {
@@ -354,14 +336,6 @@ export function ProductosManagement({ tenantId }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8">
-                    <input
-                      type="checkbox"
-                      checked={productos.length > 0 && seleccionados.size === productos.length}
-                      onChange={alternarSeleccionTodos}
-                      aria-label="Seleccionar todos los productos de la página"
-                    />
-                  </TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden md:table-cell">Rubro</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
@@ -381,14 +355,6 @@ export function ProductosManagement({ tenantId }: Props) {
 
                   return (
                     <TableRow key={p.id} className={cn(!p.activo && "opacity-50")}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={seleccionados.has(p.id)}
-                          onChange={() => alternarSeleccion(p.id)}
-                          aria-label={`Seleccionar ${p.nombre}`}
-                        />
-                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           {/* Las miniaturas quedan ocultas a propósito por ahora,
@@ -574,13 +540,9 @@ export function ProductosManagement({ tenantId }: Props) {
       <MargenDialog
         tenantId={tenantId}
         categorias={categorias}
-        seleccionIds={[...seleccionados]}
         open={margenOpen}
         onOpenChange={setMargenOpen}
-        onAplicado={() => {
-          setSeleccionados(new Set())
-          recargarTodo()
-        }}
+        onAplicado={recargarTodo}
       />
 
       <AlertDialog open={aDarDeBaja !== null} onOpenChange={(o) => !o && setADarDeBaja(null)}>
