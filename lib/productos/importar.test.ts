@@ -142,6 +142,48 @@ describe("parsearFilas", () => {
 
     expect(filas[0].costo).toBeCloseTo(899.9)
   })
+
+  it("limpia la marca y detecta el peso en una fila de alimento", () => {
+    const wb = workbookDeFilas([
+      ["COD", "DESCRIP", "MARCA", "VETER"],
+      ["12080105", "HANDLER GATOS ADULTOS  X 10 KG HANDLER ", "APM FOOD *", "$ 30,568.94"],
+    ])
+
+    const filas = parsearFilas(wb, "Alimentos", 2)
+
+    expect(filas).toHaveLength(1)
+    expect(filas[0]).toMatchObject({
+      marca: "APM FOOD",
+      unidad: "un",
+      pesoKg: 10,
+      advertencias: [],
+      revisar: false,
+    })
+  })
+
+  it("marca advertencia cuando un alimento no trae peso detectable", () => {
+    const wb = workbookDeFilas([
+      ["COD", "DESCRIP", "MARCA", "VETER"],
+      ["9999", "Snack sin presentación clara", "AUKI", "1000"],
+    ])
+
+    const filas = parsearFilas(wb, "Alimentos", 2)
+
+    expect(filas[0].pesoKg).toBeUndefined()
+    expect(filas[0].advertencias).toContain("sin peso detectado")
+  })
+
+  it("no exige peso detectado fuera de la categoría Alimentos", () => {
+    const wb = workbookDeFilas([
+      ["COD", "DESCRIP", "MARCA", "VETER"],
+      ["A001", "Amoxidal 500mg", "Bagó", "1250.50"],
+    ])
+
+    const filas = parsearFilas(wb, "Medicamentos", 2)
+
+    expect(filas[0].pesoKg).toBeUndefined()
+    expect(filas[0].advertencias).not.toContain("sin peso detectado")
+  })
 })
 
 describe("limpiarMarca", () => {

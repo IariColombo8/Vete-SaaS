@@ -162,15 +162,20 @@ export function parsearFilas(
 
     const codigo = leer(0)
     const descripcion = leer(1)
-    const marca = leer(2)
+    const marca = limpiarMarca(leer(2))
     const costo = aNumero(leer(3))
 
     if (!descripcion && !codigo) return
+
+    const pesoKg = detectarPesoKg(descripcion)
 
     const advertencias: string[] = []
     if (!descripcion) advertencias.push("sin descripción")
     if (costo <= 0) advertencias.push("precio en cero")
     if (!codigo) advertencias.push("sin código")
+    if (categoria === "Alimentos" && pesoKg === undefined) {
+      advertencias.push("sin peso detectado")
+    }
 
     resultado.push({
       numeroFila: filaInicio + i,
@@ -178,6 +183,8 @@ export function parsearFilas(
       codigo,
       descripcion,
       marca,
+      unidad: "un",
+      pesoKg,
       categoria,
       precio: costo,
       costo,
