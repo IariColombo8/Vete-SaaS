@@ -185,11 +185,17 @@ export async function updateTenant(
  * el alta y la promoción por separado dejaría una veterinaria huérfana si lo
  * segundo falla.
  *
+ * `trialDias`: si se pasa, el tenant queda con `trial_expires_at = now() +
+ * trialDias` (ver `crear_veterinaria` en 011_trial_demo.sql). Si se pasa,
+ * además se llama a `seed_demo_data` — falla silenciosa: si el seed no anda,
+ * el registro no se aborta, el tenant ya existe con su admin asignado.
+ *
  * Lanza Error("SLUG_TAKEN") si el slug ya está ocupado.
  */
 export async function createTenant(
   tenantId: string,
   data: Partial<TenantConfig>,
+  trialDias?: number,
 ): Promise<void> {
   const { error } = await supabase.rpc("crear_veterinaria", {
     p_slug: tenantId,
@@ -201,6 +207,7 @@ export async function createTenant(
       direccion: data.direccion ?? null,
       ciudad: data.ciudad ?? null,
       admin_ids: data.adminIds ?? [],
+      trial_dias: trialDias != null ? String(trialDias) : null,
     },
   })
 
@@ -218,5 +225,12 @@ export async function createTenant(
   }
   if (Object.keys(resto).length > 0) {
     await supabase.from("tenants").update(resto).eq("slug", tenantId)
+  }
+
+  if (trialDias != null) {
+    const { error: seedError } = await supabase.rpc("seed_demo_data", { p_tenant_id: tenantId })
+    if (seedError) {
+      console.error("No se pudo cargar la demo inicial:", seedError.message)
+    }
   }
 }
