@@ -176,9 +176,8 @@ export function parsearFilas(
     if (!descripcion) advertencias.push("sin descripción")
     if (costo <= 0) advertencias.push("precio en cero")
     if (!codigo) advertencias.push("sin código")
-    if (categoria === "Alimentos" && pesoKg === undefined) {
-      advertencias.push("sin peso detectado")
-    }
+    // No todos los alimentos tienen un peso real (cajas de regalo, combos):
+    // no detectarlo no es un error de la fila, se completa a mano si hace falta.
 
     resultado.push({
       numeroFila: filaInicio + i,

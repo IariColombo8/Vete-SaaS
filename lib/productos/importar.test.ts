@@ -161,28 +161,17 @@ describe("parsearFilas", () => {
     })
   })
 
-  it("marca advertencia cuando un alimento no trae peso detectable", () => {
+  it("no marca advertencia cuando un alimento no trae peso detectable", () => {
     const wb = workbookDeFilas([
       ["COD", "DESCRIP", "MARCA", "VETER"],
-      ["9999", "Snack sin presentación clara", "AUKI", "1000"],
+      ["9999", "CAJA NAVIDEÑA PERRO", "AUKI", "1000"],
     ])
 
     const filas = parsearFilas(wb, "Alimentos", 2)
 
     expect(filas[0].pesoKg).toBeUndefined()
-    expect(filas[0].advertencias).toContain("sin peso detectado")
-  })
-
-  it("no exige peso detectado fuera de la categoría Alimentos", () => {
-    const wb = workbookDeFilas([
-      ["COD", "DESCRIP", "MARCA", "VETER"],
-      ["A001", "Amoxidal 500mg", "Bagó", "1250.50"],
-    ])
-
-    const filas = parsearFilas(wb, "Medicamentos", 2)
-
-    expect(filas[0].pesoKg).toBeUndefined()
     expect(filas[0].advertencias).not.toContain("sin peso detectado")
+    expect(filas[0].revisar).toBe(false)
   })
 })
 
