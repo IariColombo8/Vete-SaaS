@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { signInWithGoogle } from "@/lib/supabase/auth"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { signInWithGoogle, signInWithEmail } from "@/lib/supabase/auth"
 import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
@@ -17,6 +19,8 @@ export default function LoginPage() {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
   // Supabase inicia sesión por redirect: el usuario vuelve acá desde /auth/callback.
   // Recién en ese momento podemos resolver su panel y mandarlo al destino correcto.
@@ -49,6 +53,23 @@ export default function LoginPage() {
     }
   }
 
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await signInWithEmail(email, password)
+      // onAuthStateChanged actualiza `user` y el useEffect de arriba redirige.
+    } catch (error) {
+      console.error("Login error:", error)
+      toast({
+        title: "Error al iniciar sesión",
+        description: "Email o contraseña incorrectos.",
+        variant: "destructive",
+      })
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-8 md:py-12">
       <div className="w-full max-w-md space-y-4">
@@ -59,7 +80,7 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl md:text-3xl">Iniciar sesión</CardTitle>
             <CardDescription className="text-sm md:text-base">
-              Accedé a tu panel con tu cuenta de Google
+              Accedé a tu panel con Google o tu email
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 pb-6 md:px-6">
@@ -78,6 +99,39 @@ export default function LoginPage() {
               </svg>
               {loading ? "Iniciando sesión..." : "Continuar con Google"}
             </Button>
+
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">o con tu email</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <form onSubmit={handleEmailSignIn} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="tu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+              </Button>
+            </form>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
               ¿Querés sumar tu veterinaria?{" "}

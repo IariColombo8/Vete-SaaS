@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { signInWithGoogle } from "@/lib/supabase/auth"
+import { signInWithGoogle, signUpWithEmail } from "@/lib/supabase/auth"
 import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { createTenant, getTenant } from "@/lib/supabase/queries"
 import { Stethoscope, ArrowRight, Check, Loader2, XCircle } from "lucide-react"
@@ -33,6 +33,9 @@ export default function RegistroPage() {
   const [step, setStep] = useState<Step>("login")
   const [uid, setUid]   = useState("")
   const [loading, setLoading] = useState(false)
+  const [signupEmail, setSignupEmail] = useState("")
+  const [signupPassword, setSignupPassword] = useState("")
+  const [emailSent, setEmailSent] = useState(false)
 
   const [form, setForm] = useState({
     nombreClinica: "",
@@ -108,6 +111,27 @@ export default function RegistroPage() {
       await signInWithGoogle("/registro")
     } catch {
       toast({ title: "Error", description: "No se pudo iniciar sesión.", variant: "destructive" })
+      setLoading(false)
+    }
+  }
+
+  // Alta con email/contraseña. Si Supabase requiere confirmación por mail,
+  // no hay sesión todavía: se le pide al usuario que confirme y vuelva a
+  // entrar por /login, donde el useAuth de arriba lo trae de nuevo acá.
+  async function handleEmailSignup(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await signUpWithEmail(signupEmail, signupPassword)
+      setEmailSent(true)
+    } catch (error) {
+      console.error("Error al registrarse:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo crear la cuenta.",
+        variant: "destructive",
+      })
+    } finally {
       setLoading(false)
     }
   }
@@ -202,7 +226,7 @@ export default function RegistroPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Creá tu cuenta</CardTitle>
-              <CardDescription>Usamos Google para simplificar el acceso.</CardDescription>
+              <CardDescription>Con Google o tu email.</CardDescription>
             </CardHeader>
             <CardContent>
               <Button
@@ -220,6 +244,52 @@ export default function RegistroPage() {
                 </svg>
                 {loading ? "Cargando..." : "Continuar con Google"}
               </Button>
+
+              <div className="my-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">o con tu email</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {emailSent ? (
+                <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-4 text-sm text-center space-y-1">
+                  <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                    Revisá tu email
+                  </p>
+                  <p className="text-muted-foreground">
+                    Te enviamos un link para confirmar tu cuenta. Una vez confirmada, iniciá sesión.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleEmailSignup} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signupEmail">Email</Label>
+                    <Input
+                      id="signupEmail"
+                      type="email"
+                      placeholder="tu@email.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signupPassword">Contraseña</Label>
+                    <Input
+                      id="signupPassword"
+                      type="password"
+                      minLength={6}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Creando cuenta..." : "Crear cuenta con email"}
+                  </Button>
+                </form>
+              )}
+
               <p className="mt-4 text-center text-xs text-muted-foreground">
                 ¿Ya tenés cuenta?{" "}
                 <Link href="/login" className="text-emerald-600 hover:underline font-medium">
