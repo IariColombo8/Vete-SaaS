@@ -6,10 +6,14 @@ import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
+import { getMarcas, getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
 import { presentacionDe } from "@/lib/ventas/carrito"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
 import { formatCantidad, formatCurrency } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type { Producto } from "@/lib/supabase/types"
 
 interface Props {
@@ -21,6 +25,9 @@ interface Props {
 
 /** Milisegundos de espera antes de consultar mientras se tipea. */
 const DEBOUNCE_MS = 250
+
+/** Categorías fijas que usa este catálogo (ver ImportDialog). */
+const CATEGORIAS = ["Alimentos", "Medicamentos", "Accesorios"] as const
 
 /**
  * Buscador del mostrador. Dos formas de encontrar un producto:
@@ -35,13 +42,26 @@ const DEBOUNCE_MS = 250
  */
 export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbrirAtencion }: Props) {
   const [busqueda, setBusqueda] = useState("")
+  const [categoria, setCategoria] = useState<string | null>(null)
+  const [marca, setMarca] = useState<string | null>(null)
+  const [marcasDisponibles, setMarcasDisponibles] = useState<string[]>([])
   const [resultados, setResultados] = useState<Producto[]>([])
   const [cargando, setCargando] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Las marcas dependen de la categoría elegida: filtrar por "Alimentos" no
+  // tiene sentido si el desplegable sigue ofreciendo marcas de medicamentos.
+  useEffect(() => {
+    setMarca(null)
+    getMarcas(tenantId, categoria ?? undefined).then(setMarcasDisponibles)
+  }, [tenantId, categoria])
+
   useEffect(() => {
     const termino = busqueda.trim()
-    if (termino.length < 2) {
+    // Sin texto y sin ningún filtro activo no hay nada que mostrar todavía:
+    // traer "todo el catálogo" de una sola sería una consulta cara e inútil
+    // apenas se abre el POS.
+    if (termino.length < 2 && !categoria && !marca) {
       setResultados([])
       return
     }
@@ -50,7 +70,12 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
     setCargando(true)
 
     const timer = setTimeout(() => {
-      getProductos(tenantId, { busqueda: termino, porPagina: 24 })
+      getProductos(tenantId, {
+        busqueda: termino.length >= 2 ? termino : undefined,
+        categoriaPrefijo: categoria ?? undefined,
+        marca: marca ?? undefined,
+        porPagina: 24,
+      })
         .then(({ productos }) => {
           if (vigente) setResultados(productos)
         })
@@ -63,7 +88,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
       vigente = false
       clearTimeout(timer)
     }
-  }, [busqueda, tenantId])
+  }, [busqueda, categoria, marca, tenantId])
 
   const elegir = (producto: Producto) => {
     onElegir(producto)
@@ -129,6 +154,27 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
         </Button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <FiltroCategoria
+          value={categoria}
+          onClick={(c) => setCategoria((actual) => (actual === c ? null : c))}
+        />
+        <Select
+          value={marca ?? "_todas"}
+          onValueChange={(v) => setMarca(v === "_todas" ? null : v)}
+        >
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="Marca" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_todas">Todas las marcas</SelectItem>
+            {marcasDisponibles.map((m) => (
+              <SelectItem key={m} value={m}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         {cargando && resultados.length === 0 ? (
           <div className="flex justify-center py-10">
@@ -136,7 +182,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
           </div>
         ) : resultados.length === 0 ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
-            {busqueda.trim().length >= 2
+            {busqueda.trim().length >= 2 || categoria || marca
               ? "Sin resultados"
               : "Escaneá un producto o empezá a escribir"}
           </div>
@@ -148,6 +194,35 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Chips de categoría: tocar la ya activa la apaga (vuelve a "Todos"). */
+function FiltroCategoria({
+  value,
+  onClick,
+}: {
+  value: string | null
+  onClick: (categoria: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {CATEGORIAS.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onClick(c)}
+          className={cn(
+            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            value === c
+              ? "border-emerald-600 bg-emerald-600 text-white"
+              : "border-border bg-card text-muted-foreground hover:border-emerald-500 hover:text-foreground",
+          )}
+        >
+          {c}
+        </button>
+      ))}
     </div>
   )
 }

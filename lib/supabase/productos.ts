@@ -188,6 +188,8 @@ export async function getProductos(
 
   if (!filtro.incluirInactivos) q = q.eq("activo", true)
   if (filtro.categoria) q = q.eq("categoria", filtro.categoria)
+  if (filtro.categoriaPrefijo) q = q.ilike("categoria", `${filtro.categoriaPrefijo}%`)
+  if (filtro.marca) q = q.eq("marca", filtro.marca)
   if (filtro.soloRevisar) q = q.eq("revisar", true)
 
   // `soloAgotados` es más específico que `soloStockBajo`, así que gana.
@@ -217,6 +219,37 @@ export async function getProductos(
   }
 
   return { productos: (data ?? []).map(aProducto), total: count ?? 0 }
+}
+
+/**
+ * Marcas distintas con al menos un producto activo, para el filtro del
+ * buscador del POS. Postgrest no tiene `distinct` en el cliente, así que se
+ * trae la columna sola (liviana) y se dedupea acá — la misma idea que ya usa
+ * `getAlimentos`/`agruparPorMarca`, pero sin pedir la fila completa.
+ */
+export async function getMarcas(tenantId: string, categoriaPrefijo?: string): Promise<string[]> {
+  let q = supabase
+    .from("productos")
+    .select("marca")
+    .eq("tenant_id", tenantId).eq("activo", true)
+    .not("marca", "is", null).not("marca", "eq", "")
+
+  if (categoriaPrefijo) q = q.ilike("categoria", `${categoriaPrefijo}%`)
+
+  const { data, error } = await q
+
+  if (error) {
+    console.error("Error listando marcas:", error.message)
+    return []
+  }
+
+  const marcas = new Set<string>()
+  for (const fila of data ?? []) {
+    const marca = ((fila as { marca: string | null }).marca ?? "").trim()
+    if (marca) marcas.add(marca)
+  }
+
+  return [...marcas].sort((a, b) => a.localeCompare(b, "es"))
 }
 
 /**
