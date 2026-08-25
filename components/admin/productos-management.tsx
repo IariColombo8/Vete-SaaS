@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import {
   Search, AlertTriangle, ChevronLeft, ChevronRight, Tag, Upload, Pencil,
   Package, PackageX, ClipboardList, Layers, Plus, CalendarClock, Trash2,
+  FileDown, Loader2, Percent,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -20,11 +21,15 @@ import {
 import { ProductoDialog } from "@/components/admin/productos/producto-dialog"
 import { OfertaDialog } from "@/components/admin/productos/oferta-dialog"
 import { ImportDialog } from "@/components/admin/productos/import-dialog"
+import { MargenDialog } from "@/components/admin/productos/margen-dialog"
 import {
   getProductos, getCategorias, getStockStats, getVencimientosProximos,
+  getTodosLosProductosParaExportar,
   createProducto, updateProducto, desactivarProducto, setOferta, ajustarStock,
   type ProductoInput, type OfertaInput, type StockStats,
 } from "@/lib/supabase/productos"
+import { getTenantConfig } from "@/lib/supabase/queries"
+import { descargarStockPDF } from "@/lib/productos/stock-pdf"
 import type { AjusteStockTipo, Producto } from "@/lib/supabase/types"
 import {
   precioFinal, tieneOferta, comboLabel, margenPct, estadoStock, diasHastaVencimiento,
@@ -62,15 +67,20 @@ export function ProductosManagement({ tenantId }: Props) {
   const [ofertaOpen, setOfertaOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [aDarDeBaja, setADarDeBaja] = useState<Producto | null>(null)
+  const [exportando, setExportando] = useState(false)
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [margenOpen, setMargenOpen] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setBusquedaDebounced(busqueda), 300)
     return () => clearTimeout(t)
   }, [busqueda])
 
-  // Cualquier cambio de filtro invalida la página actual.
+  // Cualquier cambio de filtro invalida la página actual y la selección
+  // (evita aplicar ganancia a productos que ya no se están viendo).
   useEffect(() => {
     setPagina(0)
+    setSeleccionados(new Set())
   }, [busquedaDebounced, filtro, categoria, incluirInactivos])
 
   const cargarLista = useCallback(async () => {
@@ -117,6 +127,21 @@ export function ProductosManagement({ tenantId }: Props) {
   const abrirNuevo = () => { setEditando(null); setProductoOpen(true) }
   const abrirEdicion = (p: Producto) => { setEditando(p); setProductoOpen(true) }
   const abrirOferta = (p: Producto) => { setOfertaDe(p); setOfertaOpen(true) }
+
+  const alternarSeleccion = (id: string) => {
+    setSeleccionados((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const alternarSeleccionTodos = () => {
+    setSeleccionados((prev) =>
+      prev.size === productos.length ? new Set() : new Set(productos.map((p) => p.id)),
+    )
+  }
 
   const guardarProducto = async (input: ProductoInput) => {
     try {
@@ -172,6 +197,29 @@ export function ProductosManagement({ tenantId }: Props) {
     }
   }
 
+  /**
+   * Único lugar donde se trae el catálogo entero, y solo porque el usuario lo
+   * pidió explícitamente: la tabla de la pantalla nunca deja de paginar.
+   */
+  const exportarStockPDF = async () => {
+    setExportando(true)
+    try {
+      const [productosExportar, config] = await Promise.all([
+        getTodosLosProductosParaExportar(tenantId, { categoria: categoria || undefined }),
+        getTenantConfig(tenantId),
+      ])
+      if (productosExportar.length === 0) {
+        toast.error("No hay productos para exportar")
+        return
+      }
+      descargarStockPDF(productosExportar, config?.nombre || "VetPanel")
+    } catch {
+      toast.error("No se pudo generar el PDF del stock")
+    } finally {
+      setExportando(false)
+    }
+  }
+
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA))
 
   const tarjetas = useMemo(
@@ -196,6 +244,17 @@ export function ProductosManagement({ tenantId }: Props) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={exportarStockPDF} disabled={exportando}>
+            {exportando ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="mr-2 h-4 w-4" />
+            )}
+            Stock en PDF
+          </Button>
+          <Button variant="outline" onClick={() => setMargenOpen(true)}>
+            <Percent className="mr-2 h-4 w-4" /> Aplicar ganancia
+          </Button>
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" /> Importar
           </Button>
@@ -295,6 +354,14 @@ export function ProductosManagement({ tenantId }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <input
+                      type="checkbox"
+                      checked={productos.length > 0 && seleccionados.size === productos.length}
+                      onChange={alternarSeleccionTodos}
+                      aria-label="Seleccionar todos los productos de la página"
+                    />
+                  </TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden md:table-cell">Rubro</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
@@ -314,6 +381,14 @@ export function ProductosManagement({ tenantId }: Props) {
 
                   return (
                     <TableRow key={p.id} className={cn(!p.activo && "opacity-50")}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={seleccionados.has(p.id)}
+                          onChange={() => alternarSeleccion(p.id)}
+                          aria-label={`Seleccionar ${p.nombre}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           {/* Las miniaturas quedan ocultas a propósito por ahora,
@@ -494,6 +569,18 @@ export function ProductosManagement({ tenantId }: Props) {
         open={importOpen}
         onOpenChange={setImportOpen}
         onImportado={recargarTodo}
+      />
+
+      <MargenDialog
+        tenantId={tenantId}
+        categorias={categorias}
+        seleccionIds={[...seleccionados]}
+        open={margenOpen}
+        onOpenChange={setMargenOpen}
+        onAplicado={() => {
+          setSeleccionados(new Set())
+          recargarTodo()
+        }}
       />
 
       <AlertDialog open={aDarDeBaja !== null} onOpenChange={(o) => !o && setADarDeBaja(null)}>
