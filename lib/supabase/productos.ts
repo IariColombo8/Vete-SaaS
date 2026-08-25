@@ -622,6 +622,11 @@ export async function getAlimentos(tenantId: string): Promise<Producto[]> {
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId).eq("activo", true)
     .not("marca", "is", null).not("marca", "eq", "")
+    // Medicamentos y accesorios también pueden traer "marca" (el proveedor de
+    // la lista de precios importada), y sin este filtro se mezclaban con los
+    // alimentos reales en el selector del mostrador. "Alimentos / Perro" (con
+    // subcategoría) también tiene que matchear, de ahí el `ilike` con `%`.
+    .ilike("categoria", "Alimentos%")
     .order("marca").order("linea").order("peso_kg")
 
   if (error) {
