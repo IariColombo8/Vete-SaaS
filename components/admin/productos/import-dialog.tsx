@@ -36,12 +36,12 @@ const CATEGORIAS: { value: Categoria; icon: typeof Pill; descripcion: string }[]
   { value: "Accesorios", icon: PawPrint, descripcion: "Correas, juguetes, higiene y demás" },
 ]
 
-const ESTRATEGIAS: { value: EstrategiaStock; label: string; ayuda: string }[] = [
-  { value: "no_tocar", label: "No tocar el stock", ayuda: "Solo actualiza precio, nombre y rubro" },
-  { value: "reemplazar", label: "Reemplazar el stock", ayuda: "El stock pasa a ser el del Excel" },
-  { value: "sumar", label: "Sumar al stock", ayuda: "El valor del Excel se suma al actual" },
-  { value: "solo_nuevos", label: "Solo agregar nuevos", ayuda: "No modifica los productos existentes" },
-]
+/**
+ * Estas listas no traen stock, así que la única estrategia que tiene sentido
+ * es no tocarlo: actualiza precio/nombre/marca de lo que ya existe y da de
+ * alta lo que venga con un código nuevo.
+ */
+const ESTRATEGIA_FIJA: EstrategiaStock = "no_tocar"
 
 /** Las filas se mandan de a tandas: cada una es una transacción en la base. */
 const TAMANIO_LOTE = 200
@@ -53,7 +53,6 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
   const [totalFilasArchivo, setTotalFilasArchivo] = useState(0)
   const [filaInicio, setFilaInicio] = useState(2)
   const [filas, setFilas] = useState<FilaParseada[]>([])
-  const [estrategia, setEstrategia] = useState<EstrategiaStock>("no_tocar")
   const [incluirConAdvertencias, setIncluirConAdvertencias] = useState(true)
   const [progreso, setProgreso] = useState({ hechas: 0, total: 0 })
   const [resumen, setResumen] = useState<ResumenImportacion | null>(null)
@@ -62,7 +61,7 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
 
   const reiniciar = () => {
     setPaso("categoria"); setCategoria(null); setWorkbook(null); setTotalFilasArchivo(0)
-    setFilaInicio(2); setFilas([]); setEstrategia("no_tocar")
+    setFilaInicio(2); setFilas([])
     setIncluirConAdvertencias(true); setProgreso({ hechas: 0, total: 0 })
     setResumen(null); setError("")
   }
@@ -134,7 +133,7 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
         const lote = usables.slice(i, i + TAMANIO_LOTE).map(
           ({ numeroFila: _n, advertencias: _a, ...fila }) => fila,
         )
-        const r = await importarProductos(tenantId, lote, estrategia)
+        const r = await importarProductos(tenantId, lote, ESTRATEGIA_FIJA)
         total.creados += r.creados
         total.actualizados += r.actualizados
         total.omitidos += r.omitidos
@@ -291,27 +290,10 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
               </>
             )}
 
-            <div>
-              <Label className="mb-2 block">Si el producto ya existe</Label>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {ESTRATEGIAS.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setEstrategia(s.value)}
-                    className={cn(
-                      "rounded-lg border p-3 text-left transition-colors",
-                      estrategia === s.value
-                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    <p className="text-sm font-medium">{s.label}</p>
-                    <p className="text-xs text-muted-foreground">{s.ayuda}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Los productos con código ya existente se actualizan (precio, nombre, marca).
+              Los códigos nuevos se dan de alta. El stock no se toca.
+            </p>
           </div>
         )}
 
