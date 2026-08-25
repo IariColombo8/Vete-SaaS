@@ -211,6 +211,49 @@ export async function getProductos(
   return { productos: (data ?? []).map(aProducto), total: count ?? 0 }
 }
 
+/**
+ * Todo el catálogo activo, para el PDF de stock. Es la única lectura que no
+ * pagina hacia la UI —el usuario pidió explícitamente "todo el stock"—, pero
+ * tampoco lo trae de un solo golpe: va en tandas de `TANDA` filas para no
+ * disparar una consulta gigante ni depender del límite por defecto de la API.
+ */
+const TANDA_EXPORTACION = 500
+
+export async function getTodosLosProductosParaExportar(
+  tenantId: string,
+  filtro: Pick<ProductosFiltro, "categoria" | "incluirInactivos"> = {},
+): Promise<Producto[]> {
+  const productos: Producto[] = []
+  let desde = 0
+
+  while (true) {
+    let q = supabase
+      .from("productos")
+      .select(COLS)
+      .eq("tenant_id", tenantId)
+
+    if (!filtro.incluirInactivos) q = q.eq("activo", true)
+    if (filtro.categoria) q = q.eq("categoria", filtro.categoria)
+
+    const { data, error } = await q
+      .order("categoria").order("nombre")
+      .range(desde, desde + TANDA_EXPORTACION - 1)
+
+    if (error) {
+      console.error("Error exportando productos:", error.message)
+      break
+    }
+
+    const tanda = (data ?? []).map(aProducto)
+    productos.push(...tanda)
+
+    if (tanda.length < TANDA_EXPORTACION) break
+    desde += TANDA_EXPORTACION
+  }
+
+  return productos
+}
+
 export async function getProducto(tenantId: string, id: string): Promise<Producto | null> {
   const { data } = await supabase
     .from("productos").select(COLS)
@@ -280,20 +323,26 @@ export async function getStockStats(tenantId: string): Promise<StockStats> {
   }
 }
 
-/** Productos que vencen dentro de `dias` (incluye los ya vencidos). */
+/**
+ * Productos que vencen dentro de `dias` (incluye los ya vencidos).
+ * Es un aviso, no un listado: se corta en `limite` filas (las más urgentes,
+ * por el `order`) para no traer el catálogo entero si hay muchos vencimientos.
+ */
 export async function getVencimientosProximos(
   tenantId: string,
   dias = 30,
+  limite = 100,
 ): Promise<Producto[]> {
-  const limite = new Date()
-  limite.setDate(limite.getDate() + dias)
+  const fechaLimite = new Date()
+  fechaLimite.setDate(fechaLimite.getDate() + dias)
 
   const { data } = await supabase
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId).eq("activo", true)
     .not("fecha_vencimiento", "is", null)
-    .lte("fecha_vencimiento", limite.toISOString().slice(0, 10))
+    .lte("fecha_vencimiento", fechaLimite.toISOString().slice(0, 10))
     .order("fecha_vencimiento")
+    .limit(limite)
 
   return (data ?? []).map(aProducto)
 }
@@ -499,6 +548,8 @@ export interface FilaImportacion {
   barra: string
   codigo: string
   descripcion: string
+  marca?: string
+  categoria: string
   precio: number
   costo?: number
   rubro: string
