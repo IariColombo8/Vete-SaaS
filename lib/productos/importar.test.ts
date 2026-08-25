@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import * as XLSX from "xlsx-js-style"
-import { parsearFilas } from "./importar"
+import { parsearFilas, limpiarMarca, detectarPesoKg } from "./importar"
 
 function workbookDeFilas(filas: (string | number)[][]): XLSX.WorkBook {
   const hoja = XLSX.utils.aoa_to_sheet(filas)
@@ -141,5 +141,98 @@ describe("parsearFilas", () => {
     const filas = parsearFilas(wb, "Accesorios", 2)
 
     expect(filas[0].costo).toBeCloseTo(899.9)
+  })
+
+  it("limpia la marca y detecta el peso en una fila de alimento", () => {
+    const wb = workbookDeFilas([
+      ["COD", "DESCRIP", "MARCA", "VETER"],
+      ["12080105", "HANDLER GATOS ADULTOS  X 10 KG HANDLER ", "APM FOOD *", "$ 30,568.94"],
+    ])
+
+    const filas = parsearFilas(wb, "Alimentos", 2)
+
+    expect(filas).toHaveLength(1)
+    expect(filas[0]).toMatchObject({
+      marca: "APM FOOD",
+      unidad: "un",
+      pesoKg: 10,
+      advertencias: [],
+      revisar: false,
+    })
+  })
+
+  it("marca advertencia cuando un alimento no trae peso detectable", () => {
+    const wb = workbookDeFilas([
+      ["COD", "DESCRIP", "MARCA", "VETER"],
+      ["9999", "Snack sin presentación clara", "AUKI", "1000"],
+    ])
+
+    const filas = parsearFilas(wb, "Alimentos", 2)
+
+    expect(filas[0].pesoKg).toBeUndefined()
+    expect(filas[0].advertencias).toContain("sin peso detectado")
+  })
+
+  it("no exige peso detectado fuera de la categoría Alimentos", () => {
+    const wb = workbookDeFilas([
+      ["COD", "DESCRIP", "MARCA", "VETER"],
+      ["A001", "Amoxidal 500mg", "Bagó", "1250.50"],
+    ])
+
+    const filas = parsearFilas(wb, "Medicamentos", 2)
+
+    expect(filas[0].pesoKg).toBeUndefined()
+    expect(filas[0].advertencias).not.toContain("sin peso detectado")
+  })
+})
+
+describe("limpiarMarca", () => {
+  it("quita el asterisco final y los espacios", () => {
+    expect(limpiarMarca("APM FOOD *")).toBe("APM FOOD")
+    expect(limpiarMarca("GARAY S.R.L *")).toBe("GARAY S.R.L")
+  })
+
+  it("no toca una marca sin asterisco", () => {
+    expect(limpiarMarca("AUKI")).toBe("AUKI")
+    expect(limpiarMarca("Bagó")).toBe("Bagó")
+  })
+
+  it("recorta espacios sueltos aunque no haya asterisco", () => {
+    expect(limpiarMarca("  GOLOCAN  ")).toBe("GOLOCAN")
+  })
+
+  it("devuelve string vacío si no hay marca", () => {
+    expect(limpiarMarca("")).toBe("")
+    expect(limpiarMarca("   ")).toBe("")
+  })
+})
+
+describe("detectarPesoKg", () => {
+  it("detecta kilos enteros", () => {
+    expect(detectarPesoKg("HANDLER GATOS ADULTOS X 10 KG HANDLER")).toBe(10)
+    expect(detectarPesoKg("MONTAÑES PERROS ADULTOS X 20 KG MONTAÑES")).toBe(20)
+  })
+
+  it("convierte gramos a kilos", () => {
+    expect(detectarPesoKg("BISCUITS DE POLLO HORNEADOS X 120 GR ")).toBe(0.12)
+    expect(detectarPesoKg("AUKI BOCADITOS CAJA DOYPACKS 9 UNID X 500 GRS")).toBe(0.5)
+  })
+
+  it("acepta GR con punto final", () => {
+    expect(detectarPesoKg("BOCADITOS FINOS X 100 GR. CARNE/POLLO/CHOCOLATE")).toBe(0.1)
+  })
+
+  it("usa la última coincidencia si el patrón aparece más de una vez", () => {
+    expect(detectarPesoKg("ARGENTO PERRO ADULTO MORDIDA PEQ. X 15 KG ARGENTO X 1 KG")).toBe(1)
+  })
+
+  it("devuelve undefined si no hay patrón de peso", () => {
+    expect(detectarPesoKg("Amoxidal 500mg")).toBeUndefined()
+    expect(detectarPesoKg("Correa de cuero")).toBeUndefined()
+    expect(detectarPesoKg("")).toBeUndefined()
+  })
+
+  it("interpreta el punto como separador de miles cuando la unidad es gramos", () => {
+    expect(detectarPesoKg("BOLSA GRANDE X 1.000 GRS")).toBe(1)
   })
 })

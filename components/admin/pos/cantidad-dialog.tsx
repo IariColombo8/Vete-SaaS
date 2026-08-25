@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { precioLinea } from "@/lib/productos/precios"
+import { precioFinal, precioLinea, tieneOferta } from "@/lib/productos/precios"
 import { descripcionLinea } from "@/lib/ventas/carrito"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import type { Producto } from "@/lib/supabase/types"
@@ -24,7 +24,10 @@ const KILOS_RAPIDOS = [0.5, 1, 2, 3, 5, 10]
 /** Atajos de gramos: para pedidos chicos, donde "0,2" es menos natural que "200". */
 const GRAMOS_RAPIDOS = [100, 200, 250, 500, 750]
 
-type UnidadIngreso = "kg" | "g"
+/** Atajos de montos: los pedidos típicos cuando el cliente pide "$1000 de alimento". */
+const MONTOS_RAPIDOS = [500, 1000, 1500, 2000, 3000, 5000]
+
+type UnidadIngreso = "kg" | "g" | "$"
 
 /**
  * Pide cuánto se lleva el cliente y muestra el importe en vivo.
@@ -38,6 +41,9 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   const [unidadIngreso, setUnidadIngreso] = useState<UnidadIngreso>("kg")
 
   const porKg = producto?.unidad === "kg"
+  // El monto en pesos asume precio unitario fijo: no tiene forma limpia de
+  // invertirse cuando hay un combo (N unidades a precio fijo) de por medio.
+  const esCombo = producto ? tieneOferta(producto) && producto.ofertaTipo === "combo" : false
 
   // Cada vez que se abre con otro producto se reinicia: arrastrar "2,5" de la
   // venta anterior es una forma muy fácil de despachar de más.
@@ -53,8 +59,13 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   const cantidad = useMemo(() => {
     const n = Number(valor.replace(",", "."))
     if (!Number.isFinite(n) || n <= 0) return 0
-    return unidadIngreso === "g" ? n / 1000 : n
-  }, [valor, unidadIngreso])
+    if (unidadIngreso === "g") return n / 1000
+    if (unidadIngreso === "$") {
+      const precio = producto ? precioFinal(producto) : 0
+      return precio > 0 ? n / precio : 0
+    }
+    return n
+  }, [valor, unidadIngreso, producto])
 
   const importe = producto && cantidad > 0 ? precioLinea(producto, cantidad) : 0
   const excedeStock =
@@ -80,11 +91,17 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="cantidad">
-                  {porKg ? (unidadIngreso === "g" ? "Peso" : "Kilos") : "Unidades"}
+                  {porKg
+                    ? unidadIngreso === "g"
+                      ? "Peso"
+                      : unidadIngreso === "$"
+                        ? "Monto"
+                        : "Kilos"
+                    : "Unidades"}
                 </Label>
                 {porKg && (
                   <div className="flex gap-0.5 rounded-md border bg-background p-0.5">
-                    {(["kg", "g"] as const).map((u) => (
+                    {(esCombo ? (["kg", "g"] as const) : (["kg", "g", "$"] as const)).map((u) => (
                       <Button
                         key={u}
                         type="button"
@@ -98,7 +115,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                           setValor("")
                         }}
                       >
-                        {u === "kg" ? "Kilos" : "Elegir peso (g)"}
+                        {u === "kg" ? "Kilos" : u === "g" ? "Elegir peso (g)" : "Por monto ($)"}
                       </Button>
                     ))}
                   </div>
@@ -108,11 +125,19 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                 id="cantidad"
                 type="number"
                 inputMode="decimal"
-                min={porKg ? (unidadIngreso === "g" ? 1 : 0.001) : 1}
-                step={porKg ? (unidadIngreso === "g" ? 10 : 0.1) : 1}
+                min={porKg ? (unidadIngreso === "g" ? 1 : unidadIngreso === "$" ? 1 : 0.001) : 1}
+                step={porKg ? (unidadIngreso === "g" ? 10 : unidadIngreso === "$" ? 100 : 0.1) : 1}
                 value={valor}
                 autoFocus
-                placeholder={porKg ? (unidadIngreso === "g" ? "Ej: 200" : "Ej: 2,5") : "1"}
+                placeholder={
+                  porKg
+                    ? unidadIngreso === "g"
+                      ? "Ej: 200"
+                      : unidadIngreso === "$"
+                        ? "Ej: 1000"
+                        : "Ej: 2,5"
+                    : "1"
+                }
                 onChange={(e) => setValor(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") confirmar()
@@ -123,7 +148,12 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
 
             {porKg && (
               <div className="flex flex-wrap gap-1.5">
-                {(unidadIngreso === "g" ? GRAMOS_RAPIDOS : KILOS_RAPIDOS).map((n) => (
+                {(unidadIngreso === "g"
+                  ? GRAMOS_RAPIDOS
+                  : unidadIngreso === "$"
+                    ? MONTOS_RAPIDOS
+                    : KILOS_RAPIDOS
+                ).map((n) => (
                   <Button
                     key={n}
                     type="button"
@@ -131,7 +161,11 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                     size="sm"
                     onClick={() => setValor(String(n))}
                   >
-                    {unidadIngreso === "g" ? `${n} g` : `${formatCantidad(n)} kg`}
+                    {unidadIngreso === "g"
+                      ? `${n} g`
+                      : unidadIngreso === "$"
+                        ? formatCurrency(n)
+                        : `${formatCantidad(n)} kg`}
                   </Button>
                 ))}
               </div>
@@ -144,6 +178,11 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                   {formatCurrency(importe)}
                 </span>
               </div>
+              {unidadIngreso === "$" && cantidad > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  ≈ {cantidad < 1 ? `${formatCantidad(cantidad * 1000)} g` : `${formatCantidad(cantidad)} kg`}
+                </p>
+              )}
               {producto.controlaStock && (
                 <p
                   className={`mt-1 text-xs ${excedeStock ? "font-medium text-red-600" : "text-muted-foreground"}`}

@@ -108,6 +108,41 @@ function aNumero(texto: string): number {
 }
 
 /**
+ * El Excel del proveedor trae la marca/distribuidor con un asterisco colgado
+ * al final ("APM FOOD *", "GARAY S.R.L *"): es un artefacto de cómo exportan
+ * la lista, no parte del nombre.
+ */
+export function limpiarMarca(texto: string): string {
+  return texto.trim().replace(/\s*\*\s*$/, "").trim()
+}
+
+/**
+ * Casi toda descripción de alimento trae el peso de la bolsa como
+ * "X 10 KG" o "X 500 GRS" (a veces con punto: "X 100 GR."). Cuando la marca
+ * se repite al final de la descripción puede aparecer más de una vez el
+ * patrón "X ... KG" — se toma la última, que es la que describe la
+ * presentación real (la primera repetición suele ser ruido del nombre).
+ *
+ * Devuelve el peso siempre en kilos (los gramos se dividen por 1000), o
+ * `undefined` si la descripción no trae ningún patrón reconocible.
+ */
+export function detectarPesoKg(descripcion: string): number | undefined {
+  const coincidencias = [...descripcion.matchAll(/X\s*([\d.,]+)\s*(KGS?|GRS?)\.?\b/gi)]
+  if (coincidencias.length === 0) return undefined
+
+  const [, numero, unidad] = coincidencias[coincidencias.length - 1]
+  const esGramos = /^GRS?$/i.test(unidad)
+  // En gramos el punto es separador de miles (nadie vende "120,5 gramos");
+  // en kilos, el punto es decimal como en el resto del archivo.
+  const normalizado = esGramos ? numero.replace(/\./g, "").replace(",", ".") : numero.replace(",", ".")
+  const valor = Number(normalizado)
+  if (!Number.isFinite(valor) || valor <= 0) return undefined
+
+  const enKg = esGramos ? valor / 1000 : valor
+  return Math.round(enKg * 1000) / 1000
+}
+
+/**
  * Columnas fijas: A=código, B=descripción, C=marca, D=costo. El precio de
  * venta se inicializa igual al costo — se corrige después con la herramienta
  * de margen de ganancia, no acá.
@@ -127,15 +162,20 @@ export function parsearFilas(
 
     const codigo = leer(0)
     const descripcion = leer(1)
-    const marca = leer(2)
+    const marca = limpiarMarca(leer(2))
     const costo = aNumero(leer(3))
 
     if (!descripcion && !codigo) return
+
+    const pesoKg = detectarPesoKg(descripcion)
 
     const advertencias: string[] = []
     if (!descripcion) advertencias.push("sin descripción")
     if (costo <= 0) advertencias.push("precio en cero")
     if (!codigo) advertencias.push("sin código")
+    if (categoria === "Alimentos" && pesoKg === undefined) {
+      advertencias.push("sin peso detectado")
+    }
 
     resultado.push({
       numeroFila: filaInicio + i,
@@ -143,6 +183,8 @@ export function parsearFilas(
       codigo,
       descripcion,
       marca,
+      unidad: "un",
+      pesoKg,
       categoria,
       precio: costo,
       costo,
