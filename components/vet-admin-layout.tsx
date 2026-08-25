@@ -15,6 +15,9 @@ import { Separator } from "@/components/ui/separator"
 import type React from "react"
 import type { UserRole } from "@/lib/supabase/queries"
 import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
+import { getTrialStatus } from "@/lib/plans"
+import { ReadOnlyProvider } from "@/lib/auth/read-only-context"
+import { TrialExpiredBanner } from "@/components/admin/trial-expired-banner"
 
 interface Props {
   slug: string
@@ -54,6 +57,7 @@ export function VetAdminLayout({ slug, children }: Props) {
   const pathname = usePathname()
   const [checking, setChecking] = useState(true)
   const [vetNombre, setVetNombre] = useState<string>("")
+  const [trialVencido, setTrialVencido] = useState(false)
   const [role, setRole] = useState<UserRole | null>(null)
 
   useEffect(() => {
@@ -78,6 +82,7 @@ export function VetAdminLayout({ slug, children }: Props) {
         return
       }
       setVetNombre(config?.nombre || slug)
+      setTrialVencido(getTrialStatus(config ?? {}).vencido)
       setChecking(false)
     })
   }, [user, authLoading, slug, router, pathname])
@@ -96,39 +101,42 @@ export function VetAdminLayout({ slug, children }: Props) {
     // `SidebarProvider` recuerda el estado en una cookie, así que el menú queda
     // como lo dejó el usuario entre recargas y entre páginas. Ctrl/Cmd+B lo
     // pliega y despliega sin tocar el mouse.
-    <SidebarProvider>
-      <VetAdminSidebar
-        slug={slug}
-        vetNombre={vetNombre}
-        role={role}
-        onSalir={async () => {
-          await signOut()
-          router.push("/")
-        }}
-      />
+    <ReadOnlyProvider readOnly={trialVencido}>
+      <SidebarProvider>
+        <VetAdminSidebar
+          slug={slug}
+          vetNombre={vetNombre}
+          role={role}
+          onSalir={async () => {
+            await signOut()
+            router.push("/")
+          }}
+        />
 
-      <SidebarInset className="bg-slate-50 dark:bg-slate-950">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-1 h-4" />
-          <h1 className="truncate text-sm font-semibold flex-1">
-            {section ? TITULOS[section] : (vetNombre || slug)}
-          </h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground"
-            onClick={() => router.push(`/${slug}/admin?tour=1`)}
-          >
-            <HelpCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">Ayuda</span>
-          </Button>
-        </header>
+        <SidebarInset className="bg-slate-50 dark:bg-slate-950">
+          {trialVencido && <TrialExpiredBanner />}
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-1 h-4" />
+            <h1 className="truncate text-sm font-semibold flex-1">
+              {section ? TITULOS[section] : (vetNombre || slug)}
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+              onClick={() => router.push(`/${slug}/admin?tour=1`)}
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Ayuda</span>
+            </Button>
+          </header>
 
-        {/* Sin `container mx-auto`: con el sidebar plegado el contenido tiene que
-            aprovechar el ancho que se liberó, sobre todo el mostrador. */}
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+          {/* Sin `container mx-auto`: con el sidebar plegado el contenido tiene que
+              aprovechar el ancho que se liberó, sobre todo el mostrador. */}
+          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+    </ReadOnlyProvider>
   )
 }
