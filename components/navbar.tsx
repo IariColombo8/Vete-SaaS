@@ -76,9 +76,11 @@ function SaasNavbar() {
             <a href="/#caracteristicas" className={`text-sm transition-colors ${t.link}`}>
               Características
             </a>
+            {/* Precios: comentado junto con la seccion de la landing, pendiente definir planes.
             <a href="/#precios" className={`text-sm transition-colors ${t.link}`}>
               Precios
             </a>
+            */}
             <Link href="/blog" className={`text-sm transition-colors ${t.link}`}>
               Blog
             </Link>
@@ -130,9 +132,11 @@ function SaasNavbar() {
             <a href="/#caracteristicas" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Características
             </a>
+            {/* Precios: comentado junto con la seccion de la landing, pendiente definir planes.
             <a href="/#precios" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Precios
             </a>
+            */}
             <Link href="/blog" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Blog
             </Link>
