@@ -551,7 +551,7 @@ export interface FilaImportacion {
   descripcion: string
   marca?: string
   /** "un" para bolsa cerrada, "kg" si se vende suelto. Detectado al importar. */
-  unidad?: string
+  unidad?: ProductoUnidad
   /** Kilos de la bolsa, detectados de la descripción. Solo tiene sentido con unidad "un". */
   pesoKg?: number
   categoria: string
