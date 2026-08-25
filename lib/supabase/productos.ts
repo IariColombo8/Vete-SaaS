@@ -138,6 +138,13 @@ const COLS = "*"
 export interface ProductosFiltro {
   busqueda?: string
   categoria?: string
+  /**
+   * Igual que `categoria`, pero por prefijo ("Alimentos" matchea también
+   * "Alimentos / Perro"). Lo usan los filtros rápidos del POS, donde importa
+   * la categoría grande, no la subcategoría exacta.
+   */
+  categoriaPrefijo?: string
+  marca?: string
   /** Solo los que están en o por debajo del mínimo (incluye agotados). */
   soloStockBajo?: boolean
   soloAgotados?: boolean

@@ -59,9 +59,25 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
   const marcaActual = marcas.find((m) => m.marca === marca)
   const lineaActual = marcaActual?.lineas.find((l) => l.linea === linea)
 
+  // Cuando la marca tiene una sola línea (o directamente ninguna, que es el
+  // caso más común en este catálogo: el Excel del proveedor no trae línea),
+  // ese paso intermedio no elige nada — se salta derecho a las presentaciones.
+  const elegirMarca = (m: string) => {
+    setMarca(m)
+    const encontrada = marcas.find((x) => x.marca === m)
+    if (encontrada && encontrada.lineas.length === 1) {
+      setLinea(encontrada.lineas[0].linea)
+    }
+  }
+
   const volver = () => {
-    if (linea !== null) setLinea(null)
-    else setMarca(null)
+    if (linea !== null) {
+      // Si la línea se saltó sola al entrar, volver tiene que saltarla también.
+      if ((marcaActual?.lineas.length ?? 0) <= 1) setMarca(null)
+      else setLinea(null)
+    } else {
+      setMarca(null)
+    }
   }
 
   const elegir = (producto: Producto) => {
@@ -108,7 +124,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
             {marca === null && (
               <Grilla>
                 {marcas.map((m) => (
-                  <Opcion key={m.marca} onClick={() => setMarca(m.marca)}>
+                  <Opcion key={m.marca} onClick={() => elegirMarca(m.marca)}>
                     <span className="font-semibold">{m.marca}</span>
                     <span className="text-xs text-muted-foreground">
                       {m.lineas.length} {m.lineas.length === 1 ? "línea" : "líneas"}
@@ -170,7 +186,10 @@ function Opcion({ children, onClick }: { children: React.ReactNode; onClick: () 
 function Presentacion({ producto, onElegir }: { producto: Producto; onElegir: () => void }) {
   const agotado = producto.controlaStock && producto.stock <= 0
   const porKg = producto.unidad === "kg"
-  const etiqueta = presentacionDe(producto) || producto.nombre
+  // El nombre completo del Excel identifica la bolsa (perro/gato, adulto/
+  // cachorro...); el peso solo (presentacionDe) se repite igual en varias
+  // filas de la misma marca y no alcanza para distinguirlas.
+  const presentacion = presentacionDe(producto)
 
   return (
     <button
@@ -180,11 +199,14 @@ function Presentacion({ producto, onElegir }: { producto: Producto; onElegir: ()
       className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate font-semibold">{etiqueta}</span>
+        <span className="truncate font-semibold">{producto.nombre}</span>
         {tieneOferta(producto) && (
           <Badge className="shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
       </div>
+      {presentacion && (
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">{presentacion}</span>
+      )}
       <span className="shrink-0 text-xs text-muted-foreground">
         {agotado
           ? "Sin stock"
