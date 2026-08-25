@@ -189,4 +189,8 @@ describe("detectarPesoKg", () => {
     expect(detectarPesoKg("Correa de cuero")).toBeUndefined()
     expect(detectarPesoKg("")).toBeUndefined()
   })
+
+  it("interpreta el punto como separador de miles cuando la unidad es gramos", () => {
+    expect(detectarPesoKg("BOLSA GRANDE X 1.000 GRS")).toBe(1)
+  })
 })

@@ -131,10 +131,14 @@ export function detectarPesoKg(descripcion: string): number | undefined {
   if (coincidencias.length === 0) return undefined
 
   const [, numero, unidad] = coincidencias[coincidencias.length - 1]
-  const valor = Number(numero.replace(",", "."))
+  const esGramos = /^GRS?$/i.test(unidad)
+  // En gramos el punto es separador de miles (nadie vende "120,5 gramos");
+  // en kilos, el punto es decimal como en el resto del archivo.
+  const normalizado = esGramos ? numero.replace(/\./g, "").replace(",", ".") : numero.replace(",", ".")
+  const valor = Number(normalizado)
   if (!Number.isFinite(valor) || valor <= 0) return undefined
 
-  const enKg = /^KGS?$/i.test(unidad) ? valor : valor / 1000
+  const enKg = esGramos ? valor / 1000 : valor
   return Math.round(enKg * 1000) / 1000
 }
 
