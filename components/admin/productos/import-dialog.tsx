@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import {
   Upload, AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileSpreadsheet,
-  Pill, Bone, PawPrint,
+  Pill, Bone, PawPrint, ClipboardList, ChevronDown, ChevronUp,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -54,6 +54,7 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
   const [filaInicio, setFilaInicio] = useState(2)
   const [filas, setFilas] = useState<FilaParseada[]>([])
   const [incluirConAdvertencias, setIncluirConAdvertencias] = useState(true)
+  const [revisarAbierto, setRevisarAbierto] = useState(true)
   const [progreso, setProgreso] = useState({ hechas: 0, total: 0 })
   const [resumen, setResumen] = useState<ResumenImportacion | null>(null)
   const [error, setError] = useState("")
@@ -62,7 +63,7 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
   const reiniciar = () => {
     setPaso("categoria"); setCategoria(null); setWorkbook(null); setTotalFilasArchivo(0)
     setFilaInicio(2); setFilas([])
-    setIncluirConAdvertencias(true); setProgreso({ hechas: 0, total: 0 })
+    setIncluirConAdvertencias(true); setRevisarAbierto(true); setProgreso({ hechas: 0, total: 0 })
     setResumen(null); setError("")
   }
 
@@ -105,6 +106,24 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
         const advertencias = f.advertencias.filter((a) => a !== "precio en cero")
         if (!Number.isFinite(precio) || precio <= 0) advertencias.push("precio en cero")
         return { ...f, costo: precio, precio, advertencias, revisar: advertencias.length > 0 }
+      }),
+    )
+  }
+
+  /**
+   * Un producto sin código en el Excel se puede completar acá a mano. Si
+   * queda sin código igual, el import lo matchea por nombre + categoría la
+   * próxima vez (ver `importar_productos` en la base) — no es obligatorio
+   * completarlo para que no se duplique en el siguiente archivo.
+   */
+  const corregirCodigo = (numeroFila: number, texto: string) => {
+    const codigo = texto.trim()
+    setFilas((prev) =>
+      prev.map((f) => {
+        if (f.numeroFila !== numeroFila) return f
+        const advertencias = f.advertencias.filter((a) => a !== "sin código")
+        if (!codigo) advertencias.push("sin código")
+        return { ...f, codigo, advertencias, revisar: advertencias.length > 0 }
       }),
     )
   }
@@ -236,6 +255,57 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
 
         {paso === "revision" && (
           <div className="space-y-4">
+            {stats.conAdvertencias > 0 && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-900">
+                <button
+                  type="button"
+                  onClick={() => setRevisarAbierto((v) => !v)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-left text-sm font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                >
+                  <span className="flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 shrink-0" />
+                    Productos a revisar ({stats.conAdvertencias})
+                  </span>
+                  {revisarAbierto ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+
+                {revisarAbierto && (
+                  <div className="max-h-64 overflow-y-auto p-2 text-xs text-muted-foreground">
+                    {filas
+                      .filter((f) => f.advertencias.length > 0)
+                      .map((f) => (
+                        <div
+                          key={f.numeroFila}
+                          className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed py-1.5 last:border-0"
+                        >
+                          <p className="min-w-0 flex-1 truncate">
+                            Fila {f.numeroFila}: {f.descripcion || "(sin nombre)"} — {f.advertencias.join(", ")}
+                          </p>
+                          <div className="flex shrink-0 gap-1.5">
+                            {f.advertencias.includes("sin código") && (
+                              <Input
+                                type="text" placeholder="Código"
+                                defaultValue={f.codigo}
+                                onBlur={(e) => corregirCodigo(f.numeroFila, e.target.value)}
+                                className="h-7 w-24 text-xs"
+                              />
+                            )}
+                            {f.advertencias.includes("precio en cero") && (
+                              <Input
+                                type="number" min={0} step="0.01" placeholder="Precio"
+                                defaultValue={f.costo || ""}
+                                onBlur={(e) => corregirPrecio(f.numeroFila, e.target.value)}
+                                className="h-7 w-24 text-xs"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-muted/60 p-3">
                 <p className="text-lg font-bold">{stats.total}</p>
@@ -258,41 +328,19 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
             )}
 
             {stats.conAdvertencias > 0 && (
-              <>
-                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
-                  <span className="flex items-center gap-2 text-sm">
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                    Incluir las filas con advertencias (quedan marcadas &ldquo;a revisar&rdquo;)
-                  </span>
-                  <Switch checked={incluirConAdvertencias} onCheckedChange={setIncluirConAdvertencias} />
-                </label>
-
-                <div className="max-h-48 overflow-y-auto rounded-lg border p-2 text-xs text-muted-foreground">
-                  {filas
-                    .filter((f) => f.advertencias.length > 0)
-                    .slice(0, 20)
-                    .map((f) => (
-                      <div key={f.numeroFila} className="flex items-center justify-between gap-2 py-0.5">
-                        <p className="truncate">
-                          Fila {f.numeroFila}: {f.descripcion || "(sin nombre)"} — {f.advertencias.join(", ")}
-                        </p>
-                        {f.advertencias.includes("precio en cero") && (
-                          <Input
-                            type="number" min={0} step="0.01" placeholder="Precio"
-                            defaultValue={f.costo || ""}
-                            onBlur={(e) => corregirPrecio(f.numeroFila, e.target.value)}
-                            className="h-7 w-24 shrink-0 text-xs"
-                          />
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </>
+              <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+                <span className="flex items-center gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                  Incluir las filas con advertencias (quedan marcadas &ldquo;a revisar&rdquo;)
+                </span>
+                <Switch checked={incluirConAdvertencias} onCheckedChange={setIncluirConAdvertencias} />
+              </label>
             )}
 
             <p className="text-xs text-muted-foreground">
               Los productos con código ya existente se actualizan (precio, nombre, marca).
-              Los códigos nuevos se dan de alta. El stock no se toca.
+              Los códigos nuevos se dan de alta. El stock no se toca. Un producto sin código se
+              sigue reconociendo por nombre y categoría en la próxima importación.
             </p>
           </div>
         )}
