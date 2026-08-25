@@ -13,9 +13,10 @@ const ProductScrolly = dynamic(() =>
   import("@/components/landing/product-scrolly").then((m) => m.ProductScrolly),
 )
 const Stats = dynamic(() => import("@/components/landing/stats").then((m) => m.Stats))
-const PricingSection = dynamic(() =>
-  import("@/components/landing/pricing-section").then((m) => m.PricingSection),
-)
+// Precios: comentado por el momento (pendiente definir planes/valores finales).
+// const PricingSection = dynamic(() =>
+//   import("@/components/landing/pricing-section").then((m) => m.PricingSection),
+// )
 const Faq = dynamic(() => import("@/components/landing/faq").then((m) => m.Faq))
 const FinalCta = dynamic(() =>
   import("@/components/landing/final-cta").then((m) => m.FinalCta),
@@ -31,7 +32,7 @@ export default function SaasLandingPage() {
       <Stats />
       <FeaturesBento />
       <Testimonials />
-      <PricingSection />
+      {/* <PricingSection /> */}
       <Faq />
       <FinalCta />
       <SaasFooter />
