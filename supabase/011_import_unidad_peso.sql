@@ -127,7 +127,7 @@ begin
           costo              = coalesce(v_costo, v_existente.costo),
           categoria          = coalesce(nullif(v_categoria, ''), v_existente.categoria),
           marca              = coalesce(v_marca, v_existente.marca),
-          unidad             = coalesce(v_unidad, v_existente.unidad),
+          unidad             = coalesce(v_unidad::producto_unidad, v_existente.unidad),
           peso_kg            = coalesce(v_peso_kg, v_existente.peso_kg),
           codigo             = coalesce(v_codigo, v_existente.codigo),
           codigo_barras      = coalesce(v_barra,  v_existente.codigo_barras),
@@ -144,7 +144,7 @@ begin
         values
           (p_tenant_id, v_codigo, v_barra, coalesce(v_nombre, coalesce(v_barra, v_codigo)),
            v_marca, v_categoria, greatest(v_precio, 0), v_costo,
-           greatest(v_stock, 0), v_bulto, coalesce(v_unidad, 'un'), v_peso_kg, v_revisar);
+           greatest(v_stock, 0), v_bulto, coalesce(v_unidad, 'un')::producto_unidad, v_peso_kg, v_revisar);
 
         v_creados := v_creados + 1;
       end if;
