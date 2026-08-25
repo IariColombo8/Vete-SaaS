@@ -147,7 +147,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
 }
 
 function Grilla({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-2 gap-2 p-1 sm:grid-cols-3">{children}</div>
+  return <div className="flex flex-col gap-2 p-1">{children}</div>
 }
 
 function Opcion({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
@@ -155,7 +155,7 @@ function Opcion({ children, onClick }: { children: React.ReactNode; onClick: () 
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[72px] flex-col items-start justify-center gap-1 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+      className="flex w-full items-center justify-between gap-2 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
     >
       {children}
     </button>
@@ -177,27 +177,25 @@ function Presentacion({ producto, onElegir }: { producto: Producto; onElegir: ()
       type="button"
       onClick={onElegir}
       disabled={agotado}
-      className="flex min-h-[86px] flex-col items-start justify-between gap-1 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
+      className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
     >
-      <div className="flex w-full items-start justify-between gap-2">
-        <span className="font-semibold">{etiqueta}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="truncate font-semibold">{etiqueta}</span>
         {tieneOferta(producto) && (
-          <Badge className="bg-amber-500 hover:bg-amber-500">Oferta</Badge>
+          <Badge className="shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
       </div>
-      <div>
-        <div className="font-bold text-emerald-600 dark:text-emerald-400">
-          {formatCurrency(precioFinal(producto))}
-          {porKg && <span className="text-xs font-normal"> / kg</span>}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {agotado
-            ? "Sin stock"
-            : producto.controlaStock
-              ? `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`
-              : "Sin control de stock"}
-        </div>
-      </div>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {agotado
+          ? "Sin stock"
+          : producto.controlaStock
+            ? `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`
+            : "Sin control de stock"}
+      </span>
+      <span className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400">
+        {formatCurrency(precioFinal(producto))}
+        {porKg && <span className="text-xs font-normal"> / kg</span>}
+      </span>
     </button>
   )
 }

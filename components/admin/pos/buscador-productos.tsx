@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
-import { descripcionLinea } from "@/lib/ventas/carrito"
+import { presentacionDe } from "@/lib/ventas/carrito"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import type { Producto } from "@/lib/supabase/types"
@@ -170,7 +170,7 @@ function ResultadoProducto({
       className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate text-sm font-medium">{descripcionLinea(producto)}</span>
+        <span className="truncate text-sm font-medium">{descripcionBuscador(producto)}</span>
         {tieneOferta(producto) && (
           <Badge className="shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
@@ -188,4 +188,20 @@ function ResultadoProducto({
       </span>
     </button>
   )
+}
+
+/**
+ * Acá el nombre va primero y la marca después ("Handler Perros Adultos ·
+ * HANDLER"): en el buscador de texto libre el vendedor ya escribió lo que
+ * busca, así que lo relevante es confirmar el producto exacto primero. Es al
+ * revés que en el remito (`descripcionLinea`), donde la marca abre porque ahí
+ * es lo primero que identifica la línea a simple vista.
+ */
+function descripcionBuscador(producto: Producto): string {
+  const partes = [producto.nombre, producto.marca, producto.linea].filter(
+    (p): p is string => Boolean(p && p.trim()),
+  )
+  const presentacion = presentacionDe(producto)
+  const base = partes.join(" · ")
+  return presentacion ? `${base} · ${presentacion}` : base
 }
