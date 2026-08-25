@@ -117,6 +117,28 @@ export function limpiarMarca(texto: string): string {
 }
 
 /**
+ * Casi toda descripción de alimento trae el peso de la bolsa como
+ * "X 10 KG" o "X 500 GRS" (a veces con punto: "X 100 GR."). Cuando la marca
+ * se repite al final de la descripción puede aparecer más de una vez el
+ * patrón "X ... KG" — se toma la última, que es la que describe la
+ * presentación real (la primera repetición suele ser ruido del nombre).
+ *
+ * Devuelve el peso siempre en kilos (los gramos se dividen por 1000), o
+ * `undefined` si la descripción no trae ningún patrón reconocible.
+ */
+export function detectarPesoKg(descripcion: string): number | undefined {
+  const coincidencias = [...descripcion.matchAll(/X\s*([\d.,]+)\s*(KGS?|GRS?)\.?\b/gi)]
+  if (coincidencias.length === 0) return undefined
+
+  const [, numero, unidad] = coincidencias[coincidencias.length - 1]
+  const valor = Number(numero.replace(",", "."))
+  if (!Number.isFinite(valor) || valor <= 0) return undefined
+
+  const enKg = /^KGS?$/i.test(unidad) ? valor : valor / 1000
+  return Math.round(enKg * 1000) / 1000
+}
+
+/**
  * Columnas fijas: A=código, B=descripción, C=marca, D=costo. El precio de
  * venta se inicializa igual al costo — se corrige después con la herramienta
  * de margen de ganancia, no acá.

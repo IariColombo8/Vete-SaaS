@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import * as XLSX from "xlsx-js-style"
-import { parsearFilas, limpiarMarca } from "./importar"
+import { parsearFilas, limpiarMarca, detectarPesoKg } from "./importar"
 
 function workbookDeFilas(filas: (string | number)[][]): XLSX.WorkBook {
   const hoja = XLSX.utils.aoa_to_sheet(filas)
@@ -162,5 +162,31 @@ describe("limpiarMarca", () => {
   it("devuelve string vacío si no hay marca", () => {
     expect(limpiarMarca("")).toBe("")
     expect(limpiarMarca("   ")).toBe("")
+  })
+})
+
+describe("detectarPesoKg", () => {
+  it("detecta kilos enteros", () => {
+    expect(detectarPesoKg("HANDLER GATOS ADULTOS X 10 KG HANDLER")).toBe(10)
+    expect(detectarPesoKg("MONTAÑES PERROS ADULTOS X 20 KG MONTAÑES")).toBe(20)
+  })
+
+  it("convierte gramos a kilos", () => {
+    expect(detectarPesoKg("BISCUITS DE POLLO HORNEADOS X 120 GR ")).toBe(0.12)
+    expect(detectarPesoKg("AUKI BOCADITOS CAJA DOYPACKS 9 UNID X 500 GRS")).toBe(0.5)
+  })
+
+  it("acepta GR con punto final", () => {
+    expect(detectarPesoKg("BOCADITOS FINOS X 100 GR. CARNE/POLLO/CHOCOLATE")).toBe(0.1)
+  })
+
+  it("usa la última coincidencia si el patrón aparece más de una vez", () => {
+    expect(detectarPesoKg("ARGENTO PERRO ADULTO MORDIDA PEQ. X 15 KG ARGENTO X 1 KG")).toBe(1)
+  })
+
+  it("devuelve undefined si no hay patrón de peso", () => {
+    expect(detectarPesoKg("Amoxidal 500mg")).toBeUndefined()
+    expect(detectarPesoKg("Correa de cuero")).toBeUndefined()
+    expect(detectarPesoKg("")).toBeUndefined()
   })
 })
