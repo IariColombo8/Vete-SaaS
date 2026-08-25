@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { precioFinal, precioLinea } from "@/lib/productos/precios"
+import { precioFinal, precioLinea, tieneOferta } from "@/lib/productos/precios"
 import { descripcionLinea } from "@/lib/ventas/carrito"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import type { Producto } from "@/lib/supabase/types"
@@ -41,6 +41,9 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   const [unidadIngreso, setUnidadIngreso] = useState<UnidadIngreso>("kg")
 
   const porKg = producto?.unidad === "kg"
+  // El monto en pesos asume precio unitario fijo: no tiene forma limpia de
+  // invertirse cuando hay un combo (N unidades a precio fijo) de por medio.
+  const esCombo = producto ? tieneOferta(producto) && producto.ofertaTipo === "combo" : false
 
   // Cada vez que se abre con otro producto se reinicia: arrastrar "2,5" de la
   // venta anterior es una forma muy fácil de despachar de más.
@@ -98,7 +101,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                 </Label>
                 {porKg && (
                   <div className="flex gap-0.5 rounded-md border bg-background p-0.5">
-                    {(["kg", "g", "$"] as const).map((u) => (
+                    {(esCombo ? (["kg", "g"] as const) : (["kg", "g", "$"] as const)).map((u) => (
                       <Button
                         key={u}
                         type="button"
