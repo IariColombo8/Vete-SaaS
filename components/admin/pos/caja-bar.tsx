@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { abrirCaja, cerrarCaja, getResumenCaja } from "@/lib/supabase/ventas"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { Caja } from "@/lib/supabase/types"
+import { useReadOnly } from "@/lib/auth/read-only-context"
 
 interface Props {
   tenantId: string
@@ -30,6 +31,7 @@ interface Props {
  */
 export function CajaBar({ tenantId, caja, onCambio }: Props) {
   const [dialogo, setDialogo] = useState<"abrir" | "cerrar" | null>(null)
+  const readOnly = useReadOnly()
 
   return (
     <>
@@ -55,11 +57,23 @@ export function CajaBar({ tenantId, caja, onCambio }: Props) {
         </div>
 
         {caja ? (
-          <Button variant="outline" size="sm" onClick={() => setDialogo("cerrar")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDialogo("cerrar")}
+            disabled={readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+          >
             <Lock className="mr-2 h-3.5 w-3.5" /> Cerrar caja
           </Button>
         ) : (
-          <Button size="sm" onClick={() => setDialogo("abrir")} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button
+            size="sm"
+            onClick={() => setDialogo("abrir")}
+            disabled={readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
             <LockOpen className="mr-2 h-3.5 w-3.5" /> Abrir caja
           </Button>
         )}

@@ -13,6 +13,7 @@ import {
 } from "@/lib/ventas/carrito"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO, type Cliente, type MedioPago } from "@/lib/supabase/types"
+import { useReadOnly } from "@/lib/auth/read-only-context"
 
 interface Props {
   tenantId: string
@@ -54,6 +55,7 @@ export function CarritoPanel({
   // total que motivó ese monto: si cambia el carrito o el medio de pago,
   // el número que quedó escrito deja de significar lo que el usuario tipeó.
   const [pagaCon, setPagaCon] = useState("")
+  const readOnly = useReadOnly()
   useEffect(() => {
     setPagaCon("")
   }, [esEfectivo, totales.total])
@@ -230,7 +232,8 @@ export function CarritoPanel({
 
         <Button
           onClick={onCobrar}
-          disabled={vacio || cobrando}
+          disabled={vacio || cobrando || readOnly}
+          title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
           className="h-12 w-full bg-emerald-600 text-base hover:bg-emerald-700"
         >
           {cobrando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

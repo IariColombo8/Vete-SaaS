@@ -39,6 +39,7 @@ import { BlockDateModal } from "./BlockDateModal";
 import { StatsCard } from "./StatsCard";
 import { NextAppointmentCard } from "./NextAppointmentCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useReadOnly } from "@/lib/auth/read-only-context";
 
 interface TurnosManagementProps {
   tenantId: string;
@@ -92,6 +93,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
     observaciones: "",
   });
   const [savingNota, setSavingNota] = useState(false);
+  const readOnly = useReadOnly();
 
   useEffect(() => {
     if (!targetDate) return;
@@ -484,7 +486,12 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
             <Button variant="outline" onClick={() => setGenerateHistoriaTurno(null)}>
               Cancelar
             </Button>
-            <Button onClick={saveNotaRapida} disabled={savingNota} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button
+              onClick={saveNotaRapida}
+              disabled={savingNota || readOnly}
+              title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
               {savingNota ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar y marcar turno completado
             </Button>

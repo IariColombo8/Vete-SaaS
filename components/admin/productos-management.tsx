@@ -37,6 +37,7 @@ import {
 import { ordenarCategorias } from "@/lib/productos/categorias"
 import { formatCurrency, formatCantidad, formatFechaISO } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const POR_PAGINA = 30
 
@@ -70,6 +71,7 @@ export function ProductosManagement({ tenantId }: Props) {
   const [aDarDeBaja, setADarDeBaja] = useState<Producto | null>(null)
   const [exportando, setExportando] = useState(false)
   const [margenOpen, setMargenOpen] = useState(false)
+  const readOnly = useReadOnly()
 
   useEffect(() => {
     const t = setTimeout(() => setBusquedaDebounced(busqueda), 300)
@@ -241,7 +243,12 @@ export function ProductosManagement({ tenantId }: Props) {
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" /> Importar
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={abrirNuevo}>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={abrirNuevo}
+            disabled={readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+          >
             <Plus className="mr-2 h-4 w-4" /> Nuevo producto
           </Button>
         </div>
@@ -325,7 +332,12 @@ export function ProductosManagement({ tenantId }: Props) {
                 : "Todavía no cargaste productos"}
             </p>
             {!busquedaDebounced && filtro === "todos" && !categoria && (
-              <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700" onClick={abrirNuevo}>
+              <Button
+                className="mt-4 bg-emerald-600 hover:bg-emerald-700"
+                onClick={abrirNuevo}
+                disabled={readOnly}
+                title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+              >
                 <Plus className="mr-2 h-4 w-4" /> Cargar el primero
               </Button>
             )}
