@@ -85,12 +85,16 @@ export function comboLabel(p: ConOferta): string | null {
 }
 
 /**
- * Margen en % sobre el precio de venta. `null` cuando no se puede calcular
- * (sin costo cargado o producto gratis).
+ * Ganancia en % sobre el costo (recargo/markup), no sobre el precio de venta
+ * (que sería el margen contable). Un recargo del 50% sobre el costo da un
+ * margen real de 33.3% — para que la tabla muestre el mismo número que se
+ * tipeó en "Aplicar ganancia" (`calcularPrecioConMargen`), acá se usa la
+ * misma base de cálculo: `((precio - costo) / costo) × 100`.
+ * `null` cuando no se puede calcular (sin costo cargado).
  */
 export function margenPct(precio: number, costo?: number | null): number | null {
-  if (costo == null || !Number.isFinite(costo) || precio <= 0) return null
-  return ((precio - costo) / precio) * 100
+  if (costo == null || !Number.isFinite(costo) || costo <= 0) return null
+  return ((precio - costo) / costo) * 100
 }
 
 /**

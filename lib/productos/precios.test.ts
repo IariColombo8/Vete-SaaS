@@ -119,18 +119,24 @@ describe("comboLabel", () => {
 })
 
 describe("margenPct", () => {
-  it("calcula el margen sobre el precio de venta", () => {
-    expect(margenPct(1000, 600)).toBe(40)
+  it("calcula la ganancia sobre el costo (recargo), no sobre el precio de venta", () => {
+    expect(margenPct(1500, 1000)).toBe(50)
+  })
+
+  it("coincide con lo que aplica calcularPrecioConMargen: mismo % ida y vuelta", () => {
+    const costo = 1000
+    const porcentaje = 50
+    expect(margenPct(calcularPrecioConMargen(costo, porcentaje), costo)).toBeCloseTo(porcentaje)
   })
 
   it("da negativo cuando se vende por debajo del costo", () => {
-    expect(margenPct(500, 800)).toBeCloseTo(-60)
+    expect(margenPct(500, 800)).toBeCloseTo(-37.5)
   })
 
-  it("es null sin costo o sin precio", () => {
+  it("es null sin costo cargado o con costo en cero", () => {
     expect(margenPct(1000, null)).toBeNull()
     expect(margenPct(1000, undefined)).toBeNull()
-    expect(margenPct(0, 500)).toBeNull()
+    expect(margenPct(1000, 0)).toBeNull()
   })
 })
 
