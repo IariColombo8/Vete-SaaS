@@ -77,6 +77,24 @@ export default function SuperAdminPage() {
     setUpdating(null)
   }
 
+  async function handleExtenderTrial(tenant: TenantFull) {
+    const base = tenant.trialExpiresAt && new Date(tenant.trialExpiresAt) > new Date()
+      ? new Date(tenant.trialExpiresAt)
+      : new Date()
+    const nuevoVencimiento = new Date(base.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString()
+    setUpdating(tenant.slug + "-trial")
+    await updateTenantConfig(tenant.slug, { trialExpiresAt: nuevoVencimiento })
+    setTenants(prev => prev.map(t => t.slug === tenant.slug ? { ...t, trialExpiresAt: nuevoVencimiento } : t))
+    setUpdating(null)
+  }
+
+  async function handleQuitarTrial(tenant: TenantFull) {
+    setUpdating(tenant.slug + "-trial")
+    await updateTenantConfig(tenant.slug, { trialExpiresAt: null })
+    setTenants(prev => prev.map(t => t.slug === tenant.slug ? { ...t, trialExpiresAt: null } : t))
+    setUpdating(null)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -135,6 +153,7 @@ export default function SuperAdminPage() {
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Plan</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Turnos</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Estado</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Trial</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
@@ -182,6 +201,35 @@ export default function SuperAdminPage() {
                           <Badge variant={isPaused ? "destructive" : "secondary"}>
                             {isPaused ? "Pausada" : "Activa"}
                           </Badge>
+                        </td>
+
+                        {/* Trial */}
+                        <td className="px-4 py-3">
+                          {t.trialExpiresAt ? (
+                            <div className="flex flex-col gap-1">
+                              <span className={`text-xs font-mono ${new Date(t.trialExpiresAt) < new Date() ? "text-destructive" : "text-muted-foreground"}`}>
+                                {new Date(t.trialExpiresAt).toLocaleDateString("es-AR")}
+                              </span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost" size="sm" className="text-[10px] h-6 px-1.5"
+                                  onClick={() => handleExtenderTrial(t)}
+                                  disabled={updating?.startsWith(t.slug)}
+                                >
+                                  +10 días
+                                </Button>
+                                <Button
+                                  variant="ghost" size="sm" className="text-[10px] h-6 px-1.5 text-emerald-600"
+                                  onClick={() => handleQuitarTrial(t)}
+                                  disabled={updating?.startsWith(t.slug)}
+                                >
+                                  Quitar trial
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
 
                         {/* Acciones */}
