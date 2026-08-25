@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import {
   Upload, AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileSpreadsheet,
+  Pill, Bone, PawPrint,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -12,9 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
-  leerArchivo, adivinarMapeo, parsearFilas, cargarMapeoGuardado, guardarMapeo,
-  ETIQUETAS_CAMPO,
-  type CampoImport, type MapeoColumnas, type FilaParseada,
+  leerArchivo, parsearFilas,
+  type FilaParseada,
 } from "@/lib/productos/importar"
 import { importarProductos, type EstrategiaStock, type ResumenImportacion } from "@/lib/supabase/productos"
 import { cn } from "@/lib/utils"
@@ -27,10 +27,13 @@ interface Props {
   onImportado: () => void
 }
 
-type Paso = "archivo" | "revision" | "progreso" | "resultado"
+type Paso = "categoria" | "archivo" | "revision" | "progreso" | "resultado"
+type Categoria = "Medicamentos" | "Alimentos" | "Accesorios"
 
-const CAMPOS: CampoImport[] = [
-  "barra", "codigo", "descripcion", "precio", "costo", "rubro", "subrubro", "stock", "bulto",
+const CATEGORIAS: { value: Categoria; icon: typeof Pill; descripcion: string }[] = [
+  { value: "Medicamentos", icon: Pill, descripcion: "Fármacos y productos veterinarios" },
+  { value: "Alimentos", icon: Bone, descripcion: "Balanceados, snacks y suplementos" },
+  { value: "Accesorios", icon: PawPrint, descripcion: "Correas, juguetes, higiene y demás" },
 ]
 
 const ESTRATEGIAS: { value: EstrategiaStock; label: string; ayuda: string }[] = [
@@ -44,11 +47,10 @@ const ESTRATEGIAS: { value: EstrategiaStock; label: string; ayuda: string }[] = 
 const TAMANIO_LOTE = 200
 
 export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Props) {
-  const [paso, setPaso] = useState<Paso>("archivo")
+  const [paso, setPaso] = useState<Paso>("categoria")
+  const [categoria, setCategoria] = useState<Categoria | null>(null)
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null)
-  const [columnas, setColumnas] = useState<string[]>([])
-  const [filasMuestra, setFilasMuestra] = useState<string[][]>([])
-  const [mapeo, setMapeo] = useState<MapeoColumnas>({})
+  const [totalFilasArchivo, setTotalFilasArchivo] = useState(0)
   const [filaInicio, setFilaInicio] = useState(2)
   const [filas, setFilas] = useState<FilaParseada[]>([])
   const [estrategia, setEstrategia] = useState<EstrategiaStock>("no_tocar")
@@ -59,8 +61,8 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
   const [leyendo, setLeyendo] = useState(false)
 
   const reiniciar = () => {
-    setPaso("archivo"); setWorkbook(null); setColumnas([]); setFilasMuestra([])
-    setMapeo({}); setFilaInicio(2); setFilas([]); setEstrategia("no_tocar")
+    setPaso("categoria"); setCategoria(null); setWorkbook(null); setTotalFilasArchivo(0)
+    setFilaInicio(2); setFilas([]); setEstrategia("no_tocar")
     setIncluirConAdvertencias(true); setProgreso({ hechas: 0, total: 0 })
     setResumen(null); setError("")
   }
@@ -70,31 +72,13 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
     onOpenChange(abierto)
   }
 
-  /** Muestra un dato real de esa columna en el selector, para no adivinar a ciegas. */
-  const muestraDe = (letra: string): string => {
-    const i = columnas.indexOf(letra)
-    if (i < 0) return ""
-    const fila = filasMuestra[filaInicio - 1] ?? filasMuestra.find((f) => f[i]?.trim())
-    return (fila?.[i] ?? "").trim()
-  }
-
   const elegirArchivo = async (file: File) => {
     setError("")
     setLeyendo(true)
     try {
       const { workbook: wb, vistaPrevia } = await leerArchivo(file)
       setWorkbook(wb)
-      setColumnas(vistaPrevia.columnas)
-      setFilasMuestra(vistaPrevia.filasMuestra)
-
-      // El mapeo guardado gana: el proveedor manda siempre el mismo formato.
-      const guardado = cargarMapeoGuardado(tenantId)
-      if (guardado) {
-        setMapeo(guardado.mapeo)
-        setFilaInicio(guardado.filaInicio)
-      } else {
-        setMapeo(adivinarMapeo(vistaPrevia.filasMuestra[0] ?? []))
-      }
+      setTotalFilasArchivo(vistaPrevia.totalFilas)
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo leer el archivo")
     } finally {
@@ -102,12 +86,9 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
     }
   }
 
-  const mapeoCompleto = Boolean(mapeo.descripcion && mapeo.precio && (mapeo.barra || mapeo.codigo))
-
   const irARevision = () => {
-    if (!workbook) return
-    guardarMapeo(tenantId, { mapeo, filaInicio })
-    setFilas(parsearFilas(workbook, mapeo, filaInicio))
+    if (!workbook || !categoria) return
+    setFilas(parsearFilas(workbook, categoria, filaInicio))
     setPaso("revision")
   }
 
@@ -169,9 +150,36 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Importar lista de precios
           </DialogTitle>
           <DialogDescription>
-            Cargá el Excel del proveedor. Se mapea una vez y queda recordado para la próxima.
+            El Excel del proveedor trae código, descripción, marca y precio en ese orden.
           </DialogDescription>
         </DialogHeader>
+
+        {paso === "categoria" && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              ¿Qué lista de precios vas a importar?
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {CATEGORIAS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setCategoria(c.value)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors",
+                    categoria === c.value
+                      ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40"
+                      : "hover:bg-muted",
+                  )}
+                >
+                  <c.icon className="h-5 w-5" />
+                  <span className="text-sm font-medium">{c.value}</span>
+                  <span className="text-xs text-muted-foreground">{c.descripcion}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {paso === "archivo" && (
           <div className="space-y-4">
@@ -189,8 +197,12 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
             {leyendo && <p className="text-center text-sm text-muted-foreground">Leyendo archivo…</p>}
             {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
-            {columnas.length > 0 && (
+            {workbook && (
               <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  {totalFilasArchivo} fila{totalFilasArchivo === 1 ? "" : "s"} leídas del archivo.
+                  Categoría: <strong className="text-foreground">{categoria}</strong>.
+                </p>
                 <div>
                   <Label className="mb-1 block text-xs text-muted-foreground">
                     Fila donde empiezan los datos
@@ -200,44 +212,6 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
                     onChange={(e) => setFilaInicio(Math.max(1, Number(e.target.value) || 1))}
                   />
                 </div>
-
-                <p className="text-xs text-muted-foreground">
-                  Elegí qué columna del Excel corresponde a cada dato. Al lado de cada letra
-                  se muestra un valor real del archivo.
-                </p>
-
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {CAMPOS.map((campo) => (
-                    <div key={campo}>
-                      <Label className="mb-1 block text-xs text-muted-foreground">
-                        {ETIQUETAS_CAMPO[campo]}
-                      </Label>
-                      <select
-                        value={mapeo[campo] ?? ""}
-                        onChange={(e) =>
-                          setMapeo((m) => ({ ...m, [campo]: e.target.value || undefined }))
-                        }
-                        className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
-                      >
-                        <option value="">— sin usar —</option>
-                        {columnas.map((letra) => {
-                          const muestra = muestraDe(letra)
-                          return (
-                            <option key={letra} value={letra}>
-                              {letra}{muestra ? ` — ${muestra.slice(0, 26)}` : ""}
-                            </option>
-                          )
-                        })}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-
-                {!mapeoCompleto && (
-                  <p className="text-xs text-amber-600">
-                    Faltan datos obligatorios: Descripción, Precio, y Código o Código de barras.
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -262,7 +236,7 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
 
             {stats.total === 0 && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                No se leyó ninguna fila. Revisá la fila de inicio y el mapeo de columnas.
+                No se leyó ninguna fila. Revisá la fila de inicio.
               </p>
             )}
 
@@ -354,14 +328,28 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
         )}
 
         <DialogFooter>
-          {paso === "archivo" && (
+          {paso === "categoria" && (
             <Button
               className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!mapeoCompleto}
-              onClick={irARevision}
+              disabled={!categoria}
+              onClick={() => setPaso("archivo")}
             >
               Continuar <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
+          )}
+          {paso === "archivo" && (
+            <>
+              <Button variant="outline" onClick={() => setPaso("categoria")}>
+                <ArrowLeft className="mr-1 h-4 w-4" /> Volver
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={!workbook}
+                onClick={irARevision}
+              >
+                Continuar <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </>
           )}
           {paso === "revision" && (
             <>
