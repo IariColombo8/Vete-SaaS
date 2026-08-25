@@ -141,7 +141,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
               : "Escaneá un producto o empezá a escribir"}
           </div>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-col gap-2">
             {resultados.map((p) => (
               <ResultadoProducto key={p.id} producto={p} onElegir={() => elegir(p)} />
             ))}
@@ -167,27 +167,25 @@ function ResultadoProducto({
       type="button"
       onClick={onElegir}
       disabled={agotado}
-      className="flex flex-col items-start gap-1 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
+      className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
     >
-      <div className="flex w-full items-start justify-between gap-2">
-        <span className="line-clamp-2 text-sm font-medium">{descripcionLinea(producto)}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="truncate text-sm font-medium">{descripcionLinea(producto)}</span>
         {tieneOferta(producto) && (
           <Badge className="shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
       </div>
-      <div className="flex w-full items-baseline justify-between">
-        <span className="font-bold text-emerald-600 dark:text-emerald-400">
-          {formatCurrency(precioFinal(producto))}
-          {porKg && <span className="text-xs font-normal"> / kg</span>}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {agotado
-            ? "Sin stock"
-            : producto.controlaStock
-              ? `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`
-              : "Servicio"}
-        </span>
-      </div>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {agotado
+          ? "Sin stock"
+          : producto.controlaStock
+            ? `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`
+            : "Servicio"}
+      </span>
+      <span className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400">
+        {formatCurrency(precioFinal(producto))}
+        {porKg && <span className="text-xs font-normal"> / kg</span>}
+      </span>
     </button>
   )
 }
