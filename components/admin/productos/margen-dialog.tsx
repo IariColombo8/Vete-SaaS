@@ -24,6 +24,21 @@ interface Props {
 type Modo = "categoria" | "todos" | "seleccion"
 
 /**
+ * Las 3 categorías del import siempre se muestran, en este orden, aunque
+ * todavía no tengan ningún producto cargado (el catálogo recién importado
+ * puede tener Medicamentos y Accesorios pero cero en Alimentos, por ejemplo,
+ * y aun así hay que poder cargarle un % de una).
+ */
+const ORDEN_CATEGORIAS = ["Medicamentos", "Accesorios", "Alimentos"]
+
+function ordenarCategorias(categorias: string[]): string[] {
+  const otras = categorias
+    .filter((c) => !ORDEN_CATEGORIAS.includes(c))
+    .sort((a, b) => a.localeCompare(b, "es"))
+  return [...ORDEN_CATEGORIAS, ...otras]
+}
+
+/**
  * El % de cada categoría se guarda por tenant: casi siempre es el mismo
  * recargo mes a mes, así que la próxima vez que se abre el diálogo aparece
  * ya cargado en vez de tener que volver a tipearlo.
@@ -62,6 +77,8 @@ export function MargenDialog({
   const [aplicandoCategoria, setAplicandoCategoria] = useState<string | null>(null)
   const [resultadosPorCategoria, setResultadosPorCategoria] = useState<Record<string, ResultadoMargen>>({})
   const [erroresPorCategoria, setErroresPorCategoria] = useState<Record<string, string>>({})
+
+  const categoriasOrdenadas = ordenarCategorias(categorias)
 
   // Único: para los modos "A todos" y "A selección".
   const [porcentajeUnico, setPorcentajeUnico] = useState("")
@@ -151,7 +168,7 @@ export function MargenDialog({
             <button
               type="button"
               onClick={() => setModo("categoria")}
-              disabled={categorias.length === 0}
+              disabled={categoriasOrdenadas.length === 0}
               className={cn(
                 "rounded-lg border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                 modo === "categoria" ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40" : "hover:bg-muted",
@@ -189,10 +206,10 @@ export function MargenDialog({
 
           {modo === "categoria" && (
             <div className="space-y-2">
-              {categorias.length === 0 && (
+              {categoriasOrdenadas.length === 0 && (
                 <p className="text-sm text-muted-foreground">Todavía no hay categorías cargadas.</p>
               )}
-              {categorias.map((cat) => {
+              {categoriasOrdenadas.map((cat) => {
                 const resultadoCat = resultadosPorCategoria[cat]
                 const errorCat = erroresPorCategoria[cat]
                 const valor = porcentajesPorCategoria[cat] ?? ""
