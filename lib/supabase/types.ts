@@ -124,6 +124,8 @@ export interface TenantConfig {
   emailProvider?: "resend" | "gmail" | "emailjs"
   /** true una vez que el dueño completó (o saltó) el wizard de onboarding. */
   onboardingCompletado?: boolean
+  /** Vencimiento del trial de plan Pro. null/undefined = sin trial. */
+  trialExpiresAt?: string | null
 }
 
 export type TenantFull = Tenant & TenantConfig

@@ -37,6 +37,7 @@ function aConfig(fila: FilaTenant): TenantConfig {
     calendarId: (fila.calendar_id as string) ?? undefined,
     emailProvider: (fila.email_provider as TenantConfig["emailProvider"]) ?? "resend",
     onboardingCompletado: (fila.onboarding_completado as boolean) ?? false,
+    trialExpiresAt: (fila.trial_expires_at as string) ?? undefined,
   }
 }
 
@@ -65,6 +66,7 @@ function aFila(data: Partial<TenantConfig>): Record<string, unknown> {
     calendarId: "calendar_id",
     emailProvider: "email_provider",
     onboardingCompletado: "onboarding_completado",
+    trialExpiresAt: "trial_expires_at",
   }
   const fila: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(data)) {
