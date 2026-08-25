@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { calcularPrecioConMargen } from "@/lib/productos/precios"
 import type {
   AjusteStockTipo,
   CambioPrecio,
@@ -659,4 +660,63 @@ export function agruparPorMarca(productos: Producto[]): MarcaAlimento[] {
         .sort((a, b) => a.linea.localeCompare(b.linea, "es")),
     }))
     .sort((a, b) => a.marca.localeCompare(b.marca, "es"))
+}
+
+// ── Margen de ganancia ──
+
+export type AlcanceMargen =
+  | { tipo: "todos" }
+  | { tipo: "categoria"; categoria: string }
+  | { tipo: "seleccion"; ids: string[] }
+
+export interface ResultadoMargen {
+  actualizados: number
+  omitidosSinCosto: number
+}
+
+const TAMANIO_LOTE_MARGEN = 200
+
+/**
+ * Aplica `precio = costo × (1 + porcentaje / 100)` a los productos activos
+ * del alcance elegido. Los que no tienen costo cargado (null o 0) se dejan
+ * afuera y se cuentan aparte — no hay de dónde calcular su precio.
+ */
+export async function aplicarMargen(
+  tenantId: string,
+  porcentaje: number,
+  alcance: AlcanceMargen,
+): Promise<ResultadoMargen> {
+  let q = supabase
+    .from("productos")
+    .select("id, costo")
+    .eq("tenant_id", tenantId)
+    .eq("activo", true)
+
+  if (alcance.tipo === "categoria") {
+    q = q.eq("categoria", alcance.categoria)
+  } else if (alcance.tipo === "seleccion") {
+    q = q.in("id", alcance.ids)
+  }
+
+  const { data, error } = await q
+  if (error) throw mensajeError(error, "No se pudo leer el catálogo para aplicar el margen")
+
+  const filas = (data ?? []) as { id: string; costo: number | null }[]
+  const conCosto = filas.filter((f) => f.costo != null && f.costo > 0)
+  const omitidosSinCosto = filas.length - conCosto.length
+
+  for (let i = 0; i < conCosto.length; i += TAMANIO_LOTE_MARGEN) {
+    const lote = conCosto.slice(i, i + TAMANIO_LOTE_MARGEN)
+    await Promise.all(
+      lote.map((f) =>
+        supabase
+          .from("productos")
+          .update({ precio: calcularPrecioConMargen(f.costo as number, porcentaje) })
+          .eq("tenant_id", tenantId)
+          .eq("id", f.id),
+      ),
+    )
+  }
+
+  return { actualizados: conCosto.length, omitidosSinCosto }
 }
