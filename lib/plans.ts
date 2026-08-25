@@ -7,6 +7,8 @@
  * (`veterinarias/{slug}/config/datos.plan`).
  */
 
+import type { TenantConfig } from "./supabase/types"
+
 export type PlanId = "basico" | "plus" | "pro"
 
 /** Capacidades activables por plan. */
@@ -139,3 +141,28 @@ export function getPlanLimits(plan: string | undefined | null): PlanLimits {
 
 /** Lista ordenada de planes para mostrar en /pricing. */
 export const PLAN_LIST: PlanDefinition[] = [PLANS.basico, PLANS.plus, PLANS.pro]
+
+export interface TrialStatus {
+  /** El tenant tiene un vencimiento de trial asignado. */
+  enTrial: boolean
+  /** enTrial && ya pasó la fecha. */
+  vencido: boolean
+  /** Días enteros restantes (0 si ya venció, null si no está en trial). */
+  diasRestantes: number | null
+}
+
+/** Estado del trial de un tenant a partir de su `trialExpiresAt`. */
+export function getTrialStatus(
+  config: Pick<TenantConfig, "trialExpiresAt">,
+): TrialStatus {
+  if (!config.trialExpiresAt) {
+    return { enTrial: false, vencido: false, diasRestantes: null }
+  }
+
+  const vencimiento = new Date(config.trialExpiresAt).getTime()
+  const restanteMs = vencimiento - Date.now()
+  const vencido = restanteMs <= 0
+  const diasRestantes = vencido ? 0 : Math.ceil(restanteMs / (24 * 60 * 60 * 1000))
+
+  return { enTrial: true, vencido, diasRestantes }
+}
