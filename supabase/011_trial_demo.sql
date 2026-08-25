@@ -92,8 +92,17 @@ declare
   v_venta1 uuid; v_venta2 uuid; v_venta3 uuid;
   v_turno_pasado uuid;
 begin
+  if not public.es_staff(p_tenant_id) then
+    raise exception 'No tenés permiso sobre esta veterinaria';
+  end if;
+
   if not exists (select 1 from public.tenants where slug = p_tenant_id) then
     raise exception 'La veterinaria % no existe', p_tenant_id;
+  end if;
+
+  -- Idempotente: si ya hay ventas cargadas, la demo ya se sembró antes.
+  if exists (select 1 from public.ventas where tenant_id = p_tenant_id) then
+    return;
   end if;
 
   -- turno_config: mascotas, servicios, vacunas
