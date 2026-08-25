@@ -62,15 +62,47 @@ export interface FilaParseada extends FilaImportacion {
 }
 
 /**
- * "$ 1.234,56" → 1234.56. Los proveedores exportan con separador de miles y
- * coma decimal; parsear eso con `Number()` directo da NaN o un número 100x.
+ * Convierte cualquier formato de precio que suelta un Excel a número:
+ * "$ 1.234,56" (AR), "1,234.56" (US), "1.234" o "1234" (General/Number sin
+ * separador de miles claro), con o sin símbolo de moneda.
+ *
+ * No alcanza con "si hay coma es decimal": un proveedor que exporta en
+ * formato "General" o con configuración regional en inglés manda el punto
+ * como decimal y la coma como separador de miles, o directamente un entero
+ * con puntos de miles y sin parte decimal ("$ 1.080.000"). Tratar ese último
+ * caso como si el punto fuera decimal da `Number("1.080.000")` → `NaN` → se
+ * reporta como "precio en cero" aunque el precio real sea mucho mayor a cero.
+ *
+ * Regla: si aparecen los dos separadores, el que aparece último (más a la
+ * derecha) es el decimal y el otro son miles. Si aparece uno solo, es decimal
+ * únicamente cuando queda exactamente una vez y con 1 o 2 dígitos después
+ * (el patrón de un precio con centavos); en cualquier otro caso —incluida más
+ * de una aparición— se trata como separador de miles y se descarta.
  */
 function aNumero(texto: string): number {
-  const limpio = texto.replace(/[^\d,.-]/g, "")
+  const limpio = texto.replace(/[^\d,.-]/g, "").trim()
   if (!limpio) return 0
-  const normalizado = limpio.includes(",")
-    ? limpio.replace(/\./g, "").replace(",", ".")
-    : limpio
+
+  const tieneComa = limpio.includes(",")
+  const tienePunto = limpio.includes(".")
+  let normalizado = limpio
+
+  if (tieneComa && tienePunto) {
+    normalizado =
+      limpio.lastIndexOf(",") > limpio.lastIndexOf(".")
+        ? limpio.replace(/\./g, "").replace(",", ".")
+        : limpio.replace(/,/g, "")
+  } else if (tieneComa) {
+    const partes = limpio.split(",")
+    normalizado =
+      partes.length === 2 && partes[1].length <= 2
+        ? limpio.replace(",", ".")
+        : limpio.replace(/,/g, "")
+  } else if (tienePunto) {
+    const partes = limpio.split(".")
+    normalizado = partes.length === 2 && partes[1].length <= 2 ? limpio : limpio.replace(/\./g, "")
+  }
+
   const n = Number(normalizado)
   return Number.isFinite(n) ? n : 0
 }

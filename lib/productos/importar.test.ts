@@ -96,4 +96,50 @@ describe("parsearFilas", () => {
     expect(filas[0].costo).toBeCloseTo(45990.5)
     expect(filas[0].precio).toBeCloseTo(45990.5)
   })
+
+  it("acepta un precio con puntos de miles y sin parte decimal (formato General de Excel)", () => {
+    const wb = workbookDeFilas([
+      ["header"],
+      ["A005", "Bolsa de alimento 20kg", "Eukanuba", "$ 1.080.000"],
+    ])
+
+    const filas = parsearFilas(wb, "Alimentos", 2)
+
+    expect(filas[0].costo).toBe(1080000)
+    expect(filas[0].advertencias).not.toContain("precio en cero")
+  })
+
+  it("acepta un precio en formato estadounidense (coma de miles, punto decimal)", () => {
+    const wb = workbookDeFilas([
+      ["header"],
+      ["A006", "Vacuna quíntuple", "Zoetis", "1,200.50"],
+    ])
+
+    const filas = parsearFilas(wb, "Medicamentos", 2)
+
+    expect(filas[0].costo).toBeCloseTo(1200.5)
+  })
+
+  it("acepta un precio entero sin ningún separador", () => {
+    const wb = workbookDeFilas([
+      ["header"],
+      ["A007", "Antiparasitario", "Bayer", "1200"],
+    ])
+
+    const filas = parsearFilas(wb, "Medicamentos", 2)
+
+    expect(filas[0].costo).toBe(1200)
+    expect(filas[0].advertencias).not.toContain("precio en cero")
+  })
+
+  it("acepta un precio con dos decimales separados por punto", () => {
+    const wb = workbookDeFilas([
+      ["header"],
+      ["A008", "Collar antipulgas", "Seresto", "899.90"],
+    ])
+
+    const filas = parsearFilas(wb, "Accesorios", 2)
+
+    expect(filas[0].costo).toBeCloseTo(899.9)
+  })
 })

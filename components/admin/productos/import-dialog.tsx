@@ -92,6 +92,24 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
     setPaso("revision")
   }
 
+  /**
+   * El Excel puede traer un precio que no se pudo leer (celda con un formato
+   * raro, fórmula, etc.). En vez de obligar a corregir el archivo y volver a
+   * subirlo, se puede tipear el precio a mano acá mismo y sacarle la
+   * advertencia a esa fila puntual.
+   */
+  const corregirPrecio = (numeroFila: number, texto: string) => {
+    const precio = Number(texto)
+    setFilas((prev) =>
+      prev.map((f) => {
+        if (f.numeroFila !== numeroFila) return f
+        const advertencias = f.advertencias.filter((a) => a !== "precio en cero")
+        if (!Number.isFinite(precio) || precio <= 0) advertencias.push("precio en cero")
+        return { ...f, costo: precio, precio, advertencias, revisar: advertencias.length > 0 }
+      }),
+    )
+  }
+
   const stats = useMemo(() => {
     const conAdvertencias = filas.filter((f) => f.advertencias.length > 0).length
     return { total: filas.length, conAdvertencias, ok: filas.length - conAdvertencias }
@@ -250,14 +268,24 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
                   <Switch checked={incluirConAdvertencias} onCheckedChange={setIncluirConAdvertencias} />
                 </label>
 
-                <div className="max-h-32 overflow-y-auto rounded-lg border p-2 text-xs text-muted-foreground">
+                <div className="max-h-48 overflow-y-auto rounded-lg border p-2 text-xs text-muted-foreground">
                   {filas
                     .filter((f) => f.advertencias.length > 0)
                     .slice(0, 20)
                     .map((f) => (
-                      <p key={f.numeroFila} className="truncate">
-                        Fila {f.numeroFila}: {f.descripcion || "(sin nombre)"} — {f.advertencias.join(", ")}
-                      </p>
+                      <div key={f.numeroFila} className="flex items-center justify-between gap-2 py-0.5">
+                        <p className="truncate">
+                          Fila {f.numeroFila}: {f.descripcion || "(sin nombre)"} — {f.advertencias.join(", ")}
+                        </p>
+                        {f.advertencias.includes("precio en cero") && (
+                          <Input
+                            type="number" min={0} step="0.01" placeholder="Precio"
+                            defaultValue={f.costo || ""}
+                            onBlur={(e) => corregirPrecio(f.numeroFila, e.target.value)}
+                            className="h-7 w-24 shrink-0 text-xs"
+                          />
+                        )}
+                      </div>
                     ))}
                 </div>
               </>
