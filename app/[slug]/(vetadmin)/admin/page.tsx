@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
@@ -118,7 +118,9 @@ export default function DashboardPage() {
 
   return (
     <>
-      <DashboardTour slug={slug} />
+      <Suspense fallback={null}>
+        <DashboardTour slug={slug} />
+      </Suspense>
       <div className="space-y-6">
         {/* Encabezado con plan */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

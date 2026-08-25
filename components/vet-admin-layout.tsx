@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { HelpCircle, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { getUserRole, getUsuarioData, signOut } from "@/lib/supabase/auth"
 import { getTenantConfig } from "@/lib/supabase/queries"
@@ -110,9 +111,18 @@ export function VetAdminLayout({ slug, children }: Props) {
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 h-4" />
-          <h1 className="truncate text-sm font-semibold">
+          <h1 className="truncate text-sm font-semibold flex-1">
             {section ? TITULOS[section] : (vetNombre || slug)}
           </h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground"
+            onClick={() => router.push(`/${slug}/admin?tour=1`)}
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Ayuda</span>
+          </Button>
         </header>
 
         {/* Sin `container mx-auto`: con el sidebar plegado el contenido tiene que

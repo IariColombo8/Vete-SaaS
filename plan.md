@@ -134,6 +134,12 @@
 - [x] **5.3.1** WhatsApp (cubierto en 2.2.2: Cloud API, confirmación + recordatorios).
 - [x] **5.3.2** Mercado Pago (cubierto en 2.1.3: suscripciones + webhook).
 - [x] **5.3.3** Export de turnos a CSV (`lib/export/turnos-csv.ts`, con BOM UTF-8 para Excel; filtrable por rango de fechas para cierre mensual) + botón "Exportar CSV" en gestión de turnos. Nota: el monto/facturación requeriría un modelo de precios por servicio (pendiente).
+- [x] **5.3.4** Gmail API + Google Calendar por tenant (OAuth propio, un solo consentimiento cubre ambos). `tenant_email_credentials` (service-role only), `lib/google/gmail.ts`, `lib/google/calendar.ts`, `app/api/gmail/{auth,callback,credentials}`. El email de confirmación sale desde la cuenta de Gmail del tenant y el turno se crea en su Calendar invitando al dueño (recibe la invitación de Google, se agrega solo a su calendario). VipVet conectado y probado end-to-end.
+- [ ] **5.3.5** Ideas para próximas integraciones (sin priorizar aún):
+  - Reseñas de Google Business Profile: pedir automáticamente una reseña por email/WhatsApp después del turno. Probablemente el de mayor impacto de negocio.
+  - Recordatorio de turno por WhatsApp el día anterior — revisar si el cron de recordatorios (`app/api/cron/recordatorios`) ya dispara WhatsApp o solo email.
+  - Google Drive: backup de remitos/historias clínicas, o reportes de ventas como Sheet.
+  - Google Contacts: sincronizar el contacto del cliente al reservar turno (bajo valor, el sistema ya tiene su propia base de clientes).
 
 ---
 

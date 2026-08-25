@@ -148,6 +148,14 @@ function isProximaVisitaVencida(proximaVisita: string | undefined): boolean {
   return d < new Date();
 }
 
+function esImagenUrl(url: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp|svg)/i.test(url);
+}
+
+function esPdfUrl(url: string): boolean {
+  return /\.pdf/i.test(url);
+}
+
 const emptyHistoriaForm = {
   fechaAtencion: "",
   motivo: "",
@@ -215,6 +223,15 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [archivosNota, setArchivosNota] = useState<File[]>([]);
   const [uploadingArchivos, setUploadingArchivos] = useState(false);
   const [savingNota, setSavingNota] = useState(false);
+
+  const [addArchivoOpen, setAddArchivoOpen] = useState(false);
+  const [addArchivoMascota, setAddArchivoMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
+  const [archivoTitulo, setArchivoTitulo] = useState("");
+  const [archivoDescripcion, setArchivoDescripcion] = useState("");
+  const [archivoFile, setArchivoFile] = useState<File | null>(null);
+  const [savingArchivo, setSavingArchivo] = useState(false);
+  /** Filtro de la pestaña Historia Clínica: todos los adjuntos, solo imágenes o solo PDFs. */
+  const [filtroArchivos, setFiltroArchivos] = useState<"todos" | "imagenes" | "pdf">("todos");
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailModalItem, setDetailModalItem] = useState<TimelineItem | null>(null);
@@ -638,6 +655,63 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
+  const openAddArchivo = (cliente: Cliente, mascota: Mascota) => {
+    const clienteId = cliente?.id ?? "";
+    const mascotaId = mascota?.id ?? "";
+    if (!clienteId || !mascotaId) {
+      toast({ title: "Error", description: "No se pudo identificar cliente o mascota.", variant: "destructive" });
+      return;
+    }
+    if (isMobile) setDetailSheetOpen(false);
+    setAddArchivoMascota({ cliente: { ...cliente, id: clienteId }, mascota: { ...mascota, id: mascotaId } });
+    setArchivoTitulo("");
+    setArchivoDescripcion("");
+    setArchivoFile(null);
+    setTimeout(() => setAddArchivoOpen(true), isMobile ? 150 : 0);
+  };
+
+  /** Sube un único adjunto (imagen o PDF) como una entrada mínima de la libreta, sin el formulario clínico completo. */
+  const saveArchivo = async () => {
+    if (!addArchivoMascota?.cliente.id || !addArchivoMascota?.mascota.id) return;
+    const titulo = archivoTitulo.trim();
+    if (!titulo) {
+      toast({ title: "Completá el título", variant: "destructive" });
+      return;
+    }
+    if (!archivoFile) {
+      toast({ title: "Elegí un archivo", variant: "destructive" });
+      return;
+    }
+    setSavingArchivo(true);
+    try {
+      const url = await uploadArchivoHistoria(
+        tenantId,
+        addArchivoMascota.cliente.id,
+        addArchivoMascota.mascota.id,
+        archivoFile
+      );
+      await createHistoria(tenantId, addArchivoMascota.cliente.id, addArchivoMascota.mascota.id, {
+        fechaAtencion: new Date().toISOString().slice(0, 10),
+        motivo: titulo,
+        diagnostico: titulo,
+        tratamiento: "—",
+        observaciones: archivoDescripcion.trim(),
+        archivos: [url],
+      } as Omit<Historia, "id">);
+      toast({ title: "Archivo adjuntado" });
+      setAddArchivoOpen(false);
+      setAddArchivoMascota(null);
+      if (clienteExpandido?.cliente.id === addArchivoMascota.cliente.id && selectedMascotaId === addArchivoMascota.mascota.id) {
+        loadTimeline(addArchivoMascota.cliente.id, addArchivoMascota.mascota.id);
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: e instanceof Error ? e.message : "No se pudo subir el archivo", variant: "destructive" });
+    } finally {
+      setSavingArchivo(false);
+    }
+  };
+
   const handleSaveInline = async () => {
     if (!clienteExpandido?.cliente.id || !inlineEditField) return;
     setSavingCliente(true);
@@ -829,9 +903,16 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   const proximos = countProximosTurnos(clienteExpandido.turnos, m.id ?? "", m.nombre ?? "");
                   const visitasReales = (timelineData?.historias ?? []).filter((h) => h.tipoVisita !== "turno_programado");
                   const turnosMascota = timelineData?.turnos ?? [];
+                  const visitasFiltradas = filtroArchivos === "todos"
+                    ? visitasReales
+                    : visitasReales.filter((h) =>
+                        (h.archivos ?? []).some((url) =>
+                          filtroArchivos === "imagenes" ? esImagenUrl(url) : esPdfUrl(url)
+                        )
+                      );
                   const historiasPorFecha = (() => {
                     const byDate = new Map<string, Historia[]>();
-                    visitasReales.forEach((h) => {
+                    visitasFiltradas.forEach((h) => {
                       const key = h.fechaAtencion ?? "";
                       if (!byDate.has(key)) byDate.set(key, []);
                       byDate.get(key)!.push(h);
@@ -878,6 +959,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                               telefono={clienteExpandido.cliente.telefono ?? ""}
                             />
                           )}
+                          <Button size="sm" variant="outline" className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0" onClick={() => openAddArchivo(clienteExpandido.cliente, m)} title="Subir archivo adjunto"><Paperclip className="h-5 w-5" /></Button>
                           <Button size="sm" className="h-11 w-11 p-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0" onClick={() => openAddNota(clienteExpandido.cliente, m)} title="Agregar nota clínica"><Plus className="h-6 w-6" /></Button>
                         </div>
                       </div>
@@ -890,9 +972,35 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         </TabsList>
 
                         <TabsContent value="historia" className="mt-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 max-h-[340px] overflow-y-auto bg-slate-50/30 dark:bg-slate-800/20">
+                          {visitasReales.length > 0 && (
+                            <div className="flex items-center gap-1.5 mb-3">
+                              {([
+                                { value: "todos", label: "Todo" },
+                                { value: "imagenes", label: "Imágenes" },
+                                { value: "pdf", label: "PDFs" },
+                              ] as const).map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => setFiltroArchivos(opt.value)}
+                                  className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                    filtroArchivos === opt.value
+                                      ? "bg-emerald-600 text-white border-emerald-600"
+                                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                           {loadingTimeline ? (
                             <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-emerald-600" /></div>
-                          ) : visitasReales.length === 0 ? (
+                          ) : visitasFiltradas.length === 0 ? filtroArchivos !== "todos" ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">
+                              Sin {filtroArchivos === "imagenes" ? "imágenes" : "PDFs"} adjuntos para esta mascota.
+                            </p>
+                          ) : (
                             <div className="flex flex-col items-center justify-center py-10">
                               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sin visitas registradas para esta mascota.</p>
                               <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-6 rounded-xl shadow-lg" onClick={() => openAddNota(clienteExpandido.cliente, m)}>
@@ -919,12 +1027,34 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                       <div className="text-xs text-slate-600 dark:text-slate-400">
                                         <p><span className="font-semibold">Diagnóstico:</span> {(h.diagnostico || "—").slice(0, 120)}{(h.diagnostico?.length ?? 0) > 120 ? "…" : ""}</p>
                                         <p className="mt-0.5"><span className="font-semibold">Tratamiento:</span> {(h.tratamiento || "—").slice(0, 120)}{(h.tratamiento?.length ?? 0) > 120 ? "…" : ""}</p>
-                                        {h.archivos && h.archivos.length > 0 && (
-                                          <p className="mt-1 flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                            <Paperclip className="h-3 w-3" />
-                                            {h.archivos.length} adjunto{h.archivos.length !== 1 ? "s" : ""}
-                                          </p>
-                                        )}
+                                        {h.archivos && h.archivos.length > 0 && (() => {
+                                          const visibles = filtroArchivos === "todos"
+                                            ? h.archivos
+                                            : h.archivos.filter((url) => filtroArchivos === "imagenes" ? esImagenUrl(url) : esPdfUrl(url));
+                                          if (visibles.length === 0) return null;
+                                          return (
+                                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                              {visibles.map((url, i) =>
+                                                esImagenUrl(url) ? (
+                                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                                    <img src={url} alt="Adjunto" className="h-12 w-12 rounded object-cover border border-slate-200 dark:border-slate-700" />
+                                                  </a>
+                                                ) : (
+                                                  <a
+                                                    key={i}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1 h-12 px-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] text-emerald-700 dark:text-emerald-400"
+                                                  >
+                                                    <Paperclip className="h-3 w-3" />
+                                                    {esPdfUrl(url) ? "PDF" : "Archivo"}
+                                                  </a>
+                                                )
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
                                     </div>
                                   ))}
@@ -1468,6 +1598,68 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             <Button size="sm" onClick={saveNota} disabled={savingNota} className="bg-emerald-600 hover:bg-emerald-700">
               {savingNota ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               {uploadingArchivos ? "Subiendo archivos..." : "Guardar nota"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Subir archivo adjunto (imagen o PDF suelto, sin el formulario clínico completo) */}
+      <Dialog open={addArchivoOpen} onOpenChange={(open) => {
+          setAddArchivoOpen(open);
+          if (!open) {
+            setAddArchivoMascota(null);
+            if (isMobile && expandedClienteId) setDetailSheetOpen(true);
+          }
+        }}>
+        <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <Paperclip className="h-4 w-4" /> Subir archivo adjunto
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+              {addArchivoMascota ? `${addArchivoMascota.cliente.nombre} – ${addArchivoMascota.mascota.nombre}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs font-semibold">Título *</Label>
+              <Input
+                value={archivoTitulo}
+                onChange={(e) => setArchivoTitulo(e.target.value)}
+                className="mt-1 h-9"
+                placeholder="Ej. Radiografía de tórax"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Descripción (opcional)</Label>
+              <Textarea
+                value={archivoDescripcion}
+                onChange={(e) => setArchivoDescripcion(e.target.value)}
+                className="mt-1 min-h-[60px] text-sm"
+                placeholder="Detalle breve del estudio o documento..."
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Archivo *</Label>
+              <label className="mt-1 flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-600 cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/30">
+                <Upload className="h-4 w-4 text-slate-400 shrink-0" />
+                <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
+                  {archivoFile ? archivoFile.name : "Elegí una imagen o un PDF"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={(e) => setArchivoFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setAddArchivoOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={saveArchivo} disabled={savingArchivo} className="bg-emerald-600 hover:bg-emerald-700">
+              {savingArchivo ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              {savingArchivo ? "Subiendo..." : "Guardar"}
             </Button>
           </DialogFooter>
         </DialogContent>

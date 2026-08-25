@@ -120,6 +120,8 @@ export interface TenantConfig {
   minHorasAnticipacion?: number
   /** ID del Google Calendar donde se crean los eventos de turno */
   calendarId?: string
+  /** Proveedor de email para confirmaciones de turno. Default "resend". */
+  emailProvider?: "resend" | "gmail" | "emailjs"
   /** true una vez que el dueño completó (o saltó) el wizard de onboarding. */
   onboardingCompletado?: boolean
 }

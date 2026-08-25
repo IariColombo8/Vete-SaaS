@@ -152,7 +152,7 @@ export async function updateHistoria(
   data: Partial<Historia>,
 ) {
   const fila: Record<string, unknown> = {}
-  if (data.fechaAtencion !== undefined) fila.fecha_atencion = data.fechaAtencion
+  if (data.fechaAtencion) fila.fecha_atencion = data.fechaAtencion
   if (data.motivo !== undefined) fila.motivo = data.motivo
   if (data.diagnostico !== undefined) fila.diagnostico = data.diagnostico
   if (data.tratamiento !== undefined) fila.tratamiento = data.tratamiento

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useSlug } from "@/context/slug-context"
 import { getTenantConfig, updateTenantConfig, getTurnoConfig, updateTurnoConfig } from "@/lib/supabase/queries"
-import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional } from "@/lib/supabase/queries"
+import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional, TenantConfig } from "@/lib/supabase/queries"
 import { MASCOTAS_DEFAULT, SERVICIOS_DEFAULT, VACUNAS_DEFAULT } from "@/lib/turno-defaults"
 import { uploadFotoTenant, deleteFotoTenant } from "@/lib/supabase/storage"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin, Home, PawPrint, FileText, Syringe } from "lucide-react"
 import { EquipoManagement } from "@/components/admin/equipo-management"
+import { EmailProviderConfig } from "@/components/admin/email-provider-config"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
   { dia: "Lunes a Viernes", apertura: "09:00", cierre: "18:00", cerrado: false },
@@ -52,6 +53,7 @@ export default function ConfiguracionPage() {
   const fileInputMobileRef = useRef<HTMLInputElement>(null)
   const [minHoras, setMinHoras] = useState(2)
   const [calendarIdField, setCalendarIdField] = useState("")
+  const [emailProvider, setEmailProvider] = useState<TenantConfig["emailProvider"]>("resend")
 
   // ── Config de turnos ──
   const [mascotas, setMascotas] = useState<MascotaTurnoConfig[]>(MASCOTAS_DEFAULT)
@@ -73,6 +75,7 @@ export default function ConfiguracionPage() {
         setGoogleMapsUrl(cfg.googleMapsUrl ?? "")
         if (cfg.minHorasAnticipacion !== undefined) setMinHoras(cfg.minHorasAnticipacion)
         if (cfg.calendarId) setCalendarIdField(cfg.calendarId)
+        setEmailProvider(cfg.emailProvider ?? "resend")
       }
       if (turnoCfg) {
         if (turnoCfg.mascotas?.length) setMascotas(turnoCfg.mascotas)
@@ -904,6 +907,8 @@ export default function ConfiguracionPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            <EmailProviderConfig slug={slug} emailProvider={emailProvider} onProviderChange={setEmailProvider} />
 
           </TabsContent>
 

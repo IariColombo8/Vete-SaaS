@@ -35,6 +35,7 @@ function aConfig(fila: FilaTenant): TenantConfig {
     googleMapsUrl: (fila.google_maps_url as string) ?? undefined,
     minHorasAnticipacion: (fila.min_horas_anticipacion as number) ?? undefined,
     calendarId: (fila.calendar_id as string) ?? undefined,
+    emailProvider: (fila.email_provider as TenantConfig["emailProvider"]) ?? "resend",
     onboardingCompletado: (fila.onboarding_completado as boolean) ?? false,
   }
 }
@@ -62,6 +63,7 @@ function aFila(data: Partial<TenantConfig>): Record<string, unknown> {
     googleMapsUrl: "google_maps_url",
     minHorasAnticipacion: "min_horas_anticipacion",
     calendarId: "calendar_id",
+    emailProvider: "email_provider",
     onboardingCompletado: "onboarding_completado",
   }
   const fila: Record<string, unknown> = {}

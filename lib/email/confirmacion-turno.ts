@@ -9,6 +9,8 @@ interface DatosTurno {
   email: string
   /** Nombre de la veterinaria (opcional, para personalizar el email). */
   veterinaria?: string
+  /** Slug del tenant, para resolver si envía por Resend o por Gmail API. */
+  tenantId?: string
 }
 
 /**

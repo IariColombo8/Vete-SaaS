@@ -34,7 +34,7 @@ interface ItemNav {
  * mismo. Cada grupo lleva su título; colapsado, los títulos se ocultan solos y
  * quedan los iconos separados por bloque.
  */
-function gruposNav(slug: string): { titulo: string; items: ItemNav[] }[] {
+function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNav[] }[] {
   return [
     {
       titulo: "Clínica",
@@ -47,6 +47,7 @@ function gruposNav(slug: string): { titulo: string; items: ItemNav[] }[] {
     },
     {
       titulo: "Comercio",
+      tour: "comercio",
       items: [
         { href: `/${slug}/pos`,       label: "Vender",    icon: ShoppingCart, section: "pos" },
         { href: `/${slug}/productos`, label: "Productos", icon: Package,      section: "productos" },
@@ -56,6 +57,7 @@ function gruposNav(slug: string): { titulo: string; items: ItemNav[] }[] {
     },
     {
       titulo: "Cuenta",
+      tour: "cuenta",
       items: [
         { href: `/${slug}/configuracion`, label: "Configuración", icon: Settings, section: "configuracion" },
       ],
@@ -108,7 +110,7 @@ export function VetAdminSidebar({ slug, vetNombre, role, onSalir }: Props) {
 
       <SidebarContent>
         {grupos.map((grupo) => (
-          <SidebarGroup key={grupo.titulo}>
+          <SidebarGroup key={grupo.titulo} data-tour={grupo.tour}>
             <SidebarGroupLabel>{grupo.titulo}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>

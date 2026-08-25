@@ -260,7 +260,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
             tenantId,
             mascotaNombre: formData.nombreMascota, duenoNombre: formData.nombre,
             motivo: formData.motivo, fecha: formData.fecha, hora: formData.hora,
-            servicio: formData.servicio,
+            servicio: formData.servicio, duenoEmail: formData.email,
           }),
         })
       } catch (e) {
@@ -273,6 +273,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
         hora: formData.hora, direccion: formData.domicilio,
         nombre_mascota: formData.nombreMascota, tipo_mascota: formData.tipoMascota,
         servicio_requerido: formData.servicio, email: formData.email,
+        tenantId,
       })
       if (!emailEnviado) console.warn("No se pudo enviar el email de confirmacion")
 

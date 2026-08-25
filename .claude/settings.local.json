@@ -9,7 +9,8 @@
       "Bash(npx tsc:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(ls \"c:/Users/Emanuel/Documents/Proyectos/Veterinaria-SaaS/app/[slug]/\\(vetadmin\\)/\")"
+      "Bash(ls \"c:/Users/Emanuel/Documents/Proyectos/Veterinaria-SaaS/app/[slug]/\\(vetadmin\\)/\")",
+      "Bash(npx vitest *)"
     ]
   }
 }

@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server"
+import { getAdminDb } from "@/lib/supabase/admin"
+import { getGmailCredentials, getEmailJsCredentials } from "@/lib/supabase/email-credentials"
+import { enviarEmailGmail } from "@/lib/google/gmail"
+import { enviarEmailJs } from "@/lib/email/emailjs"
 
 /**
- * Envío de emails server-side vía Resend (REST API, sin SDK).
+ * Envío de emails server-side. Dos proveedores posibles, elegidos por tenant:
  *
- * Reemplaza a EmailJS (client-side), que exponía las keys en el navegador.
- * Variables de entorno requeridas:
- *  - RESEND_API_KEY   → API key de Resend (secreta, server-only).
- *  - EMAIL_FROM       → remitente verificado, ej. "VetPanel <turnos@tudominio.com>".
+ *  - Resend (default): API key global del proyecto (`RESEND_API_KEY` / `EMAIL_FROM`).
+ *  - Gmail API: el tenant conectó su propia cuenta de Gmail (OAuth, ver
+ *    app/api/gmail/auth y app/api/gmail/callback). Credenciales en
+ *    `tenant_email_credentials`, nunca en el bundle del cliente.
+ *  - EmailJS: el tenant tiene su propia cuenta de EmailJS (Service ID,
+ *    Template ID, Public/Private Key). Mismo lugar de credenciales.
  *
- * Si falta `RESEND_API_KEY`, responde 200 con `{ ok: false, skipped: true }`
- * para no romper el flujo de reserva (el email es best-effort).
+ * `tenants.email_provider` decide cuál. Si falta `tenantId` en el body, o el
+ * tenant no existe, se asume Resend (compatibilidad con el flujo anterior).
+ *
+ * Si falta la config del proveedor elegido, responde 200 con
+ * `{ ok: false, skipped: true }` para no romper el flujo de reserva (el email
+ * es best-effort).
  */
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails"
@@ -25,6 +35,23 @@ interface TurnoEmailData {
   email: string
   /** Nombre de la veterinaria, para personalizar el asunto/cuerpo. */
   veterinaria?: string
+  /** Slug del tenant, para resolver el proveedor de email configurado. */
+  tenantId?: string
+}
+
+async function resolverProveedor(tenantId?: string): Promise<"resend" | "gmail" | "emailjs"> {
+  if (!tenantId) return "resend"
+  const admin = getAdminDb()
+  if (!admin) return "resend"
+
+  const { data } = await admin
+    .from("tenants")
+    .select("email_provider")
+    .eq("slug", tenantId)
+    .maybeSingle()
+
+  if (data?.email_provider === "gmail" || data?.email_provider === "emailjs") return data.email_provider
+  return "resend"
 }
 
 function escapeHtml(value: string): string {
@@ -80,9 +107,6 @@ function buildConfirmacionHtml(data: TurnoEmailData): string {
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.EMAIL_FROM
-
   let data: TurnoEmailData
   try {
     data = (await request.json()) as TurnoEmailData
@@ -94,15 +118,69 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Falta el email del destinatario" }, { status: 400 })
   }
 
+  const subject = data.veterinaria
+    ? `Turno confirmado en ${data.veterinaria} — ${data.fecha} ${data.hora}`
+    : `Turno confirmado — ${data.fecha} ${data.hora}`
+
+  const proveedor = await resolverProveedor(data.tenantId)
+
+  if (proveedor === "emailjs") {
+    const credenciales = await getEmailJsCredentials(data.tenantId!)
+    if (!credenciales) {
+      console.warn(`[email] Tenant ${data.tenantId} tiene proveedor "emailjs" pero no configuró sus credenciales — email omitido`)
+      return NextResponse.json({ ok: false, skipped: true })
+    }
+
+    try {
+      await enviarEmailJs(credenciales, {
+        nombre_y_apellido: data.nombre_y_apellido,
+        fecha: data.fecha,
+        hora: data.hora,
+        direccion: data.direccion ?? "",
+        nombre_mascota: data.nombre_mascota,
+        tipo_mascota: data.tipo_mascota,
+        servicio_requerido: data.servicio_requerido,
+        email: data.email,
+      })
+      return NextResponse.json({ ok: true })
+    } catch (error) {
+      console.error("[email] Error enviando vía EmailJS:", error)
+      return NextResponse.json({ ok: false, error: "No se pudo enviar el email" }, { status: 502 })
+    }
+  }
+
+  if (proveedor === "gmail") {
+    const credenciales = await getGmailCredentials(data.tenantId!)
+    if (!credenciales?.refreshToken || !credenciales.senderEmail) {
+      console.warn(`[email] Tenant ${data.tenantId} tiene proveedor "gmail" pero no conectó su cuenta — email omitido`)
+      return NextResponse.json({ ok: false, skipped: true })
+    }
+
+    try {
+      await enviarEmailGmail(
+        {
+          clientId: credenciales.clientId,
+          clientSecret: credenciales.clientSecret,
+          refreshToken: credenciales.refreshToken,
+          senderEmail: credenciales.senderEmail,
+        },
+        { to: data.email, subject, html: buildConfirmacionHtml(data) },
+      )
+      return NextResponse.json({ ok: true })
+    } catch (error) {
+      console.error("[email] Error enviando vía Gmail API:", error)
+      return NextResponse.json({ ok: false, error: "No se pudo enviar el email" }, { status: 502 })
+    }
+  }
+
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.EMAIL_FROM
+
   // No configurado → no-op para no bloquear la reserva.
   if (!apiKey || !from) {
     console.warn("[email] RESEND_API_KEY o EMAIL_FROM no configurados — email omitido")
     return NextResponse.json({ ok: false, skipped: true })
   }
-
-  const subject = data.veterinaria
-    ? `Turno confirmado en ${data.veterinaria} — ${data.fecha} ${data.hora}`
-    : `Turno confirmado — ${data.fecha} ${data.hora}`
 
   try {
     const res = await fetch(RESEND_ENDPOINT, {
