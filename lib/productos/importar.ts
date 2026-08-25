@@ -127,11 +127,14 @@ export function limpiarMarca(texto: string): string {
  * `undefined` si la descripción no trae ningún patrón reconocible.
  */
 export function detectarPesoKg(descripcion: string): number | undefined {
-  const coincidencias = [...descripcion.matchAll(/X\s*([\d.,]+)\s*(KGS?|GRS?)\.?\b/gi)]
+  // La "X" es opcional: "VITALFUN ARENA ... 6 KG VITALFUN" no la trae, a
+  // diferencia de "HANDLER ... X 10 KG HANDLER". El "(x 12 u)" que traen los
+  // packs de sobres no interfiere porque su unidad ("u") no está en la lista.
+  const coincidencias = [...descripcion.matchAll(/(?:X\s*)?([\d.,]+)\s*(KGS?|GRS?|G)\.?\b/gi)]
   if (coincidencias.length === 0) return undefined
 
   const [, numero, unidad] = coincidencias[coincidencias.length - 1]
-  const esGramos = /^GRS?$/i.test(unidad)
+  const esGramos = /^(GRS?|G)$/i.test(unidad)
   // En gramos el punto es separador de miles (nadie vende "120,5 gramos");
   // en kilos, el punto es decimal como en el resto del archivo.
   const normalizado = esGramos ? numero.replace(/\./g, "").replace(",", ".") : numero.replace(",", ".")

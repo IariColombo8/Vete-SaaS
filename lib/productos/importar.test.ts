@@ -235,4 +235,18 @@ describe("detectarPesoKg", () => {
   it("interpreta el punto como separador de miles cuando la unidad es gramos", () => {
     expect(detectarPesoKg("BOLSA GRANDE X 1.000 GRS")).toBe(1)
   })
+
+  it("detecta el peso sin la palabra X delante", () => {
+    expect(detectarPesoKg("VITALFUN ARENA AGLOM. CARBON ACTIVADO 6 KG VITALFUN")).toBe(6)
+    expect(detectarPesoKg("VITALFUN ARENA AGLOM. NEUTRO 12 KG VITALFUN")).toBe(12)
+  })
+
+  it("detecta gramos en 'g' minúscula sin la palabra X delante", () => {
+    expect(detectarPesoKg("THERAPY RECOVERY WET CANINE 85 g (x 12 u)")).toBe(0.085)
+    expect(detectarPesoKg("THERAPY RECOVERY WET FELINE 340 g (x 6 u)")).toBe(0.34)
+  })
+
+  it("no confunde la cantidad de unidades por caja (x 12 u) con un peso", () => {
+    expect(detectarPesoKg("SOBRES SURTIDOS (x 12 u)")).toBeUndefined()
+  })
 })
