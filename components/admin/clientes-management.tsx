@@ -32,11 +32,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   getClientesPaginated,
   getClienteCompleto,
+  getClientesStats,
   getMascotas,
   createCliente,
   updateCliente,
   type HistorialDato,
   type ClientesCursor,
+  type ClientesStats,
 } from "@/lib/supabase/queries";
 import type { Cliente, Mascota } from "@/lib/supabase/queries";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +58,7 @@ import {
   Bird,
   PawPrint,
   MessageCircle,
+  UserPlus,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -67,8 +70,8 @@ const emptyForm = {
   domicilio: "",
 };
 
-/** Tamaño de página para la paginación cursor-based de clientes. */
-const PAGE_SIZE = 20;
+/** Tamaño de página para la paginación cursor-based de clientes: 5 en 5, para que la carga inicial sea rápida. */
+const PAGE_SIZE = 5;
 
 function buildMapsUrl(direccion: string): string {
   if (!direccion?.trim()) return "#";
@@ -114,6 +117,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [mascotasByClienteId, setMascotasByClienteId] = useState<Record<string, Mascota[]>>({});
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<ClientesStats | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [cursor, setCursor] = useState<ClientesCursor>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -165,8 +169,8 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       setClientes(page.clientes);
       setCursor(page.nextCursor);
       setHasMore(page.hasMore);
-      // Precargar mascotas de los primeros 10 (lazy load el resto en hover/búsqueda)
-      await precargarMascotas(page.clientes.slice(0, 10));
+      // Precargar mascotas de la página actual (5 clientes, ya no hace falta limitar)
+      await precargarMascotas(page.clientes);
     } catch (error) {
       console.error("Error fetching clientes:", error);
       toast({
@@ -218,8 +222,19 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
+  // Stats del mini dashboard: consulta liviana (solo counts), en paralelo a la lista.
+  const loadStats = async () => {
+    try {
+      const s = await getClientesStats(tenantId);
+      setStats(s);
+    } catch (error) {
+      console.error("Error cargando estadísticas de clientes:", error);
+    }
+  };
+
   useEffect(() => {
     loadClientes();
+    loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
@@ -315,6 +330,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       setForm(emptyForm);
       setEditingId(null);
       await loadClientes();
+      loadStats();
     } catch (error) {
       console.error("Error saving cliente:", error);
       toast({
@@ -408,6 +424,55 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Mini dashboard */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-2 sm:mb-4 lg:mb-6">
+        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-xl">
+          <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 rounded-lg bg-slate-700 dark:bg-slate-600 shrink-0">
+              <Users className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Clientes totales</p>
+              {stats ? (
+                <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.totalClientes}</p>
+              ) : (
+                <Skeleton className="h-5 w-10 mt-0.5" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-xl">
+          <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 rounded-lg bg-emerald-600 shrink-0">
+              <PawPrint className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Mascotas registradas</p>
+              {stats ? (
+                <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.totalMascotas}</p>
+              ) : (
+                <Skeleton className="h-5 w-10 mt-0.5" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-xl">
+          <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 rounded-lg bg-amber-600 shrink-0">
+              <UserPlus className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Nuevos este mes</p>
+              {stats ? (
+                <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.clientesNuevosMes}</p>
+              ) : (
+                <Skeleton className="h-5 w-10 mt-0.5" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Card con tabla */}

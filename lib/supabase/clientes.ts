@@ -1,5 +1,7 @@
 import { supabase } from "./config"
-import type { Cliente, ClientesCursor, ClientesPage, HistorialDato } from "./types"
+import type { Cliente, ClientesCursor, ClientesPage, ClientesStats, HistorialDato } from "./types"
+
+export type { ClientesStats } from "./types"
 
 /**
  * Clientes. En Firestore el docId era el DNI; acá la PK es un uuid y el DNI
@@ -162,6 +164,29 @@ export async function getClientesPaginated(
     clientes,
     nextCursor: ultimo ? { nombre: ultimo.nombre, id: ultimo.id! } : null,
     hasMore: clientes.length === pageSize,
+  }
+}
+
+/** Estadísticas rápidas para el mini dashboard: usa `count: "exact", head: true` (no trae filas). */
+export async function getClientesStats(tenantId: string): Promise<ClientesStats> {
+  const inicioMes = new Date()
+  inicioMes.setDate(1)
+  inicioMes.setHours(0, 0, 0, 0)
+
+  const [totalClientesRes, totalMascotasRes, clientesNuevosMesRes] = await Promise.all([
+    supabase.from("clientes").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+    supabase.from("mascotas").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+    supabase
+      .from("clientes")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .gte("created_at", inicioMes.toISOString()),
+  ])
+
+  return {
+    totalClientes: totalClientesRes.count ?? 0,
+    totalMascotas: totalMascotasRes.count ?? 0,
+    clientesNuevosMes: clientesNuevosMesRes.count ?? 0,
   }
 }
 

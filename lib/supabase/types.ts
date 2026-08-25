@@ -226,6 +226,12 @@ export interface HistoriaClinicaRegistro {
  */
 export type ClientesCursor = { nombre: string; id: string } | null
 
+export interface ClientesStats {
+  totalClientes: number
+  totalMascotas: number
+  clientesNuevosMes: number
+}
+
 export interface ClientesPage {
   clientes: Cliente[]
   /** Cursor para la siguiente página; pasar a la próxima llamada. */
