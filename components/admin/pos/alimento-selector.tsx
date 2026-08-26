@@ -89,7 +89,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
 
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && onCerrar()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {marca !== null && (
