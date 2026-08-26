@@ -18,7 +18,7 @@ import { formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO, type Cliente, type MedioPago } from "@/lib/supabase/types"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
-export const CUOTAS_DEFAULT: Record<number, number> = { 1: 0, 3: 10, 6: 20, 12: 35 }
+export const CUOTAS_DEFAULT: Record<number, number> = { 1: 5, 3: 10, 6: 20, 12: 35 }
 
 interface Props {
   tenantId: string
