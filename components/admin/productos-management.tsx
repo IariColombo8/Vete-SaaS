@@ -37,7 +37,7 @@ import {
   precioFinal, tieneOferta, comboLabel, margenPct, estadoStock, diasHastaVencimiento,
 } from "@/lib/productos/precios"
 import { ordenarCategorias } from "@/lib/productos/categorias"
-import { formatCurrency, formatCantidad, formatFechaISO } from "@/lib/format"
+import { formatCurrency, formatCantidad } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
@@ -407,10 +407,10 @@ export function ProductosManagement({ tenantId }: Props) {
                   </TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden md:table-cell">Rubro</TableHead>
-                  <TableHead className="text-right">Precio</TableHead>
+                  <TableHead className="text-right">Precio original</TableHead>
                   <TableHead className="hidden text-right lg:table-cell">Margen</TableHead>
+                  <TableHead className="hidden text-right lg:table-cell">Precio con oferta</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
-                  <TableHead className="hidden text-right lg:table-cell">Vence</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -418,7 +418,6 @@ export function ProductosManagement({ tenantId }: Props) {
                 {productos.map((p) => {
                   const estado = estadoStock(p)
                   const margen = margenPct(p.precio, p.costo)
-                  const dias = diasHastaVencimiento(p.fechaVencimiento)
                   const enOferta = tieneOferta(p)
                   const combo = comboLabel(p)
 
@@ -459,27 +458,7 @@ export function ProductosManagement({ tenantId }: Props) {
                       </TableCell>
 
                       <TableCell className="text-right">
-                        {combo ? (
-                          <span className="flex flex-col items-end leading-tight">
-                            <span className="text-xs text-muted-foreground">
-                              {formatCurrency(p.precio)} c/u
-                            </span>
-                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
-                              <Tag className="h-3 w-3" /> {combo}
-                            </span>
-                          </span>
-                        ) : enOferta ? (
-                          <span className="flex flex-col items-end leading-tight">
-                            <span className="text-xs text-muted-foreground line-through">
-                              {formatCurrency(p.precio)}
-                            </span>
-                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
-                              <Tag className="h-3 w-3" /> {formatCurrency(precioFinal(p))}
-                            </span>
-                          </span>
-                        ) : (
-                          formatCurrency(p.precio)
-                        )}
+                        {formatCurrency(p.precio)}
                       </TableCell>
 
                       <TableCell className="hidden text-right text-xs lg:table-cell">
@@ -489,6 +468,20 @@ export function ProductosManagement({ tenantId }: Props) {
                           <span className={margen < 0 ? "font-medium text-red-600" : "text-muted-foreground"}>
                             {margen.toFixed(0)}%
                           </span>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="hidden text-right lg:table-cell">
+                        {combo ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                            <Tag className="h-3 w-3" /> {combo}
+                          </span>
+                        ) : enOferta ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                            <Tag className="h-3 w-3" /> {formatCurrency(precioFinal(p))}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
 
@@ -514,18 +507,6 @@ export function ProductosManagement({ tenantId }: Props) {
                                 {estado === "agotado" ? "Agotado" : "Bajo"}
                               </Badge>
                             )}
-                          </span>
-                        )}
-                      </TableCell>
-
-                      <TableCell className="hidden text-right text-xs lg:table-cell">
-                        {dias === null ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : (
-                          <span className={cn(
-                            dias < 0 ? "font-medium text-red-600" : dias <= 30 ? "text-amber-600" : "text-muted-foreground",
-                          )}>
-                            {formatFechaISO(p.fechaVencimiento)}
                           </span>
                         )}
                       </TableCell>
