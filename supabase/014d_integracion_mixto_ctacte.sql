@@ -93,7 +93,7 @@ begin
 
   -- Anular un COBRO de cuenta corriente restaura la deuda que ese cobro había
   -- cancelado.
-  if v_es_pago_cta_cte and v_cliente_id is not null then
+  if v_es_pago_cta and v_cliente_id is not null then
     insert into public.cuenta_corriente_movimientos
       (tenant_id, cliente_id, tipo, monto, venta_id, observaciones, usuario_nombre)
     values
