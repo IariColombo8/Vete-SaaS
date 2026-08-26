@@ -1,6 +1,6 @@
 import type { MedioPago, Producto, Promocion } from "@/lib/supabase/types"
 import { precioFinal, precioLinea } from "@/lib/productos/precios"
-import { descuentoPromociones } from "./promociones"
+import { descuentoPromociones, detectarPromocionAplicable } from "./promociones"
 
 /**
  * Carrito del mostrador. Puro y sin acceso a datos: acá vive la plata, así que
@@ -302,22 +302,86 @@ export interface ItemRPC {
 }
 
 /**
+ * Descuento exacto por `producto.id` de la promo detectada.
+ *
+ * Se reparte proporcional al precio de lista de cada línea dentro del combo,
+ * pero a la ÚLTIMA línea de `match.promocion.items` no se le da su parte
+ * proporcional: se le da lo que sobra (`descuentoTotal` menos lo ya repartido
+ * a las anteriores). Así la suma de los descuentos da siempre exacto, sin
+ * importar cuántos ítems tenga el combo o qué relación de precios tengan —
+ * repartir cada parte con `round2` de forma independiente puede dejar un
+ * faltante o sobrante de un centavo (p. ej. tres ítems de igual precio
+ * repartiéndose $1: 0.3333... cada uno, que redondeado da 0.33 + 0.33 + 0.33 =
+ * 0.99, no 1).
+ */
+function descuentosPorLinea(
+  carrito: LineaCarrito[],
+  match: { promocion: Promocion; veces: number } | null,
+): Map<string, number> {
+  const descuentos = new Map<string, number>()
+  if (!match) return descuentos
+
+  const precioListaCombo = match.promocion.items.reduce((acc, i) => {
+    const l = carrito.find((c) => c.producto.id === i.productoId)
+    return acc + (l ? l.producto.precio * i.cantidad * match.veces : 0)
+  }, 0)
+  if (precioListaCombo <= 0) return descuentos
+
+  const descuentoTotal = Math.max(
+    0,
+    round2(precioListaCombo - match.promocion.precioFinal * match.veces),
+  )
+
+  let repartido = 0
+  match.promocion.items.forEach((item, indice) => {
+    const esUltimo = indice === match.promocion.items.length - 1
+    const linea = carrito.find((c) => c.producto.id === item.productoId)
+    if (!linea) return
+
+    if (esUltimo) {
+      descuentos.set(item.productoId, round2(descuentoTotal - repartido))
+      return
+    }
+
+    const precioListaLinea = linea.producto.precio * item.cantidad * match.veces
+    const partePropia = round2((precioListaLinea / precioListaCombo) * descuentoTotal)
+    repartido = round2(repartido + partePropia)
+    descuentos.set(item.productoId, partePropia)
+  })
+
+  return descuentos
+}
+
+/**
  * Traduce el carrito al formato de la RPC.
  *
  * En un combo no existe un precio por unidad fijo, así que se manda el de lista
  * y el subtotal ya calculado — es el subtotal el que manda, y la base lo vuelve
  * a sumar para armar el total de la venta.
+ *
+ * Una promoción de varios productos (combo entre líneas distintas) tampoco
+ * tiene precio por unidad: el descuento se reparte entre las líneas
+ * involucradas, proporcional al precio de lista de cada una dentro del combo,
+ * y se resta de su subtotal. Así `registrar_venta` no necesita saber nada de
+ * promociones — sigue sumando los subtotales que le llegan.
  */
-export function itemsParaRPC(carrito: LineaCarrito[]): ItemRPC[] {
-  return carrito.map((linea) => ({
-    producto_id: linea.producto.id,
-    cantidad: linea.cantidad,
-    precio_unitario:
-      linea.precioManual != null
-        ? round2(linea.precioManual)
-        : linea.producto.ofertaTipo === "combo" && linea.producto.ofertaActiva
-          ? round2(linea.producto.precio)
-          : precioFinal(linea.producto),
-    subtotal: subtotalLinea(linea),
-  }))
+export function itemsParaRPC(carrito: LineaCarrito[], promociones: Promocion[] = []): ItemRPC[] {
+  const match = detectarPromocionAplicable(carrito, promociones)
+  const descuentos = descuentosPorLinea(carrito, match)
+
+  return carrito.map((linea) => {
+    const descuento = descuentos.get(linea.producto.id) ?? 0
+    const subtotal = round2(subtotalLinea(linea) - descuento)
+    return {
+      producto_id: linea.producto.id,
+      cantidad: linea.cantidad,
+      precio_unitario:
+        linea.precioManual != null
+          ? round2(linea.precioManual)
+          : linea.producto.ofertaTipo === "combo" && linea.producto.ofertaActiva
+            ? round2(linea.producto.precio)
+            : precioFinal(linea.producto),
+      subtotal,
+    }
+  })
 }
