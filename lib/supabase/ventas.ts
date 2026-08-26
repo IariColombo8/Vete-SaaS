@@ -46,6 +46,7 @@ function aVentaItem(f: Fila): VentaItem {
 
 function aVenta(f: Fila): Venta {
   const items = f.venta_items as Fila[] | undefined
+  const pagos = f.venta_pagos as Fila[] | undefined
 
   return {
     id: f.id as string,
@@ -60,13 +61,19 @@ function aVenta(f: Fila): Venta {
     estado: (f.estado as VentaEstado) ?? "completada",
     subtotal: num(f.subtotal),
     descuento: num(f.descuento),
+    recargo: num(f.recargo),
+    cuotas: f.cuotas != null ? num(f.cuotas) : undefined,
     total: num(f.total),
     anuladaAt: (f.anulada_at as string) ?? undefined,
     anuladaMotivo: (f.anulada_motivo as string) ?? undefined,
     vendedorNombre: (f.vendedor_nombre as string) ?? undefined,
     observaciones: (f.observaciones as string) ?? "",
     createdAt: (f.created_at as string) ?? "",
+    esPagoCtaCte: Boolean(f.es_pago_cta_cte),
     items: items ? items.map(aVentaItem) : undefined,
+    pagos: pagos
+      ? pagos.map((p) => ({ medioPago: p.medio_pago as MedioPago, monto: num(p.monto) }))
+      : undefined,
   }
 }
 
@@ -90,7 +97,7 @@ function aCaja(f: Fila): Caja {
   }
 }
 
-const VENTA_COLS = "*, venta_items(*)"
+const VENTA_COLS = "*, venta_items(*), venta_pagos(*)"
 
 // ── Registrar la venta ──
 
@@ -100,6 +107,12 @@ export interface RegistrarVentaInput {
   clienteId?: string
   descuento?: number
   observaciones?: string
+  /** Recargo de débito/crédito, ya en pesos. */
+  recargo?: number
+  /** Solo cuando medioPago === "credito". */
+  cuotas?: number
+  /** Obligatorio cuando medioPago === "mixto". */
+  pagos?: { medioPago: MedioPago; monto: number }[]
 }
 
 export interface ResultadoVenta {
@@ -128,6 +141,9 @@ export async function registrarVenta(
     p_cliente_id: input.clienteId ?? null,
     p_descuento: input.descuento ?? 0,
     p_observaciones: input.observaciones ?? null,
+    p_recargo: input.recargo ?? 0,
+    p_cuotas: input.cuotas ?? null,
+    p_pagos: input.pagos?.map((p) => ({ medio_pago: p.medioPago, monto: p.monto })) ?? null,
   })
 
   if (error) throw new Error(error.message)
