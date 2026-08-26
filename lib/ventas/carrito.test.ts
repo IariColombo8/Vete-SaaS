@@ -86,6 +86,14 @@ describe("agregarAlCarrito", () => {
   it("rechaza fracciones de una unidad indivisible", () => {
     expect(() => agregarAlCarrito([], producto(), 1.5)).toThrow(/entera/i)
   })
+
+  it("permite vender una fracción de una bolsa cerrada con peso detectado", () => {
+    const bolsa = producto({ unidad: "un", pesoKg: 6, precio: 9000, stock: 10 })
+    const mediaBolsa = agregarAlCarrito([], bolsa, 0.5)
+
+    expect(mediaBolsa[0].cantidad).toBe(0.5)
+    expect(totalesCarrito(mediaBolsa).subtotal).toBe(4500)
+  })
 })
 
 describe("cambiarCantidad y quitarDelCarrito", () => {

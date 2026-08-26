@@ -89,7 +89,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
 
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && onCerrar()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {marca !== null && (
@@ -120,7 +120,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
             Completá el campo <strong>Marca</strong> en Productos para que aparezcan acá.
           </div>
         ) : (
-          <div className="max-h-[55vh] overflow-y-auto">
+          <div className="max-h-[70vh] overflow-y-auto">
             {marca === null && (
               <Grilla>
                 {marcas.map((m) => (
@@ -207,13 +207,11 @@ function Presentacion({ producto, onElegir }: { producto: Producto; onElegir: ()
       {presentacion && (
         <span className="shrink-0 text-xs font-medium text-muted-foreground">{presentacion}</span>
       )}
-      <span className="shrink-0 text-xs text-muted-foreground">
-        {agotado
-          ? "Sin stock"
-          : producto.controlaStock
-            ? `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`
-            : "Sin control de stock"}
-      </span>
+      {producto.controlaStock && (
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {agotado ? "Sin stock" : `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`}
+        </span>
+      )}
       <span className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400">
         {formatCurrency(precioFinal(producto))}
         {porKg && <span className="text-xs font-normal"> / kg</span>}

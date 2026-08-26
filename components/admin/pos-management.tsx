@@ -85,12 +85,15 @@ export function PosManagement({ tenantId }: Props) {
   }, [tenantId])
 
   /**
-   * Todo lo que agrega pasa por acá. Los productos por kilo y los que ya están
-   * en el carrito abren el diálogo de cantidad; el resto entra de a uno, que es
-   * lo que hace que escanear sea instantáneo.
+   * Todo lo que agrega pasa por acá. Los productos por kilo y las bolsas
+   * cerradas con peso detectado (se pueden vender fraccionadas, ej. abrir una
+   * bolsa de 6 kg y vender 1 kg suelto) abren el diálogo de cantidad; el
+   * resto entra de a uno, que es lo que hace que escanear sea instantáneo.
    */
   const elegirProducto = (producto: Producto) => {
-    if (producto.unidad === "kg") {
+    const fraccionable =
+      producto.unidad === "kg" || (producto.unidad === "un" && (producto.pesoKg ?? 0) > 0)
+    if (fraccionable) {
       setPendiente(producto)
       return
     }

@@ -59,14 +59,17 @@ function round2(n: number): number {
 }
 
 /**
- * Los kg admiten decimales; las unidades, no. Vender "1,5 collares" es un error
- * de tipeo, y si llega a la base el remito sale con una cantidad imposible.
+ * Los kg admiten decimales; las unidades, no — salvo una bolsa cerrada con
+ * peso detectado (`pesoKg`), que se puede fraccionar (0.5 = media bolsa,
+ * vendida por peso desde `CantidadDialog`). Vender "1,5 collares" sigue
+ * siendo un error de tipeo: ahí no hay ningún peso de por medio.
  */
 function validarCantidad(producto: Producto, cantidad: number): void {
   if (!Number.isFinite(cantidad) || cantidad <= 0) {
     throw new Error("La cantidad tiene que ser mayor a cero")
   }
-  if (producto.unidad === "un" && !Number.isInteger(cantidad)) {
+  const fraccionable = producto.pesoKg != null && producto.pesoKg > 0
+  if (producto.unidad === "un" && !fraccionable && !Number.isInteger(cantidad)) {
     throw new Error(`"${producto.nombre}" se vende por unidad entera`)
   }
 }

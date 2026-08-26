@@ -250,13 +250,11 @@ function ResultadoProducto({
           <Badge className="shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
       </div>
-      <span className="shrink-0 text-xs text-muted-foreground">
-        {agotado
-          ? "Sin stock"
-          : producto.controlaStock
-            ? `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`
-            : "Servicio"}
-      </span>
+      {producto.controlaStock && (
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {agotado ? "Sin stock" : `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`}
+        </span>
+      )}
       <span className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400">
         {formatCurrency(precioFinal(producto))}
         {porKg && <span className="text-xs font-normal"> / kg</span>}

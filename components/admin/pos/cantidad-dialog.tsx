@@ -41,31 +41,50 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   const [unidadIngreso, setUnidadIngreso] = useState<UnidadIngreso>("kg")
 
   const porKg = producto?.unidad === "kg"
+  // Una bolsa cerrada con peso detectado (import de alimentos) también se
+  // puede vender fraccionada: alguien abre la bolsa de 6 kg y vende 1 kg
+  // suelto. `pesoBolsa` es el peso de la bolsa completa; 0 si no aplica.
+  const pesoBolsa = producto?.unidad === "un" ? (producto?.pesoKg ?? 0) : 0
+  const fraccionable = porKg || pesoBolsa > 0
   // El monto en pesos asume precio unitario fijo: no tiene forma limpia de
   // invertirse cuando hay un combo (N unidades a precio fijo) de por medio.
   const esCombo = producto ? tieneOferta(producto) && producto.ofertaTipo === "combo" : false
 
   // Cada vez que se abre con otro producto se reinicia: arrastrar "2,5" de la
-  // venta anterior es una forma muy fácil de despachar de más.
+  // venta anterior es una forma muy fácil de despachar de más. Una bolsa con
+  // peso arranca en su propio peso completo — la venta más común es la bolsa
+  // entera, no una fracción — para que un simple Enter la agregue igual.
   useEffect(() => {
     if (producto) {
-      setValor(porKg ? "" : "1")
+      setValor(pesoBolsa > 0 ? String(pesoBolsa) : porKg ? "" : "1")
       setUnidadIngreso("kg")
     }
-  }, [producto, porKg])
+  }, [producto, porKg, pesoBolsa])
 
-  // La cantidad real siempre queda en kilos —es lo que espera el carrito—,
-  // aunque el vendedor haya tipeado en gramos.
+  // El carrito espera la cantidad en la unidad del producto: kilos reales
+  // cuando se vende suelto, o fracción de bolsa (0.5 = media bolsa) cuando es
+  // una bolsa cerrada con peso. El monto en pesos no necesita distinguir los
+  // dos casos: dividir por el precio de venta ya da directamente lo que hay
+  // que cargar en cada caso (kilos en uno, fracción de bolsa en el otro).
   const cantidad = useMemo(() => {
     const n = Number(valor.replace(",", "."))
     if (!Number.isFinite(n) || n <= 0) return 0
-    if (unidadIngreso === "g") return n / 1000
     if (unidadIngreso === "$") {
       const precio = producto ? precioFinal(producto) : 0
       return precio > 0 ? n / precio : 0
     }
-    return n
-  }, [valor, unidadIngreso, producto])
+    const kg = unidadIngreso === "g" ? n / 1000 : n
+    return pesoBolsa > 0 ? kg / pesoBolsa : kg
+  }, [valor, unidadIngreso, producto, pesoBolsa])
+
+  // Solo para mostrar el "≈" bajo el importe: cuántos kilos reales representa
+  // la cantidad calculada (que para una bolsa es una fracción, no kilos).
+  const kgReales = pesoBolsa > 0 ? cantidad * pesoBolsa : cantidad
+
+  // El peso de la bolsa entera va primero en los atajos, para que vender la
+  // bolsa completa (el caso más común) sea un solo click.
+  const atajosKilos =
+    pesoBolsa > 0 ? [pesoBolsa, ...KILOS_RAPIDOS.filter((k) => k !== pesoBolsa)] : KILOS_RAPIDOS
 
   const importe = producto && cantidad > 0 ? precioLinea(producto, cantidad) : 0
   const excedeStock =
@@ -80,7 +99,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
     <Dialog open={producto !== null} onOpenChange={(v) => !v && onCerrar()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{porKg ? "¿Cuántos kilos?" : "¿Cuántas unidades?"}</DialogTitle>
+          <DialogTitle>{fraccionable ? "¿Cuánto se lleva?" : "¿Cuántas unidades?"}</DialogTitle>
           <DialogDescription>
             {producto ? descripcionLinea(producto) : ""}
           </DialogDescription>
@@ -91,7 +110,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="cantidad">
-                  {porKg
+                  {fraccionable
                     ? unidadIngreso === "g"
                       ? "Peso"
                       : unidadIngreso === "$"
@@ -99,7 +118,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                         : "Kilos"
                     : "Unidades"}
                 </Label>
-                {porKg && (
+                {fraccionable && (
                   <div className="flex gap-0.5 rounded-md border bg-background p-0.5">
                     {(esCombo ? (["kg", "g"] as const) : (["kg", "g", "$"] as const)).map((u) => (
                       <Button
@@ -125,12 +144,12 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                 id="cantidad"
                 type="number"
                 inputMode="decimal"
-                min={porKg ? (unidadIngreso === "g" ? 1 : unidadIngreso === "$" ? 1 : 0.001) : 1}
-                step={porKg ? (unidadIngreso === "g" ? 10 : unidadIngreso === "$" ? 100 : 0.1) : 1}
+                min={fraccionable ? (unidadIngreso === "g" ? 1 : unidadIngreso === "$" ? 1 : 0.001) : 1}
+                step={fraccionable ? (unidadIngreso === "g" ? 10 : unidadIngreso === "$" ? 100 : 0.1) : 1}
                 value={valor}
                 autoFocus
                 placeholder={
-                  porKg
+                  fraccionable
                     ? unidadIngreso === "g"
                       ? "Ej: 200"
                       : unidadIngreso === "$"
@@ -146,13 +165,13 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
               />
             </div>
 
-            {porKg && (
+            {fraccionable && (
               <div className="flex flex-wrap gap-1.5">
                 {(unidadIngreso === "g"
                   ? GRAMOS_RAPIDOS
                   : unidadIngreso === "$"
                     ? MONTOS_RAPIDOS
-                    : KILOS_RAPIDOS
+                    : atajosKilos
                 ).map((n) => (
                   <Button
                     key={n}
@@ -165,7 +184,9 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                       ? `${n} g`
                       : unidadIngreso === "$"
                         ? formatCurrency(n)
-                        : `${formatCantidad(n)} kg`}
+                        : n === pesoBolsa
+                          ? `Bolsa (${formatCantidad(n)} kg)`
+                          : `${formatCantidad(n)} kg`}
                   </Button>
                 ))}
               </div>
@@ -180,7 +201,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
               </div>
               {unidadIngreso === "$" && cantidad > 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  ≈ {cantidad < 1 ? `${formatCantidad(cantidad * 1000)} g` : `${formatCantidad(cantidad)} kg`}
+                  ≈ {kgReales < 1 ? `${formatCantidad(kgReales * 1000)} g` : `${formatCantidad(kgReales)} kg`}
                 </p>
               )}
               {producto.controlaStock && (
