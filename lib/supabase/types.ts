@@ -346,6 +346,27 @@ export interface Producto {
   updatedAt?: string
 }
 
+export interface PromocionItem {
+  id?: string
+  productoId: string
+  cantidad: number
+}
+
+export interface Promocion {
+  id: string
+  nombre: string
+  descripcion?: string
+  precioFinal: number
+  activa: boolean
+  /** YYYY-MM-DD. undefined = sin fecha de inicio. */
+  desde?: string
+  /** YYYY-MM-DD. undefined = sin vencimiento. */
+  hasta?: string
+  items: PromocionItem[]
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface MovimientoStock {
   id: string
   productoId: string
