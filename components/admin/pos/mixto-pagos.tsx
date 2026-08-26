@@ -8,8 +8,16 @@ import { formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO_SIMPLES, type MedioPago } from "@/lib/supabase/types"
 
 export interface LineaPagoMixto {
+  /** Solo para el `key` de React — no viaja a la RPC. */
+  id: string
   medioPago: MedioPago
   monto: number
+}
+
+function nuevoId(): string {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`
 }
 
 interface Props {
@@ -32,27 +40,27 @@ export function MixtoPagos({ total, pagos, onCambiar }: Props) {
     const disponible = MEDIOS_PAGO_SIMPLES.find((m) => !medioUsado.has(m.id))
     onCambiar([
       ...pagos,
-      { medioPago: disponible?.id ?? "efectivo", monto: resta > 0 ? resta : 0 },
+      { id: nuevoId(), medioPago: disponible?.id ?? "efectivo", monto: resta > 0 ? resta : 0 },
     ])
   }
 
-  const actualizarLinea = (indice: number, cambio: Partial<LineaPagoMixto>) => {
-    onCambiar(pagos.map((p, i) => (i === indice ? { ...p, ...cambio } : p)))
+  const actualizarLinea = (id: string, cambio: Partial<LineaPagoMixto>) => {
+    onCambiar(pagos.map((p) => (p.id === id ? { ...p, ...cambio } : p)))
   }
 
-  const quitarLinea = (indice: number) => {
-    onCambiar(pagos.filter((_, i) => i !== indice))
+  const quitarLinea = (id: string) => {
+    onCambiar(pagos.filter((p) => p.id !== id))
   }
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/40 p-2.5">
       <Label className="text-xs text-muted-foreground">Desglose del pago</Label>
 
-      {pagos.map((pago, indice) => (
-        <div key={indice} className="flex items-center gap-1.5">
+      {pagos.map((pago) => (
+        <div key={pago.id} className="flex items-center gap-1.5">
           <select
             value={pago.medioPago}
-            onChange={(e) => actualizarLinea(indice, { medioPago: e.target.value as MedioPago })}
+            onChange={(e) => actualizarLinea(pago.id, { medioPago: e.target.value as MedioPago })}
             className="h-9 flex-1 rounded-md border bg-background px-2 text-sm"
             aria-label="Medio de pago de esta línea"
           >
@@ -66,13 +74,13 @@ export function MixtoPagos({ total, pagos, onCambiar }: Props) {
             value={pago.monto || ""}
             placeholder="Monto"
             className="w-28"
-            onChange={(e) => actualizarLinea(indice, { monto: Number(e.target.value) || 0 })}
+            onChange={(e) => actualizarLinea(pago.id, { monto: Number(e.target.value) || 0 })}
           />
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-600"
-            onClick={() => quitarLinea(indice)}
+            onClick={() => quitarLinea(pago.id)}
             aria-label="Quitar línea"
           >
             <Trash2 className="h-3.5 w-3.5" />
