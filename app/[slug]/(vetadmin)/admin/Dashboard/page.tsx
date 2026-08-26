@@ -6,12 +6,17 @@ import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
 import { getTenantConfig, getTurnosDelMes } from "@/lib/supabase/queries"
 import type { TenantConfig } from "@/lib/supabase/queries"
-import { getPlanLimits } from "@/lib/plans"
+import { getPlanLimits, planAllows } from "@/lib/plans"
 import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
 import { DashboardTour } from "@/components/admin/dashboard-tour"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   LayoutDashboard,
   Calendar,
@@ -24,6 +29,10 @@ import {
   CalendarPlus,
   Stethoscope,
   Link2,
+  ShoppingCart,
+  Package,
+  Receipt,
+  ChevronDown,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
@@ -40,6 +49,8 @@ export default function DashboardPage() {
   const { toast } = useToast()
   const [config, setConfig] = useState<TenantConfig | null>(null)
   const [turnosMes, setTurnosMes] = useState<number | null>(null)
+  const [accesosAbiertos, setAccesosAbiertos] = useState(true)
+  const [enlacesAbiertos, setEnlacesAbiertos] = useState(true)
 
   useEffect(() => {
     Promise.all([getTenantConfig(slug), getTurnosDelMes(slug)]).then(([cfg, count]) => {
@@ -58,6 +69,9 @@ export default function DashboardPage() {
   const plan = config?.plan ?? "basico"
   const pi = planInfo[plan] ?? planInfo.basico
   const maxTurnos = getPlanLimits(plan).maxTurnosMes
+
+  const puedeVenderYProductos = planAllows(plan, "productos")
+  const puedeVentas = planAllows(plan, "ventas")
 
   const sections = [
     {
@@ -105,6 +119,41 @@ export default function DashboardPage() {
       iconColor: "bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-400",
       external: false,
     },
+    ...(puedeVenderYProductos
+      ? [
+          {
+            href: `/${slug}/admin/Productos`,
+            label: "Productos",
+            desc: "Catalogo, stock y ofertas",
+            icon: Package,
+            color: "bg-orange-50 dark:bg-orange-900/20",
+            iconColor: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
+            external: false,
+          },
+        ]
+      : []),
+    ...(puedeVentas
+      ? [
+          {
+            href: `/${slug}/admin/Vender`,
+            label: "Punto de venta",
+            desc: "Mostrador para cobrar y emitir remitos",
+            icon: ShoppingCart,
+            color: "bg-cyan-50 dark:bg-cyan-900/20",
+            iconColor: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40 dark:text-cyan-400",
+            external: false,
+          },
+          {
+            href: `/${slug}/admin/Ventas`,
+            label: "Ventas",
+            desc: "Historial de remitos y metricas de caja",
+            icon: Receipt,
+            color: "bg-violet-50 dark:bg-violet-900/20",
+            iconColor: "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
+            external: false,
+          },
+        ]
+      : []),
     {
       href: `/${slug}/admin/Configuracion`,
       label: "Configuracion",
@@ -187,87 +236,107 @@ export default function DashboardPage() {
         })()}
 
         {/* Accesos rapidos */}
-        <div data-tour="accesos">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Accesos rapidos
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sections.map(({ href, label, desc, icon: Icon, color, iconColor, external }) => (
-              <Card
-                key={href}
-                className={`border hover:border-emerald-400/50 hover:shadow-md transition-all cursor-pointer ${color}`}
-                onClick={() => external ? window.open(href, "_blank") : router.push(href)}
-              >
-                <CardContent className="p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${iconColor}`}>
-                      <Icon className="h-4 w-4" />
+        <Collapsible open={accesosAbiertos} onOpenChange={setAccesosAbiertos} data-tour="accesos">
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 mb-3 group">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Accesos rapidos
+            </h2>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {sections.map(({ href, label, desc, icon: Icon, color, iconColor, external }) => (
+                <Card
+                  key={href}
+                  className={`border hover:border-emerald-400/50 hover:shadow-md transition-all cursor-pointer ${color}`}
+                  onClick={() => external ? window.open(href, "_blank") : router.push(href)}
+                  title={desc}
+                >
+                  <CardContent className="p-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${iconColor}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{label}</p>
+                        <p className="text-xs text-muted-foreground truncate">{desc}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate">{label}</p>
-                      <p className="text-xs text-muted-foreground truncate">{desc}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {external && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {external && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={e => { e.stopPropagation(); copyLink(href) }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
-                        onClick={e => { e.stopPropagation(); copyLink(href) }}
+                        className="h-6 w-6"
+                        onClick={e => {
+                          e.stopPropagation()
+                          external ? window.open(href, "_blank") : router.push(href)
+                        }}
                       >
-                        <Copy className="h-3.5 w-3.5" />
+                        {external
+                          ? <ExternalLink className="h-3 w-3" />
+                          : <LayoutDashboard className="h-3 w-3" />
+                        }
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={e => {
-                        e.stopPropagation()
-                        external ? window.open(href, "_blank") : router.push(href)
-                      }}
-                    >
-                      {external
-                        ? <ExternalLink className="h-3.5 w-3.5" />
-                        : <LayoutDashboard className="h-3.5 w-3.5" />
-                      }
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Tus enlaces */}
-        <div data-tour="enlaces">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-            <Link2 className="h-3.5 w-3.5" />
-            Tus enlaces
-          </h2>
-          <div className="space-y-2">
-            {[
-              { label: "Pagina publica", path: `/${slug}` },
-              { label: "Link para sacar turno", path: `/${slug}/turno` },
-              { label: "Panel admin", path: `/${slug}/admin/Dashboard` },
-            ].map(({ label, path }) => (
-              <div key={path} className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
-                <code className="flex-1 rounded bg-muted px-3 py-1.5 text-sm font-mono truncate">{BASE_URL}{path}</code>
-                <Button variant="outline" size="icon" className="h-8 w-8 shrink-0"
-                  onClick={() => copyLink(path)}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-                <a href={path} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
-                    <ExternalLink className="h-3.5 w-3.5" />
+        <Collapsible open={enlacesAbiertos} onOpenChange={setEnlacesAbiertos} data-tour="enlaces">
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 mb-3 group">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Link2 className="h-3.5 w-3.5" />
+              Tus enlaces
+            </h2>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="space-y-1.5">
+              {[
+                { label: "Pagina publica", path: `/${slug}`, help: "Es la que ven tus clientes al buscarte" },
+                { label: "Link para sacar turno", path: `/${slug}/turno`, help: "Mandaselo a un cliente para que reserve solo" },
+                { label: "Panel admin", path: `/${slug}/admin/Dashboard`, help: "Acceso directo a este panel" },
+                ...(puedeVenderYProductos
+                  ? [{ label: "Productos", path: `/${slug}/admin/Productos`, help: "Catalogo y stock de tu comercio" }]
+                  : []),
+                ...(puedeVentas
+                  ? [
+                      { label: "Punto de venta", path: `/${slug}/admin/Vender`, help: "Mostrador para cobrar en el momento" },
+                      { label: "Ventas", path: `/${slug}/admin/Ventas`, help: "Historial de remitos emitidos" },
+                    ]
+                  : []),
+              ].map(({ label, path, help }) => (
+                <div key={path} className="flex items-center gap-2" title={help}>
+                  <span className="text-xs text-muted-foreground w-32 shrink-0 truncate">{label}</span>
+                  <code className="flex-1 rounded bg-muted px-2.5 py-1 text-xs font-mono truncate">{BASE_URL}{path}</code>
+                  <Button variant="outline" size="icon" className="h-7 w-7 shrink-0"
+                    onClick={() => copyLink(path)}>
+                    <Copy className="h-3 w-3" />
                   </Button>
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
+                  <a href={path} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon" className="h-7 w-7 shrink-0">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </a>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Graficos */}
         <div data-tour="metricas">

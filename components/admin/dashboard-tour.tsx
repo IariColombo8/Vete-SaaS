@@ -38,7 +38,7 @@ const PASOS = [
     element: '[data-tour="comercio"]',
     popover: {
       title: "Comercio",
-      description: "Acá vendés en el mostrador, cargás stock de productos, revisás tus ventas y controlás la caja.",
+      description: "Vender: cobrás en el mostrador y emitís el remito. Productos: cargás tu catálogo y controlás el stock. Ventas: revisás el historial de remitos. Caja: abrís, arqueás y cerrás la caja del día.",
     },
   },
   {
