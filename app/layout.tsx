@@ -42,10 +42,10 @@ export const metadata: Metadata = {
     description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
     images: [
       {
-        url: "/metadato.jpg",
+        url: "/metadato.png",
         width: 1200,
         height: 630,
-        alt: "VetPanel",
+        alt: "VetPanel Logo",
       },
     ],
   },
@@ -53,15 +53,11 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VetPanel — Sistema de gestión para Veterinarias",
     description: "Controlá turnos, clientes y libretas sanitarias desde un solo lugar.",
-    images: ["/metadato.jpg"],
+    images: ["/metadato.png"],
   },
   icons: {
-    icon: [
-      { url: "/icon-light.png", media: "(prefers-color-scheme: light)" },
-      { url: "/icon-dark.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/logo111.png", type: "image/png" },
-    ],
-    apple: "/logo111.png",
+    icon: [{ url: "/logo.ico" }, { url: "/logo.png", type: "image/png" }],
+    apple: "/logo.png",
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel-servitec.vercel.app"),
   alternates: { canonical: "/" },

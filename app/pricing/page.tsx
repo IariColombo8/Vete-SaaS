@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     siteName: "VetPanel",
     title: "Precios y planes — VetPanel",
     description: "Planes simples y transparentes para tu veterinaria. Empezá gratis.",
-    images: [{ url: "/metadato.jpg", width: 1200, height: 630, alt: "VetPanel" }],
+    images: [{ url: "/metadato.png", width: 1200, height: 630, alt: "VetPanel Logo" }],
   },
 }
 

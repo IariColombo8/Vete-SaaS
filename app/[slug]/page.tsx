@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     config.descripcion ||
     config.slogan ||
     `Reservá turnos online en ${nombre}. Gestión veterinaria con VetPanel.`
-  const ogImage = config.fotosHero?.[0] || config.logo || `${APP_URL}/metadato.jpg`
+  const ogImage = config.fotosHero?.[0] || config.logo || `${APP_URL}/metadato.png`
   const url = `${APP_URL}/${slug}`
 
   return {
