@@ -13,7 +13,7 @@ import { getMetricasVentas, getVentas, type MetricasVentas } from "@/lib/supabas
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { formatCurrency } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
-import type { Venta } from "@/lib/supabase/types"
+import { MEDIOS_PAGO, type MedioPago, type Venta } from "@/lib/supabase/types"
 
 interface Props {
   tenantId: string
@@ -60,6 +60,7 @@ function rangoFechas(rango: Rango): { desde: string; hasta: string } {
 export function VentasManagement({ tenantId }: Props) {
   const [vista, setVista] = useState<Vista>("historial")
   const [rango, setRango] = useState<Rango>("hoy")
+  const [filtroMedio, setFiltroMedio] = useState<MedioPago | "todos">("todos")
   const [metricas, setMetricas] = useState<MetricasVentas | null>(null)
   const [ventas, setVentas] = useState<Venta[]>([])
   const [cargando, setCargando] = useState(true)
@@ -72,7 +73,12 @@ export function VentasManagement({ tenantId }: Props) {
 
     Promise.all([
       getMetricasVentas(tenantId, desde, hasta),
-      getVentas(tenantId, { desde, hasta, porPagina: 100 }),
+      getVentas(tenantId, {
+        desde,
+        hasta,
+        porPagina: 100,
+        medioPago: filtroMedio === "todos" ? undefined : filtroMedio,
+      }),
     ])
       .then(([m, v]) => {
         setMetricas(m)
@@ -80,7 +86,7 @@ export function VentasManagement({ tenantId }: Props) {
       })
       .catch(() => toast.error("No se pudieron cargar las ventas"))
       .finally(() => setCargando(false))
-  }, [tenantId, desde, hasta])
+  }, [tenantId, desde, hasta, filtroMedio])
 
   useEffect(() => {
     cargar()
@@ -142,6 +148,18 @@ export function VentasManagement({ tenantId }: Props) {
               Dashboard
             </Button>
           </div>
+
+          <select
+            value={filtroMedio}
+            onChange={(e) => setFiltroMedio(e.target.value as MedioPago | "todos")}
+            className="h-9 rounded-md border bg-background px-2 text-sm"
+            aria-label="Filtrar por medio de pago"
+          >
+            <option value="todos">Todos los medios</option>
+            {MEDIOS_PAGO.map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
 
           <div className="flex gap-1.5">
             {RANGOS.map(({ id, label }) => (
