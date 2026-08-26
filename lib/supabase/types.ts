@@ -367,6 +367,48 @@ export interface Promocion {
   updatedAt?: string
 }
 
+export type SorteoEstado = "borrador" | "activo" | "finalizado"
+
+export interface SorteoPremio {
+  id?: string
+  orden: number
+  nombre: string
+  descripcion?: string
+  fotoUrl?: string
+}
+
+export interface SorteoGanador {
+  premioId: string
+  clienteId: string
+  clienteNombre: string
+  ventaId: string
+  ventaNumero: number
+  sorteadoEn: string
+}
+
+export interface Sorteo {
+  id: string
+  nombre: string
+  descripcion?: string
+  fotoUrl?: string
+  desde: string
+  hasta: string
+  estado: SorteoEstado
+  premios: SorteoPremio[]
+  ganadores: SorteoGanador[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** Un cliente y cuántas ventas (= chances) hizo dentro del rango del sorteo. */
+export interface ParticipanteSorteo {
+  clienteId: string
+  clienteNombre: string
+  chances: number
+  /** IDs de las ventas que dieron esas chances, para sortear una al azar como "ganadora". */
+  ventaIds: string[]
+}
+
 export interface MovimientoStock {
   id: string
   productoId: string
