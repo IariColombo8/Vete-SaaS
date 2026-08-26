@@ -4,6 +4,7 @@ import {
   agregarAlCarrito,
   cambiarCantidad,
   itemsParaRPC,
+  pctRecargoDe,
   presentacionDe,
   quitarDelCarrito,
   SIN_DESCUENTO,
@@ -280,6 +281,27 @@ describe("totalesCarrito con recargo", () => {
     const totales = totalesCarrito(carrito, SIN_DESCUENTO, 15)
     // 333 * 1.15 = 382.95
     expect(totales.total).toBe(382.95)
+  })
+})
+
+describe("pctRecargoDe", () => {
+  it("usa recargoPct para débito", () => {
+    expect(pctRecargoDe("debito", 5, 1, {})).toBe(5)
+  })
+
+  it("usa el recargo de la cantidad de cuotas elegida para crédito", () => {
+    expect(pctRecargoDe("credito", 5, 6, { 1: 0, 6: 20 })).toBe(20)
+  })
+
+  it("da 0 si la cuota elegida no está en el mapa", () => {
+    expect(pctRecargoDe("credito", 5, 9, { 1: 0, 6: 20 })).toBe(0)
+  })
+
+  it("da 0 para cualquier otro medio de pago", () => {
+    expect(pctRecargoDe("efectivo", 5, 1, {})).toBe(0)
+    expect(pctRecargoDe("transferencia", 5, 1, {})).toBe(0)
+    expect(pctRecargoDe("mixto", 5, 1, {})).toBe(0)
+    expect(pctRecargoDe("cuenta_corriente", 5, 1, {})).toBe(0)
   })
 })
 

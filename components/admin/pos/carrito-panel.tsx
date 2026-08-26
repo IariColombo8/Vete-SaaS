@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { ClienteSelector } from "./cliente-selector"
 import { MixtoPagos, type LineaPagoMixto } from "./mixto-pagos"
 import {
-  descripcionLinea, subtotalLinea, totalesCarrito,
+  descripcionLinea, pctRecargoDe, subtotalLinea, totalesCarrito,
   type Descuento, type LineaCarrito,
 } from "@/lib/ventas/carrito"
 import { formatCantidad, formatCurrency } from "@/lib/format"
@@ -70,7 +70,7 @@ export function CarritoPanel({
   const esCredito = medioPago === "credito"
   const esMixto = medioPago === "mixto"
   const esCtaCte = medioPago === "cuenta_corriente"
-  const pctAplicado = esDebito ? recargoPct : esCredito ? (recargoPorCuotas[cuotas] ?? 0) : 0
+  const pctAplicado = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
 
   const totales = totalesCarrito(carrito, descuento, pctAplicado)
   const vacio = carrito.length === 0

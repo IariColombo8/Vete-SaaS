@@ -15,6 +15,7 @@ import {
   agregarAtencion,
   cambiarCantidad,
   itemsParaRPC,
+  pctRecargoDe,
   quitarDelCarrito,
   subtotalLinea,
   totalesCarrito,
@@ -182,8 +183,7 @@ export function PosManagement({ tenantId }: Props) {
       return
     }
 
-    const pctRecargo =
-      medioPago === "debito" ? recargoPct : medioPago === "credito" ? (recargoPorCuotas[cuotas] ?? 0) : 0
+    const pctRecargo = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
 
     // `totalesCarrito` ya recorta el descuento al subtotal y aplica el
     // recargo después, así que el monto que se manda nunca deja el total en

@@ -1,4 +1,4 @@
-import type { Producto } from "@/lib/supabase/types"
+import type { MedioPago, Producto } from "@/lib/supabase/types"
 import { precioFinal, precioLinea } from "@/lib/productos/precios"
 
 /**
@@ -198,6 +198,24 @@ export function montoDescuento(subtotal: number, descuento: Descuento): number {
 
   const bruto = descuento.tipo === "porcentaje" ? (subtotal * valor) / 100 : valor
   return Math.min(round2(bruto), round2(subtotal))
+}
+
+/**
+ * Único lugar que decide qué % de recargo corresponde según el medio de pago:
+ * lo usan tanto el total que se muestra en pantalla (`CarritoPanel`) como el
+ * que efectivamente se manda a cobrar (`PosManagement.cobrar`). Si vivieran
+ * duplicados en los dos componentes, un cambio en uno y no en el otro
+ * desincroniza lo que el cliente ve del importe real de la venta.
+ */
+export function pctRecargoDe(
+  medioPago: MedioPago,
+  recargoPct: number,
+  cuotas: number,
+  recargoPorCuotas: Record<number, number>,
+): number {
+  if (medioPago === "debito") return recargoPct
+  if (medioPago === "credito") return recargoPorCuotas[cuotas] ?? 0
+  return 0
 }
 
 /**
