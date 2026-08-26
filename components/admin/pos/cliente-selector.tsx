@@ -150,7 +150,7 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
               />
             </div>
             <div className="flex justify-end gap-1.5 pt-1">
-              <Button variant="ghost" size="sm" onClick={() => setCreando(false)}>
+              <Button variant="ghost" size="sm" disabled={guardando} onClick={() => setCreando(false)}>
                 Cancelar
               </Button>
               <Button
