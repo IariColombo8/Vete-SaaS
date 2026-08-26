@@ -1,5 +1,6 @@
-import type { MedioPago, Producto } from "@/lib/supabase/types"
+import type { MedioPago, Producto, Promocion } from "@/lib/supabase/types"
 import { precioFinal, precioLinea } from "@/lib/productos/precios"
+import { descuentoPromociones } from "./promociones"
 
 /**
  * Carrito del mostrador. Puro y sin acceso a datos: acá vive la plata, así que
@@ -230,6 +231,7 @@ export function totalesCarrito(
   carrito: LineaCarrito[],
   descuento: Descuento = SIN_DESCUENTO,
   recargoPorcentaje = 0,
+  promociones: Promocion[] = [],
 ): TotalesCarrito {
   let subtotal = 0
   let sinOferta = 0
@@ -239,7 +241,11 @@ export function totalesCarrito(
     sinOferta += linea.producto.precio * linea.cantidad
   }
 
-  subtotal = round2(subtotal)
+  // El descuento de promo se resta primero, igual que las ofertas del catálogo:
+  // así el descuento manual del vendedor también se aplica sobre el precio ya combeado.
+  const descuentoPromo = descuentoPromociones(carrito, promociones)
+  subtotal = round2(subtotal - descuentoPromo)
+
   const desc = montoDescuento(subtotal, descuento)
   const baseConDescuento = Math.max(0, round2(subtotal - desc))
 

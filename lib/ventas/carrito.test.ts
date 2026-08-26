@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Producto } from "@/lib/supabase/types"
+import type { Producto, Promocion } from "@/lib/supabase/types"
 import {
   agregarAlCarrito,
   cambiarCantidad,
@@ -360,5 +360,38 @@ describe("itemsParaRPC", () => {
       precio_unitario: 1000,
       subtotal: 2500,
     })
+  })
+})
+
+describe("totalesCarrito con promociones", () => {
+  it("resta el descuento de la promocion detectada del subtotal", () => {
+    const collar = producto({ id: "collar", precio: 5000 })
+    const correa = producto({ id: "correa", precio: 3000 })
+    const carrito: LineaCarrito[] = [
+      { id: "collar", producto: collar, cantidad: 1 },
+      { id: "correa", producto: correa, cantidad: 1 },
+    ]
+    const promocion: Promocion = {
+      id: "p1",
+      nombre: "Combo",
+      precioFinal: 6500,
+      activa: true,
+      items: [
+        { productoId: "collar", cantidad: 1 },
+        { productoId: "correa", cantidad: 1 },
+      ],
+    }
+
+    const totales = totalesCarrito(carrito, undefined, 0, [promocion])
+    // 8000 de lista - 1500 de promo = 6500.
+    expect(totales.subtotal).toBe(6500)
+    expect(totales.ahorro).toBe(1500)
+  })
+
+  it("sin promociones se comporta como antes", () => {
+    const collar = producto({ id: "collar", precio: 5000 })
+    const carrito: LineaCarrito[] = [{ id: "collar", producto: collar, cantidad: 1 }]
+    const totales = totalesCarrito(carrito)
+    expect(totales.subtotal).toBe(5000)
   })
 })
