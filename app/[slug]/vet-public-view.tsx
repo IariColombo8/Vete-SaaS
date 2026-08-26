@@ -11,6 +11,10 @@ import {
   Heart, Shield, Star, Home,
 } from "lucide-react"
 import Link from "next/link"
+import { getProductosPublicados } from "@/lib/supabase/productos"
+import { normalizePlan, PLANS } from "@/lib/plans"
+import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
+import type { Producto } from "@/lib/supabase/types"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
 
@@ -274,14 +278,18 @@ export default function VetPublicPage() {
   const [config, setConfig] = useState<TenantConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [heroVisible, setHeroVisible] = useState(false)
+  const [productos, setProductos] = useState<Producto[]>([])
 
   useEffect(() => {
-    Promise.all([getTenant(slug), getTenantConfig(slug)]).then(([t, cfg]) => {
-      setExists(!!t)
-      setConfig(cfg)
-      setLoading(false)
-      requestAnimationFrame(() => setTimeout(() => setHeroVisible(true), 100))
-    })
+    Promise.all([getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug)]).then(
+      ([t, cfg, prods]) => {
+        setExists(!!t)
+        setConfig(cfg)
+        setProductos(prods)
+        setLoading(false)
+        requestAnimationFrame(() => setTimeout(() => setHeroVisible(true), 100))
+      },
+    )
   }, [slug])
 
   /* ── LOADING ── */
@@ -333,6 +341,8 @@ export default function VetPublicPage() {
   const googleMapsUrl = config?.googleMapsUrl
   const hayFotos    = fotosDesktop.length > 0 || fotosMobile.length > 0
   const muestraMapa = (modalidad === "local" || modalidad === "ambos") && googleMapsUrl
+  const tieneFeatureProductos = PLANS[normalizePlan(config?.plan)].features.productos
+  const muestraProductos = tieneFeatureProductos && productos.length > 0
 
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
@@ -513,6 +523,53 @@ export default function VetPublicPage() {
           </div>
         </div>
       </section>
+
+      {/* ╔══════════════════════════════════════════════════╗
+          ║                  PRODUCTOS                       ║
+          ╚══════════════════════════════════════════════════╝ */}
+      {muestraProductos && (
+        <section className="py-28 bg-slate-50 dark:bg-slate-900 relative">
+          <div className="container max-w-6xl mx-auto px-6 relative">
+            <Reveal>
+              <div className="text-center mb-16">
+                <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-4 py-1.5 mb-5">
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.15em]">
+                    Productos
+                  </span>
+                </div>
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-4">
+                  Todo lo que tu mascota<br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">
+                    puede necesitar
+                  </span>
+                </h2>
+              </div>
+            </Reveal>
+
+            <div className="flex flex-wrap justify-center gap-6 mb-12">
+              {productos.slice(0, 8).map((p, i) => (
+                <Reveal key={p.id} delay={i * 80} direction={i % 2 === 0 ? "left" : "right"}>
+                  <div className="w-[calc(50%-12px)] lg:w-[calc(25%-18px)]">
+                    <ProductoTarjeta producto={p} logo={logo} />
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full font-bold border-2"
+                onClick={() => router.push(`/${slug}/productos`)}
+              >
+                Ver todos los productos
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ╔══════════════════════════════════════════════════╗
           ║              HORARIOS + CONTACTO                 ║
