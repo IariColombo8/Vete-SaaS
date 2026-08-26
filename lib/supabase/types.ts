@@ -293,6 +293,18 @@ export interface Producto {
   categoria: string
   imagenUrl?: string
   precio: number
+  /**
+   * Precio de lista: lo trae la importación o la carga manual, y NUNCA lo
+   * toca "Aplicar ganancia" (esa herramienta solo recalcula `precio`). Es lo
+   * que se muestra en "Precio original" en la tabla.
+   */
+  precioLista: number
+  /**
+   * % de ganancia aplicado con "Aplicar ganancia". Al reimportar, si está
+   * cargado, el precio se recalcula con el costo nuevo y este mismo %.
+   * `undefined` = nunca se aplicó, o se editó el precio a mano después.
+   */
+  margenAplicado?: number
   /** Costo de reposición. Opcional: sin esto no se puede calcular el margen. */
   costo?: number
   stock: number

@@ -20,6 +20,7 @@ function producto(over: Partial<Producto> = {}): Producto {
     descripcion: "",
     categoria: "",
     precio: 1000,
+    precioLista: 1000,
     stock: 10,
     stockMinimo: 0,
     controlaStock: true,

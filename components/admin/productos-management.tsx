@@ -454,11 +454,6 @@ export function ProductosManagement({ tenantId }: Props) {
                 {productos.map((p) => {
                   const estado = estadoStock(p)
                   const margen = margenPct(p.precio, p.costo)
-                  // "Precio con %": el precio de lista con el margen de la columna
-                  // Margen sumado encima (Precio original × (1 + Margen/100)), no el
-                  // precio de venta tal cual — así se ve cuánto sale con esa ganancia
-                  // puesta sobre el precio base cargado.
-                  const precioConPorcentaje = margen !== null ? p.precio * (1 + margen / 100) : p.precio
                   const enOferta = tieneOferta(p)
                   const combo = comboLabel(p)
                   // Precio efectivo por unidad con la oferta puesta: en combo no hay
@@ -508,7 +503,7 @@ export function ProductosManagement({ tenantId }: Props) {
                       </TableCell>
 
                       <TableCell className="text-right">
-                        {formatCurrency(p.precio)}
+                        {formatCurrency(p.precioLista)}
                       </TableCell>
 
                       <TableCell className="hidden text-right text-xs lg:table-cell">
@@ -546,7 +541,7 @@ export function ProductosManagement({ tenantId }: Props) {
                             </span>
                           </span>
                         ) : (
-                          formatCurrency(precioConPorcentaje)
+                          formatCurrency(p.precio)
                         )}
                       </TableCell>
 

@@ -37,6 +37,8 @@ function aProducto(f: Fila): Producto {
     categoria: (f.categoria as string) ?? "",
     imagenUrl: (f.imagen_url as string) ?? undefined,
     precio: num(f.precio),
+    precioLista: f.precio_lista != null ? num(f.precio_lista) : num(f.precio),
+    margenAplicado: f.margen_aplicado != null ? num(f.margen_aplicado) : undefined,
     costo: f.costo != null ? num(f.costo) : undefined,
     stock: num(f.stock),
     stockMinimo: num(f.stock_minimo),
@@ -102,6 +104,12 @@ function aFila(input: ProductoInput): Record<string, unknown> {
   const fila: Record<string, unknown> = {
     nombre: input.nombre.trim(),
     precio: input.precio,
+    // El alta y la edición manual son la fuente del precio de lista: solo
+    // "Aplicar ganancia" (aplicarMargen) no pasa por acá y por eso nunca lo toca.
+    precio_lista: input.precio,
+    // Un precio tipeado a mano deja de ser "costo + %": se borra el margen
+    // guardado para que la próxima importación no lo recalcule por su cuenta.
+    margen_aplicado: null,
   }
   if (input.codigo !== undefined) fila.codigo = nulificar(input.codigo)
   if (input.codigoBarras !== undefined) fila.codigo_barras = nulificar(input.codigoBarras)
@@ -857,7 +865,13 @@ export async function aplicarMargen(
       lote.map((f) =>
         supabase
           .from("productos")
-          .update({ precio: calcularPrecioConMargen(f.costo as number, porcentaje) })
+          .update({
+            precio: calcularPrecioConMargen(f.costo as number, porcentaje),
+            // Se guarda para que una futura reimportación de Excel recalcule
+            // el precio con el costo nuevo y este mismo %, en vez de pisarlo
+            // con el precio crudo de esa lista.
+            margen_aplicado: porcentaje,
+          })
           .eq("tenant_id", tenantId)
           .eq("id", f.id),
       ),
