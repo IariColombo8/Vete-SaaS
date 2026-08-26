@@ -350,17 +350,29 @@ export interface CambioPrecio {
 
 // ── Ventas, caja y remitos ──
 
-export type MedioPago = "efectivo" | "debito" | "credito" | "transferencia"
+export type MedioPago =
+  | "efectivo" | "transferencia" | "mixto"
+  | "debito" | "credito" | "cuenta_corriente"
 export type VentaEstado = "completada" | "anulada"
 export type CajaEstado = "abierta" | "cerrada"
 
-/** Etiquetas para la UI. Un solo lugar, así el POS y el historial no divergen. */
+/**
+ * Etiquetas para la UI. Un solo lugar, así el POS y el historial no divergen.
+ * El orden es el que usa la grilla de 3 columnas del mostrador: no hace falta
+ * un array de layout aparte.
+ */
 export const MEDIOS_PAGO: { id: MedioPago; label: string }[] = [
   { id: "efectivo", label: "Efectivo" },
+  { id: "transferencia", label: "Transferencia" },
+  { id: "mixto", label: "Mixto" },
   { id: "debito", label: "Débito" },
   { id: "credito", label: "Crédito" },
-  { id: "transferencia", label: "Transferencia" },
+  { id: "cuenta_corriente", label: "Cta Cte" },
 ]
+
+/** Medios de pago válidos para un cobro (excluye mixto y cuenta_corriente). */
+export const MEDIOS_PAGO_SIMPLES: { id: MedioPago; label: string }[] =
+  MEDIOS_PAGO.filter((m) => m.id !== "mixto" && m.id !== "cuenta_corriente")
 
 /**
  * Una línea de la venta. Los datos del producto van copiados, no referenciados:
@@ -396,14 +408,22 @@ export interface Venta {
   estado: VentaEstado
   subtotal: number
   descuento: number
+  /** Recargo de débito/crédito, ya en pesos y sumado al total. */
+  recargo: number
+  /** Cantidad de cuotas, solo cuando medioPago === "credito". */
+  cuotas?: number
   total: number
   anuladaAt?: string
   anuladaMotivo?: string
   vendedorNombre?: string
   observaciones: string
   createdAt: string
+  /** Un cobro de cuenta corriente, no una venta de productos (sin items). */
+  esPagoCtaCte: boolean
   /** Solo viene cuando se pide el detalle completo. */
   items?: VentaItem[]
+  /** Desglose de "mixto". Solo viene cuando se pide el detalle completo. */
+  pagos?: { medioPago: MedioPago; monto: number }[]
 }
 
 export interface Caja {
