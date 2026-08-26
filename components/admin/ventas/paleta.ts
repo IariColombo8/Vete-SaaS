@@ -20,6 +20,8 @@ const CLARO = {
   debito: "#6366f1",
   credito: "#f59e0b",
   transferencia: "#ec4899",
+  mixto: "#f97316",
+  cuenta_corriente: "#e11d48",
 } as const
 
 const OSCURO = {
@@ -27,6 +29,8 @@ const OSCURO = {
   debito: "#6366f1",
   credito: "#d97706",
   transferencia: "#db2777",
+  mixto: "#ea580c",
+  cuenta_corriente: "#be123c",
 } as const
 
 export type PaletaMedios = Record<MedioPago, string>
