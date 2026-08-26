@@ -59,7 +59,7 @@ export default function DashboardPage() {
     })
   }, [slug])
 
-  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 
   function copyLink(path: string) {
     navigator.clipboard.writeText(`${BASE_URL}${path}`)

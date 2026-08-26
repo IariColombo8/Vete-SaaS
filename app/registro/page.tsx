@@ -337,20 +337,20 @@ export default function RegistroPage() {
                       {slugStatus === "checking" && (
                         <>
                           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                          <span className="text-muted-foreground font-mono">vetpanel.app/{slugPreview}</span>
+                          <span className="text-muted-foreground font-mono">vetpanel.com.ar/{slugPreview}</span>
                         </>
                       )}
                       {slugStatus === "available" && (
                         <>
                           <Check className="h-3 w-3 text-emerald-600" />
-                          <span className="font-mono text-emerald-600">vetpanel.app/{slugPreview}</span>
+                          <span className="font-mono text-emerald-600">vetpanel.com.ar/{slugPreview}</span>
                           <span className="text-emerald-600">— disponible</span>
                         </>
                       )}
                       {slugStatus === "taken" && (
                         <>
                           <XCircle className="h-3 w-3 text-destructive" />
-                          <span className="font-mono text-destructive">vetpanel.app/{slugPreview}</span>
+                          <span className="font-mono text-destructive">vetpanel.com.ar/{slugPreview}</span>
                           <span className="text-destructive">— ya está en uso</span>
                         </>
                       )}

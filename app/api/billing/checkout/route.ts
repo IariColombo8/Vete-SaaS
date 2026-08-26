@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "El plan seleccionado no es pago" }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
   try {
     const suscripcion = await crearSuscripcion({
       tenantId,

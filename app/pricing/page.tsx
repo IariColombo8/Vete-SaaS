@@ -4,7 +4,7 @@ import { Check, Minus, ArrowRight } from "lucide-react"
 import { PricingCards } from "@/components/pricing/pricing-cards"
 import { PLAN_LIST, type Feature } from "@/lib/plans"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 
 export const metadata: Metadata = {
   title: "Precios y planes — VetPanel",

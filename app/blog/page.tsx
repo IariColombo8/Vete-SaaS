@@ -3,7 +3,7 @@ import Link from "next/link"
 import { getAllPosts } from "@/lib/blog/posts"
 import { ArrowRight } from "lucide-react"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 
 export const metadata: Metadata = {
   title: "Blog — VetPanel",

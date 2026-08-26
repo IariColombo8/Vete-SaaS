@@ -64,7 +64,7 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 NEXT_PUBLIC_FIREBASE_APP_ID
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-NEXT_PUBLIC_APP_URL          # URL pública del sitio, ej. https://vetpanel.app
+NEXT_PUBLIC_APP_URL          # URL pública del sitio, ej. https://www.vetpanel.com.ar
 ```
 
 ### Firebase Admin (servidor) — **necesaria para invitaciones, billing y recordatorios**

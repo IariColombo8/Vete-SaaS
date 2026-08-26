@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown"
 import { getPost, getAllSlugs } from "@/lib/blog/posts"
 import { ArrowLeft } from "lucide-react"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 
 interface Props {
   params: Promise<{ slug: string }>

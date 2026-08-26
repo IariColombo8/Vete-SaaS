@@ -22,7 +22,7 @@ function AppFrame({ children }: { children: ReactNode }) {
         <span className="h-3 w-3 rounded-full bg-[#14b8a6]" />
         <div className="ml-3 flex flex-1 items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-[11px] text-ink-muted">
           <Paw className="h-3 w-3 text-coral" />
-          vetpanel.app/mi-clinica
+          vetpanel.com.ar/mi-clinica
         </div>
       </div>
       <div className="p-5 sm:p-6">{children}</div>

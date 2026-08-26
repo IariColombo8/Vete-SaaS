@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import VetPublicView from "./vet-public-view"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://vetpanel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 
 interface Props {
   params: Promise<{ slug: string }>
