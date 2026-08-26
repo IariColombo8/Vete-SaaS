@@ -75,7 +75,7 @@ export function DashboardTour({ slug }: { slug: string }) {
         steps: PASOS,
         onDestroyed: () => {
           localStorage.setItem(key, "done")
-          if (forzado) router.replace(`/${slug}/admin`)
+          if (forzado) router.replace(`/${slug}/admin/Dashboard`)
         },
       })
       d.drive()

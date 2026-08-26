@@ -36,7 +36,7 @@ export default function OnboardingPage() {
         }),
       ])
       toast({ title: "¡Listo!", description: "Tu veterinaria quedó configurada. Ajustá lo que quieras en Configuración." })
-      router.push(`/${slug}/admin`)
+      router.push(`/${slug}/admin/Dashboard`)
     } catch (error) {
       console.error("Error aplicando template:", error)
       toast({ title: "Error", description: "No se pudo guardar. Intentá de nuevo.", variant: "destructive" })
@@ -51,7 +51,7 @@ export default function OnboardingPage() {
     } catch {
       // best-effort
     }
-    router.push(`/${slug}/admin`)
+    router.push(`/${slug}/admin/Dashboard`)
   }
 
   return (

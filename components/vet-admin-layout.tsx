@@ -26,16 +26,19 @@ interface Props {
 
 /** Mapea una ruta del panel a su sección para el control de acceso. */
 function sectionFromPath(pathname: string, slug: string): AdminSection | null {
-  if (pathname.startsWith(`/${slug}/configuracion`)) return "configuracion"
-  if (pathname.startsWith(`/${slug}/turnoadmin`)) return "turnos"
-  if (pathname.startsWith(`/${slug}/libretasanitaria`)) return "libreta"
-  if (pathname.startsWith(`/${slug}/clientes`)) return "clientes"
-  if (pathname.startsWith(`/${slug}/productos`)) return "productos"
-  if (pathname.startsWith(`/${slug}/pos`)) return "pos"
-  if (pathname.startsWith(`/${slug}/ventas`)) return "ventas"
-  if (pathname.startsWith(`/${slug}/caja`)) return "caja"
-  if (pathname.startsWith(`/${slug}/cuenta-corriente`)) return "cuentaCorriente"
-  if (pathname.startsWith(`/${slug}/admin`)) return "dashboard"
+  const base = `/${slug}/admin/`
+  if (!pathname.startsWith(base)) return null
+  const resto = pathname.slice(base.length)
+  if (resto.startsWith("Configuracion")) return "configuracion"
+  if (resto.startsWith("Turnos")) return "turnos"
+  if (resto.startsWith("Libreta")) return "libreta"
+  if (resto.startsWith("Clientes")) return "clientes"
+  if (resto.startsWith("Productos")) return "productos"
+  if (resto.startsWith("Vender")) return "pos"
+  if (resto.startsWith("Ventas")) return "ventas"
+  if (resto.startsWith("Caja")) return "caja"
+  if (resto.startsWith("CuentaCorriente")) return "cuentaCorriente"
+  if (resto.startsWith("Dashboard")) return "dashboard"
   return null
 }
 
@@ -80,7 +83,7 @@ export function VetAdminLayout({ slug, children }: Props) {
       // Guard de sección: empleado no accede a configuración
       const section = sectionFromPath(pathname, slug)
       if (section && !canAccessSection(userRole, section)) {
-        router.push(`/${slug}/admin`)
+        router.push(`/${slug}/admin/Dashboard`)
         return
       }
       setVetNombre(config?.nombre || slug)
@@ -127,7 +130,7 @@ export function VetAdminLayout({ slug, children }: Props) {
               variant="ghost"
               size="sm"
               className="gap-1.5 text-muted-foreground"
-              onClick={() => router.push(`/${slug}/admin?tour=1`)}
+              onClick={() => router.push(`/${slug}/admin/Dashboard?tour=1`)}
             >
               <HelpCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Ayuda</span>

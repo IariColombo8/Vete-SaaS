@@ -271,12 +271,10 @@ export function Navbar() {
   if (pathname.startsWith("/superadmin")) return <SuperAdminNavbar />
 
   // Vet admin pages have their own nav via VetAdminLayout.
-  // Mantener sincronizado con las rutas de `app/[slug]/(vetadmin)/`: si falta
-  // una, el navbar público se dibuja encima del panel.
-  const isVetAdmin =
-    /^\/[^/]+(\/admin|\/turnoadmin|\/libretasanitaria|\/clientes|\/productos|\/pos|\/ventas|\/caja|\/cuenta-corriente|\/configuracion|\/onboarding)/.test(
-      pathname,
-    )
+  // Todas las rutas del panel viven bajo /[slug]/admin/ — si se agrega una
+  // ruta admin nueva bajo ese prefijo, no hace falta tocar este regex.
+  const isVetAdmin = /^\/[^/]+\/admin(\/|$)/.test(pathname) ||
+    /^\/[^/]+\/onboarding/.test(pathname)
   if (isVetAdmin) return null
 
   // Public vet page has its own full-page hero/footer design

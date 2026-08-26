@@ -39,28 +39,28 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
     {
       titulo: "Clínica",
       items: [
-        { href: `/${slug}/admin`,            label: "Dashboard", icon: LayoutDashboard, section: "dashboard" },
-        { href: `/${slug}/turnoadmin`,       label: "Turnos",    icon: Calendar,        section: "turnos" },
-        { href: `/${slug}/libretasanitaria`, label: "Libreta",   icon: FileText,        section: "libreta" },
-        { href: `/${slug}/clientes`,         label: "Clientes",  icon: Users,           section: "clientes" },
+        { href: `/${slug}/admin/Dashboard`,       label: "Dashboard", icon: LayoutDashboard, section: "dashboard" },
+        { href: `/${slug}/admin/Turnos`,          label: "Turnos",    icon: Calendar,        section: "turnos" },
+        { href: `/${slug}/admin/Libreta`,         label: "Libreta",   icon: FileText,        section: "libreta" },
+        { href: `/${slug}/admin/Clientes`,        label: "Clientes",  icon: Users,           section: "clientes" },
       ],
     },
     {
       titulo: "Comercio",
       tour: "comercio",
       items: [
-        { href: `/${slug}/pos`,             label: "Vender",     icon: ShoppingCart, section: "pos" },
-        { href: `/${slug}/productos`,       label: "Productos",  icon: Package,      section: "productos" },
-        { href: `/${slug}/ventas`,          label: "Ventas",     icon: Receipt,      section: "ventas" },
-        { href: `/${slug}/caja`,            label: "Caja",       icon: Wallet,       section: "caja" },
-        { href: `/${slug}/cuenta-corriente`, label: "Cta Cte",   icon: Landmark,     section: "cuentaCorriente" },
+        { href: `/${slug}/admin/Vender`,          label: "Vender",     icon: ShoppingCart, section: "pos" },
+        { href: `/${slug}/admin/Productos`,       label: "Productos",  icon: Package,      section: "productos" },
+        { href: `/${slug}/admin/Ventas`,          label: "Ventas",     icon: Receipt,      section: "ventas" },
+        { href: `/${slug}/admin/Caja`,            label: "Caja",       icon: Wallet,       section: "caja" },
+        { href: `/${slug}/admin/CuentaCorriente`, label: "Cta Cte",    icon: Landmark,     section: "cuentaCorriente" },
       ],
     },
     {
       titulo: "Cuenta",
       tour: "cuenta",
       items: [
-        { href: `/${slug}/configuracion`, label: "Configuración", icon: Settings, section: "configuracion" },
+        { href: `/${slug}/admin/Configuracion`, label: "Configuración", icon: Settings, section: "configuracion" },
       ],
     },
   ]
@@ -91,7 +91,7 @@ export function VetAdminSidebar({ slug, vetNombre, role, onSalir }: Props) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip={vetNombre || slug}>
-              <Link href={`/${slug}/admin`} onClick={cerrarEnMobile}>
+              <Link href={`/${slug}/admin/Dashboard`} onClick={cerrarEnMobile}>
                 <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
                   <Stethoscope className="size-4 text-emerald-600 dark:text-emerald-400" />
                 </div>

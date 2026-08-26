@@ -79,7 +79,7 @@ export default function DashboardPage() {
       external: true,
     },
     {
-      href: `/${slug}/turnoadmin`,
+      href: `/${slug}/admin/Turnos`,
       label: "Administrar turnos",
       desc: "Gestiona y aprueba turnos",
       icon: Calendar,
@@ -88,7 +88,7 @@ export default function DashboardPage() {
       external: false,
     },
     {
-      href: `/${slug}/libretasanitaria`,
+      href: `/${slug}/admin/Libreta`,
       label: "Libreta sanitaria",
       desc: "Historial clinico de mascotas",
       icon: FileText,
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       external: false,
     },
     {
-      href: `/${slug}/clientes`,
+      href: `/${slug}/admin/Clientes`,
       label: "Clientes",
       desc: "Duenos y mascotas registrados",
       icon: Users,
@@ -106,7 +106,7 @@ export default function DashboardPage() {
       external: false,
     },
     {
-      href: `/${slug}/configuracion`,
+      href: `/${slug}/admin/Configuracion`,
       label: "Configuracion",
       desc: "Datos de tu clinica y turnos",
       icon: Settings,
@@ -250,7 +250,7 @@ export default function DashboardPage() {
             {[
               { label: "Pagina publica", path: `/${slug}` },
               { label: "Link para sacar turno", path: `/${slug}/turno` },
-              { label: "Panel admin", path: `/${slug}/admin` },
+              { label: "Panel admin", path: `/${slug}/admin/Dashboard` },
             ].map(({ label, path }) => (
               <div key={path} className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
@@ -271,7 +271,7 @@ export default function DashboardPage() {
 
         {/* Graficos */}
         <div data-tour="metricas">
-          <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/turnoadmin`)} />
+          <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/admin/Turnos`)} />
         </div>
       </div>
       <Toaster />
