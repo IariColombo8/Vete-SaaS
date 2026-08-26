@@ -60,9 +60,9 @@ export default function ProductosPublicosPage() {
           </h1>
         </div>
 
-        <div className="flex flex-wrap gap-6">
+        <div className="flex flex-wrap justify-center gap-6">
           {productos.map((p) => (
-            <div key={p.id} className="w-[calc(50%-12px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)]">
+            <div key={p.id} className="w-[calc(50%-12px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] xl:w-[calc(16.666%-20px)]">
               <ProductoTarjeta producto={p} logo={config?.logo} />
             </div>
           ))}
