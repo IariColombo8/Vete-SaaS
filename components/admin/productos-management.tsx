@@ -20,15 +20,14 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ProductoDialog } from "@/components/admin/productos/producto-dialog"
-import { OfertaDialog } from "@/components/admin/productos/oferta-dialog"
 import { ImportDialog } from "@/components/admin/productos/import-dialog"
 import { MargenDialog } from "@/components/admin/productos/margen-dialog"
 import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-dialog"
 import {
   getProductos, getCategorias, getStockStats, getVencimientosProximos,
   getTodosLosProductosParaExportar,
-  createProducto, updateProducto, desactivarProducto, setOferta, ajustarStock, setPublicadoEnLanding,
-  type ProductoInput, type OfertaInput, type StockStats,
+  createProducto, updateProducto, desactivarProducto, ajustarStock, setPublicadoEnLanding,
+  type ProductoInput, type StockStats,
 } from "@/lib/supabase/productos"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { descargarStockPDF } from "@/lib/productos/stock-pdf"
@@ -68,8 +67,6 @@ export function ProductosManagement({ tenantId }: Props) {
 
   const [editando, setEditando] = useState<Producto | null>(null)
   const [productoOpen, setProductoOpen] = useState(false)
-  const [ofertaDe, setOfertaDe] = useState<Producto | null>(null)
-  const [ofertaOpen, setOfertaOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [aDarDeBaja, setADarDeBaja] = useState<Producto | null>(null)
   const [exportando, setExportando] = useState(false)
@@ -164,7 +161,6 @@ export function ProductosManagement({ tenantId }: Props) {
 
   const abrirNuevo = () => { setEditando(null); setProductoOpen(true) }
   const abrirEdicion = (p: Producto) => { setEditando(p); setProductoOpen(true) }
-  const abrirOferta = (p: Producto) => { setOfertaDe(p); setOfertaOpen(true) }
 
   const guardarProducto = async (input: ProductoInput) => {
     try {
@@ -178,18 +174,6 @@ export function ProductosManagement({ tenantId }: Props) {
       await recargarTodo()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo guardar el producto")
-      throw e
-    }
-  }
-
-  const guardarOferta = async (oferta: OfertaInput) => {
-    if (!ofertaDe) return
-    try {
-      await setOferta(tenantId, ofertaDe.id, oferta)
-      toast.success(oferta.activa ? "Oferta aplicada" : "Oferta quitada")
-      await cargarLista()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo guardar la oferta")
       throw e
     }
   }
@@ -585,14 +569,6 @@ export function ProductosManagement({ tenantId }: Props) {
                               : <EyeOff className="h-3.5 w-3.5" />}
                           </Button>
                           <Button
-                            size="sm" variant="ghost"
-                            className={cn("h-8 px-2", enOferta && "text-emerald-600")}
-                            onClick={() => abrirOferta(p)}
-                            title="Oferta"
-                          >
-                            <Tag className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
                             size="sm" variant="ghost" className="h-8 px-2"
                             onClick={() => abrirEdicion(p)}
                             title="Editar"
@@ -649,13 +625,6 @@ export function ProductosManagement({ tenantId }: Props) {
         onOpenChange={setProductoOpen}
         onGuardar={guardarProducto}
         onAjustarStock={moverStock}
-      />
-
-      <OfertaDialog
-        producto={ofertaDe}
-        open={ofertaOpen}
-        onOpenChange={setOfertaOpen}
-        onGuardar={guardarOferta}
       />
 
       <ImportDialog
