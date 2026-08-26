@@ -445,7 +445,7 @@ export function ProductosManagement({ tenantId }: Props) {
                   <TableHead className="hidden md:table-cell">Rubro</TableHead>
                   <TableHead className="text-right">Precio original</TableHead>
                   <TableHead className="hidden text-right lg:table-cell">Margen</TableHead>
-                  <TableHead className="hidden text-right lg:table-cell">Precio con oferta</TableHead>
+                  <TableHead className="hidden text-right lg:table-cell">Precio con %</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -541,7 +541,7 @@ export function ProductosManagement({ tenantId }: Props) {
                             </span>
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          formatCurrency(p.precio)
                         )}
                       </TableCell>
 
