@@ -274,7 +274,7 @@ export function Navbar() {
   // Mantener sincronizado con las rutas de `app/[slug]/(vetadmin)/`: si falta
   // una, el navbar público se dibuja encima del panel.
   const isVetAdmin =
-    /^\/[^/]+(\/admin|\/turnoadmin|\/libretasanitaria|\/clientes|\/productos|\/pos|\/ventas|\/caja|\/configuracion|\/onboarding)/.test(
+    /^\/[^/]+(\/admin|\/turnoadmin|\/libretasanitaria|\/clientes|\/productos|\/pos|\/ventas|\/caja|\/cuenta-corriente|\/configuracion|\/onboarding)/.test(
       pathname,
     )
   if (isVetAdmin) return null
