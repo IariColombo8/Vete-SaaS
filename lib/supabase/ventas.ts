@@ -329,19 +329,47 @@ export interface ResumenCaja {
 
 export async function getResumenCaja(caja: Caja): Promise<ResumenCaja> {
   const { data } = await supabase
-    .from("ventas").select("medio_pago, total")
+    .from("ventas").select("id, medio_pago, total")
     .eq("caja_id", caja.id).eq("estado", "completada")
+
+  const ventas = (data ?? []) as Fila[]
+  const idsMixtos = ventas.filter((f) => f.medio_pago === "mixto").map((f) => f.id as string)
+
+  // La parte en efectivo de un "mixto" cuenta como efectivo: sin desglosarla,
+  // un cobro de $500 efectivo + $500 tarjeta quedaba entero afuera del cajón.
+  const efectivoPorMixto = new Map<string, number>()
+  if (idsMixtos.length > 0) {
+    const { data: pagos } = await supabase
+      .from("venta_pagos")
+      .select("venta_id, medio_pago, monto")
+      .in("venta_id", idsMixtos)
+    for (const p of (pagos ?? []) as Fila[]) {
+      const ventaId = p.venta_id as string
+      const monto = num(p.monto)
+      if (p.medio_pago === "efectivo") {
+        efectivoPorMixto.set(ventaId, (efectivoPorMixto.get(ventaId) ?? 0) + monto)
+      }
+    }
+  }
 
   const porMedio = new Map<MedioPago, number>()
   let efectivo = 0
   let otros = 0
 
-  for (const f of (data ?? []) as Fila[]) {
+  for (const f of ventas) {
     const total = num(f.total)
     const medio = f.medio_pago as MedioPago
     porMedio.set(medio, (porMedio.get(medio) ?? 0) + total)
-    if (medio === "efectivo") efectivo += total
-    else otros += total
+
+    if (medio === "mixto") {
+      const efectivoDeEstaVenta = efectivoPorMixto.get(f.id as string) ?? 0
+      efectivo += efectivoDeEstaVenta
+      otros += total - efectivoDeEstaVenta
+    } else if (medio === "efectivo") {
+      efectivo += total
+    } else {
+      otros += total
+    }
   }
 
   return {

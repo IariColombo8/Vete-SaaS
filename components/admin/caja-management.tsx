@@ -161,7 +161,13 @@ export function CajaManagement({ tenantId }: Props) {
                 icono={<Icono className="h-4 w-4" />}
                 titulo={label}
                 valor={formatCurrency(total)}
-                nota={id === "efectivo" ? `+ ${formatCurrency(caja.saldoInicial)} de apertura` : "No está en el cajón"}
+                nota={
+                  id === "efectivo"
+                    ? `+ ${formatCurrency(caja.saldoInicial)} de apertura`
+                    : id === "mixto"
+                      ? "La parte en efectivo ya está sumada arriba"
+                      : "No está en el cajón"
+                }
               />
             )
           })}
