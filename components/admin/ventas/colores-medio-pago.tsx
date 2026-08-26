@@ -6,4 +6,6 @@ export const COLOR_MEDIO_PAGO: Record<MedioPago, string> = {
   debito: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400",
   credito: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400",
   transferencia: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400",
+  mixto: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  cuenta_corriente: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400",
 }
