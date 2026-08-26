@@ -75,9 +75,10 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
       return
     }
     const kgInicial = pesoBolsa > 0 ? pesoBolsa : 0
+    const precioInicial = pesoBolsa > 0 ? precioFinal(producto) / pesoBolsa : precioFinal(producto)
     setValorKg(kgInicial > 0 ? String(kgInicial) : "")
-    setValorMonto(kgInicial > 0 && precioPorKg > 0 ? numeroLimpio(kgInicial * precioPorKg) : "")
-  }, [producto, fraccionable, pesoBolsa, precioPorKg])
+    setValorMonto(kgInicial > 0 && precioInicial > 0 ? numeroLimpio(kgInicial * precioInicial) : "")
+  }, [producto, fraccionable, pesoBolsa])
 
   const escribirKg = (texto: string) => {
     setValorKg(texto)
