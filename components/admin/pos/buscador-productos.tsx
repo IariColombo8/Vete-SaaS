@@ -74,7 +74,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
         busqueda: termino.length >= 2 ? termino : undefined,
         categoriaPrefijo: categoria ?? undefined,
         marca: marca ?? undefined,
-        porPagina: 24,
+        porPagina: 10,
       })
         .then(({ productos }) => {
           if (vigente) setResultados(productos)

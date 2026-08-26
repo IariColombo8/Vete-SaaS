@@ -1,13 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { LayoutDashboard, List, Loader2, Receipt, ShoppingBag, TrendingUp, Wallet } from "lucide-react"
+import { ChevronLeft, ChevronRight, LayoutDashboard, List, Loader2, Receipt, ShoppingBag, TrendingUp, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { HistorialVentas } from "./ventas/historial-ventas"
-import { MiniResumen } from "./ventas/mini-resumen"
 import { VentasCharts } from "./ventas/ventas-charts"
 import { getMetricasVentas, getVentas, type MetricasVentas } from "@/lib/supabase/ventas"
 import { getTenantConfig } from "@/lib/supabase/queries"
@@ -63,10 +62,14 @@ export function VentasManagement({ tenantId }: Props) {
   const [filtroMedio, setFiltroMedio] = useState<MedioPago | "todos">("todos")
   const [metricas, setMetricas] = useState<MetricasVentas | null>(null)
   const [ventas, setVentas] = useState<Venta[]>([])
+  const [totalVentas, setTotalVentas] = useState(0)
+  const [pagina, setPagina] = useState(0)
   const [cargando, setCargando] = useState(true)
   const [emisor, setEmisor] = useState<EmisorRemito>({ nombre: "" })
 
   const { desde, hasta } = useMemo(() => rangoFechas(rango), [rango])
+
+  const POR_PAGINA = 10
 
   const cargar = useCallback(() => {
     setCargando(true)
@@ -76,17 +79,25 @@ export function VentasManagement({ tenantId }: Props) {
       getVentas(tenantId, {
         desde,
         hasta,
-        porPagina: 100,
+        pagina,
+        porPagina: POR_PAGINA,
         medioPago: filtroMedio === "todos" ? undefined : filtroMedio,
       }),
     ])
       .then(([m, v]) => {
         setMetricas(m)
         setVentas(v.ventas)
+        setTotalVentas(v.total)
       })
       .catch(() => toast.error("No se pudieron cargar las ventas"))
       .finally(() => setCargando(false))
-  }, [tenantId, desde, hasta, filtroMedio])
+  }, [tenantId, desde, hasta, filtroMedio, pagina])
+
+  // Volver a la primera página cuando cambia cualquier filtro, para no quedar
+  // parado en una página que ya no existe con el nuevo recorte de datos.
+  useEffect(() => {
+    setPagina(0)
+  }, [desde, hasta, filtroMedio])
 
   useEffect(() => {
     cargar()
@@ -216,13 +227,33 @@ export function VentasManagement({ tenantId }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {!cargando && ventas.length > 0 && <MiniResumen ventas={ventas} />}
             <HistorialVentas
               ventas={ventas}
               emisor={emisor}
               cargando={cargando}
               onCambio={cargar}
             />
+            {totalVentas > POR_PAGINA && (
+              <div className="flex items-center justify-center gap-3 border-t p-3">
+                <Button
+                  variant="outline" size="icon"
+                  disabled={pagina === 0}
+                  onClick={() => setPagina((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {pagina + 1} de {Math.max(1, Math.ceil(totalVentas / POR_PAGINA))} · {totalVentas} ventas
+                </span>
+                <Button
+                  variant="outline" size="icon"
+                  disabled={(pagina + 1) * POR_PAGINA >= totalVentas}
+                  onClick={() => setPagina((p) => p + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

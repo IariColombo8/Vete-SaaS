@@ -71,8 +71,8 @@ const emptyForm = {
   domicilio: "",
 };
 
-/** Tamaño de página para la paginación cursor-based de clientes: 5 en 5, para que la carga inicial sea rápida. */
-const PAGE_SIZE = 5;
+/** Tamaño de página para la paginación cursor-based de clientes: 10 en 10, para que la carga inicial sea rápida. */
+const PAGE_SIZE = 10;
 
 function buildMapsUrl(direccion: string): string {
   if (!direccion?.trim()) return "#";

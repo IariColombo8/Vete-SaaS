@@ -41,7 +41,7 @@ import { formatCurrency, formatCantidad } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
-const POR_PAGINA = 30
+const POR_PAGINA = 10
 
 type FiltroRapido = "todos" | "stockBajo" | "agotados" | "revisar"
 
