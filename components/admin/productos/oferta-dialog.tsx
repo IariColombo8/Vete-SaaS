@@ -69,7 +69,7 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
       )
     : precioFinal({
         precio: producto.precio,
-        precioLista: producto.precioLista,
+        costo: producto.costo,
         ofertaActiva: activa,
         ofertaTipo: tipo,
         ofertaValor: valorNum,
@@ -144,11 +144,16 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
               ) : (
                 <div>
                   <Label className="mb-1 block text-xs text-muted-foreground">
-                    {tipo === "monto" ? "Descuento en pesos" : "Descuento en %"}
+                    {tipo === "monto" ? "Descuento en pesos" : "Puntos de margen a restar"}
                   </Label>
                   <Input type="number" inputMode="decimal" min={0} autoFocus
                     value={valor} onChange={(e) => setValor(e.target.value)}
-                    placeholder={tipo === "monto" ? "Ej: 500" : "Ej: 15"} />
+                    placeholder={tipo === "monto" ? "Ej: 500" : "Ej: 10"} />
+                  {tipo === "porcentaje" && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      No es % del precio: si el margen es 50% y ponés 10, el margen queda en 40%.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -210,7 +215,7 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
                 <span className="flex items-baseline gap-2">
                   {!esCombo && (
                     <span className="text-xs text-muted-foreground line-through">
-                      {formatCurrency(producto.precioLista)}
+                      {formatCurrency(producto.precio)}
                     </span>
                   )}
                   <span className="text-lg font-bold text-emerald-600">{formatCurrency(preview)}</span>

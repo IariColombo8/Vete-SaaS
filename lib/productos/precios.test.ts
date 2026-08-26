@@ -62,15 +62,25 @@ describe("precioFinal", () => {
     expect(precioFinal({ ...base, ofertaActiva: true, ofertaTipo: "monto", ofertaValor: 5000 })).toBe(0)
   })
 
-  it("descuenta sobre precioLista, no sobre precio, cuando hay margen aplicado", () => {
-    // precio (con margen) = 1200, pero la oferta tiene que descontar sobre
-    // el precio de lista (1000), no sobre el precio de venta ya marcado.
-    const conMargen = { ...base, precio: 1200, precioLista: 1000, ofertaActiva: true, ofertaTipo: "porcentaje" as const, ofertaValor: 10 }
-    expect(precioFinal(conMargen)).toBe(900)
+  it("con costo cargado, el porcentaje resta puntos al margen (no % del precio)", () => {
+    // costo 100, precio 150 → margen 50%. Oferta "10" dejaría el margen en
+    // 40%: precio = 100 × 1.40 = 140. Muy distinto de restar 10% de 150 (135).
+    const conMargen = { precio: 150, costo: 100, ofertaActiva: true, ofertaTipo: "porcentaje" as const, ofertaValor: 10 }
+    expect(precioFinal(conMargen)).toBe(140)
   })
 
-  it("sin precioLista usa precio como base (compatibilidad)", () => {
+  it("con margen 50% y oferta de 1 punto, el margen queda en 49%", () => {
+    const conMargen = { precio: 150, costo: 100, ofertaActiva: true, ofertaTipo: "porcentaje" as const, ofertaValor: 1 }
+    expect(precioFinal(conMargen)).toBe(149)
+  })
+
+  it("sin costo cargado, el porcentaje cae al descuento tradicional sobre el precio", () => {
     expect(precioFinal({ ...base, ofertaActiva: true, ofertaTipo: "porcentaje", ofertaValor: 10 })).toBe(900)
+  })
+
+  it("el monto fijo siempre resta del precio de venta, tenga costo o no", () => {
+    const conCosto = { precio: 150, costo: 100, ofertaActiva: true, ofertaTipo: "monto" as const, ofertaValor: 10 }
+    expect(precioFinal(conCosto)).toBe(140)
   })
 
   it("redondea a dos decimales", () => {

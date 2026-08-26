@@ -12,12 +12,11 @@ import type { OfertaTipo } from "@/lib/supabase/types"
 export interface ConOferta {
   precio: number
   /**
-   * Precio de lista/Excel. La oferta (monto o porcentaje) descuenta sobre
-   * este valor, no sobre `precio` — así una promoción se arma sobre el precio
-   * de referencia, sin importar qué margen esté aplicado en ese momento.
-   * `undefined` = usa `precio` como base (compatibilidad con datos viejos).
+   * Costo de reposición. Una oferta "porcentaje" resta puntos al margen
+   * sobre este valor (ver `precioFinal`); sin costo cargado no hay margen del
+   * que restar, así que cae al descuento tradicional sobre `precio`.
    */
-  precioLista?: number
+  costo?: number | null
   ofertaActiva?: boolean
   ofertaTipo?: OfertaTipo | null
   ofertaValor?: number | null
@@ -56,20 +55,30 @@ export function tieneOferta(p: ConOferta, hoy: Date = new Date()): boolean {
  *
  * En un combo no existe un precio por unidad fijo (depende de cuántas se
  * lleven), así que devuelve el de lista — para el total real usar `precioLinea`.
+ *
+ * "Monto" resta un importe fijo del precio de venta, como siempre. "Porcentaje"
+ * es distinto: no descuenta % del precio, resta esa cantidad de PUNTOS al
+ * margen sobre el costo — una oferta de "1" con margen 50% deja el margen en
+ * 49%, no el precio en 99% de lo que estaba. Sin costo cargado no hay margen
+ * del que restar puntos, así que cae al descuento tradicional sobre el precio.
  */
 export function precioFinal(p: ConOferta): number {
   if (!tieneOferta(p) || p.ofertaTipo === "combo") return round2(p.precio)
-  const base = p.precioLista ?? p.precio
   const valor = Number(p.ofertaValor) || 0
-  const bruto = p.ofertaTipo === "porcentaje" ? base * (1 - valor / 100) : base - valor
-  return round2(bruto)
+
+  if (p.ofertaTipo === "monto") return round2(p.precio - valor)
+
+  if (p.costo != null && p.costo > 0) {
+    const margenActual = ((p.precio - p.costo) / p.costo) * 100
+    return round2(p.costo * (1 + (margenActual - valor) / 100))
+  }
+  return round2(p.precio * (1 - valor / 100))
 }
 
-/** Cuánto se ahorra el cliente por unidad respecto del precio de lista. */
+/** Cuánto se ahorra el cliente por unidad respecto del precio de venta actual. */
 export function ahorroOferta(p: ConOferta): number {
   if (p.ofertaTipo === "combo") return 0
-  const base = p.precioLista ?? p.precio
-  return round2(base - precioFinal(p))
+  return round2(p.precio - precioFinal(p))
 }
 
 /**
