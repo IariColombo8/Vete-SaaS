@@ -34,7 +34,7 @@ export function HeroCta() {
     )
   }
 
-  // Logueado → botón "Ir a mi panel" + demo
+  // Logueado → botón "Ir a mi panel"
   if (user && panelHref) {
     return (
       <div className="flex flex-col sm:flex-row gap-4 items-start">
@@ -45,17 +45,11 @@ export function HeroCta() {
           <LayoutDashboard className="h-4 w-4" />
           Ir a mi panel
         </button>
-        <Link
-          href="/demo"
-          className="inline-flex items-center gap-2 rounded-2xl border border-warm-border bg-white hover:bg-cream-deep px-7 py-3.5 text-base font-semibold text-ink transition-all hover:border-coral/30"
-        >
-          Ver demo en vivo
-        </Link>
       </div>
     )
   }
 
-  // No logueado → Registrate + Ver demo
+  // No logueado → Registrate
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start">
       <Link href="/registro" onClick={() => track("hero_cta_click", { action: "registro" })}>
@@ -63,13 +57,6 @@ export function HeroCta() {
           Registrate gratis
           <ArrowRight className="h-4 w-4" />
         </button>
-      </Link>
-      <Link
-        href="/demo"
-        onClick={() => track("demo_click", { from: "hero" })}
-        className="inline-flex items-center gap-2 rounded-2xl border border-warm-border bg-white hover:bg-cream-deep px-7 py-3.5 text-base font-semibold text-ink transition-all hover:border-coral/30"
-      >
-        Ver demo en vivo
       </Link>
     </div>
   )
