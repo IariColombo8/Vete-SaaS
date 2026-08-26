@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -18,27 +18,34 @@ interface Props {
   onConfirmar: (cantidad: number) => void
 }
 
-/** Atajos de kilos: los pedidos típicos del mostrador. */
-const KILOS_RAPIDOS = [0.5, 1, 2, 3, 5, 10]
-
-/** Atajos de gramos: para pedidos chicos, donde "0,2" es menos natural que "200". */
-const GRAMOS_RAPIDOS = [100, 200, 250, 500, 750]
+/**
+ * Atajos de kilos: cubren tanto pedidos chicos (0,1 kg = 100 g, sin tener que
+ * cambiar de campo para pensar en gramos) como los pedidos grandes típicos.
+ */
+const KILOS_RAPIDOS = [0.1, 0.25, 0.5, 1, 2, 3, 5, 10]
 
 /** Atajos de montos: los pedidos típicos cuando el cliente pide "$1000 de alimento". */
 const MONTOS_RAPIDOS = [500, 1000, 1500, 2000, 3000, 5000]
 
-type UnidadIngreso = "kg" | "g" | "$"
+/** Redondea a 3 decimales y saca ceros de más, para que el campo no muestre "1.500000000004". */
+function numeroLimpio(n: number): string {
+  const redondeado = Math.round(n * 1000) / 1000
+  return redondeado > 0 ? String(redondeado) : ""
+}
 
 /**
- * Pide cuánto se lleva el cliente y muestra el importe en vivo.
+ * Pide cuánto se lleva el cliente. Dos campos siempre visibles — Kilos y
+ * Monto — que se recalculan entre sí en cualquier dirección: escribir en uno
+ * completa el otro solo, sin tener que elegir un "modo" antes de tipear.
  *
- * Es el paso clave de la venta por peso: el vendedor escribe los kilos que marcó
- * la balanza y ve el total antes de agregarlo al carrito, sin tener que hacer la
- * cuenta de cabeza.
+ * Es el paso clave de la venta por peso: el vendedor escribe los kilos que
+ * marcó la balanza (o el monto que pidió el cliente) y ve el total antes de
+ * agregarlo al carrito, sin tener que hacer la cuenta de cabeza.
  */
 export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
-  const [valor, setValor] = useState("1")
-  const [unidadIngreso, setUnidadIngreso] = useState<UnidadIngreso>("kg")
+  const [valorKg, setValorKg] = useState("")
+  const [valorMonto, setValorMonto] = useState("")
+  const [valorUnidades, setValorUnidades] = useState("1")
 
   const porKg = producto?.unidad === "kg"
   // Una bolsa cerrada con peso detectado (import de alimentos) también se
@@ -50,41 +57,43 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   // invertirse cuando hay un combo (N unidades a precio fijo) de por medio.
   const esCombo = producto ? tieneOferta(producto) && producto.ofertaTipo === "combo" : false
 
+  const precioPorKg = producto && pesoBolsa > 0 ? precioFinal(producto) / pesoBolsa : (producto ? precioFinal(producto) : 0)
+
+  /** Kilos reales → cantidad que espera el carrito (fracción de bolsa, o kilos directo). */
+  const kgACantidad = (kg: number) => (pesoBolsa > 0 ? kg / pesoBolsa : kg)
+
   // Cada vez que se abre con otro producto se reinicia: arrastrar "2,5" de la
   // venta anterior es una forma muy fácil de despachar de más. Una bolsa con
   // peso arranca en su propio peso completo — la venta más común es la bolsa
-  // entera, no una fracción — para que un simple Enter la agregue igual.
+  // entera — para que un simple Enter la agregue igual.
   useEffect(() => {
-    if (producto) {
-      setValor(pesoBolsa > 0 ? String(pesoBolsa) : porKg ? "" : "1")
-      setUnidadIngreso("kg")
+    if (!producto) return
+    setValorUnidades("1")
+    if (!fraccionable) {
+      setValorKg("")
+      setValorMonto("")
+      return
     }
-  }, [producto, porKg, pesoBolsa])
+    const kgInicial = pesoBolsa > 0 ? pesoBolsa : 0
+    setValorKg(kgInicial > 0 ? String(kgInicial) : "")
+    setValorMonto(kgInicial > 0 && precioPorKg > 0 ? numeroLimpio(kgInicial * precioPorKg) : "")
+  }, [producto, fraccionable, pesoBolsa, precioPorKg])
 
-  // El carrito espera la cantidad en la unidad del producto: kilos reales
-  // cuando se vende suelto, o fracción de bolsa (0.5 = media bolsa) cuando es
-  // una bolsa cerrada con peso. El monto en pesos no necesita distinguir los
-  // dos casos: dividir por el precio de venta ya da directamente lo que hay
-  // que cargar en cada caso (kilos en uno, fracción de bolsa en el otro).
-  const cantidad = useMemo(() => {
-    const n = Number(valor.replace(",", "."))
-    if (!Number.isFinite(n) || n <= 0) return 0
-    if (unidadIngreso === "$") {
-      const precio = producto ? precioFinal(producto) : 0
-      return precio > 0 ? n / precio : 0
-    }
-    const kg = unidadIngreso === "g" ? n / 1000 : n
-    return pesoBolsa > 0 ? kg / pesoBolsa : kg
-  }, [valor, unidadIngreso, producto, pesoBolsa])
+  const escribirKg = (texto: string) => {
+    setValorKg(texto)
+    const kg = Number(texto.replace(",", "."))
+    setValorMonto(Number.isFinite(kg) && kg > 0 && precioPorKg > 0 ? numeroLimpio(kg * precioPorKg) : "")
+  }
 
-  // Solo para mostrar el "≈" bajo el importe: cuántos kilos reales representa
-  // la cantidad calculada (que para una bolsa es una fracción, no kilos).
-  const kgReales = pesoBolsa > 0 ? cantidad * pesoBolsa : cantidad
+  const escribirMonto = (texto: string) => {
+    setValorMonto(texto)
+    const monto = Number(texto.replace(",", "."))
+    setValorKg(Number.isFinite(monto) && monto > 0 && precioPorKg > 0 ? numeroLimpio(monto / precioPorKg) : "")
+  }
 
-  // El peso de la bolsa entera va primero en los atajos, para que vender la
-  // bolsa completa (el caso más común) sea un solo click.
-  const atajosKilos =
-    pesoBolsa > 0 ? [pesoBolsa, ...KILOS_RAPIDOS.filter((k) => k !== pesoBolsa)] : KILOS_RAPIDOS
+  const cantidad = fraccionable
+    ? kgACantidad(Number(valorKg.replace(",", ".")) || 0)
+    : Number(valorUnidades.replace(",", ".")) || 0
 
   const importe = producto && cantidad > 0 ? precioLinea(producto, cantidad) : 0
   const excedeStock =
@@ -94,6 +103,11 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
     if (cantidad <= 0 || excedeStock) return
     onConfirmar(cantidad)
   }
+
+  // El peso de la bolsa entera va primero en los atajos, para que vender la
+  // bolsa completa (el caso más común) sea un solo click.
+  const atajosKilos =
+    pesoBolsa > 0 ? [pesoBolsa, ...KILOS_RAPIDOS.filter((k) => k !== pesoBolsa)] : KILOS_RAPIDOS
 
   return (
     <Dialog open={producto !== null} onOpenChange={(v) => !v && onCerrar()}>
@@ -107,89 +121,96 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
 
         {producto && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="cantidad">
-                  {fraccionable
-                    ? unidadIngreso === "g"
-                      ? "Peso"
-                      : unidadIngreso === "$"
-                        ? "Monto"
-                        : "Kilos"
-                    : "Unidades"}
-                </Label>
-                {fraccionable && (
-                  <div className="flex gap-0.5 rounded-md border bg-background p-0.5">
-                    {(esCombo ? (["kg", "g"] as const) : (["kg", "g", "$"] as const)).map((u) => (
+            {!fraccionable ? (
+              <div className="space-y-2">
+                <Label htmlFor="cantidad">Unidades</Label>
+                <Input
+                  id="cantidad"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step={1}
+                  value={valorUnidades}
+                  autoFocus
+                  placeholder="1"
+                  onChange={(e) => setValorUnidades(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmar()
+                  }}
+                  className="h-12 text-lg"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="kilos">Kilos</Label>
+                  <Input
+                    id="kilos"
+                    type="number"
+                    inputMode="decimal"
+                    min={0.001}
+                    step={0.1}
+                    value={valorKg}
+                    autoFocus
+                    placeholder="Ej: 0,1 para 100 g"
+                    onChange={(e) => escribirKg(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") confirmar()
+                    }}
+                    className="h-12 text-lg"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {atajosKilos.map((n) => (
                       <Button
-                        key={u}
+                        key={n}
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className={`h-6 px-2 text-xs ${
-                          unidadIngreso === u ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white" : ""
-                        }`}
-                        onClick={() => {
-                          setUnidadIngreso(u)
-                          setValor("")
-                        }}
+                        onClick={() => escribirKg(String(n))}
                       >
-                        {u === "kg" ? "Kilos" : u === "g" ? "Elegir peso (g)" : "Por monto ($)"}
+                        {n === pesoBolsa
+                          ? `Bolsa (${formatCantidad(n)} kg)`
+                          : n < 1
+                            ? `${formatCantidad(n * 1000)} g`
+                            : `${formatCantidad(n)} kg`}
                       </Button>
                     ))}
                   </div>
-                )}
-              </div>
-              <Input
-                id="cantidad"
-                type="number"
-                inputMode="decimal"
-                min={fraccionable ? (unidadIngreso === "g" ? 1 : unidadIngreso === "$" ? 1 : 0.001) : 1}
-                step={fraccionable ? (unidadIngreso === "g" ? 10 : unidadIngreso === "$" ? 100 : 0.1) : 1}
-                value={valor}
-                autoFocus
-                placeholder={
-                  fraccionable
-                    ? unidadIngreso === "g"
-                      ? "Ej: 200"
-                      : unidadIngreso === "$"
-                        ? "Ej: 1000"
-                        : "Ej: 2,5"
-                    : "1"
-                }
-                onChange={(e) => setValor(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") confirmar()
-                }}
-                className="h-12 text-lg"
-              />
-            </div>
+                </div>
 
-            {fraccionable && (
-              <div className="flex flex-wrap gap-1.5">
-                {(unidadIngreso === "g"
-                  ? GRAMOS_RAPIDOS
-                  : unidadIngreso === "$"
-                    ? MONTOS_RAPIDOS
-                    : atajosKilos
-                ).map((n) => (
-                  <Button
-                    key={n}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setValor(String(n))}
-                  >
-                    {unidadIngreso === "g"
-                      ? `${n} g`
-                      : unidadIngreso === "$"
-                        ? formatCurrency(n)
-                        : n === pesoBolsa
-                          ? `Bolsa (${formatCantidad(n)} kg)`
-                          : `${formatCantidad(n)} kg`}
-                  </Button>
-                ))}
-              </div>
+                {!esCombo && (
+                  <div className="space-y-2">
+                    <Label htmlFor="monto">Monto ($)</Label>
+                    <Input
+                      id="monto"
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      step={100}
+                      value={valorMonto}
+                      placeholder="Ej: 1000"
+                      onChange={(e) => escribirMonto(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") confirmar()
+                      }}
+                      className="h-12 text-lg"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {MONTOS_RAPIDOS.map((n) => (
+                        <Button
+                          key={n}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => escribirMonto(String(n))}
+                        >
+                          {formatCurrency(n)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="rounded-lg bg-muted/60 p-3">
@@ -199,11 +220,6 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
                   {formatCurrency(importe)}
                 </span>
               </div>
-              {unidadIngreso === "$" && cantidad > 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  ≈ {kgReales < 1 ? `${formatCantidad(kgReales * 1000)} g` : `${formatCantidad(kgReales)} kg`}
-                </p>
-              )}
               {producto.controlaStock && (
                 <p
                   className={`mt-1 text-xs ${excedeStock ? "font-medium text-red-600" : "text-muted-foreground"}`}
