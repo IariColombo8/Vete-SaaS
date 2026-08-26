@@ -1,14 +1,23 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnos } from "@/lib/supabase/queries"
+import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnos, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
+import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
-import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle } from "lucide-react"
+import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import Link from "next/link"
 import type React from "react"
+
+interface ActividadTenant {
+  turnos: number
+  ventas: number
+  productos: number
+  movimientosStock: number
+}
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number | string; color: string }) {
   return (
@@ -41,6 +50,9 @@ export default function SuperAdminPage() {
   const [turnosPorSlug, setTurnosPorSlug] = useState<Record<string, number>>({})
   const [loading, setLoading]         = useState(true)
   const [updating, setUpdating]       = useState<string | null>(null)
+  const [actividadTenant, setActividadTenant] = useState<TenantFull | null>(null)
+  const [actividad, setActividad]     = useState<ActividadTenant | null>(null)
+  const [actividadLoading, setActividadLoading] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -93,6 +105,24 @@ export default function SuperAdminPage() {
     await updateTenantConfig(tenant.slug, { trialExpiresAt: null })
     setTenants(prev => prev.map(t => t.slug === tenant.slug ? { ...t, trialExpiresAt: null } : t))
     setUpdating(null)
+  }
+
+  async function handleVerActividad(tenant: TenantFull) {
+    setActividadTenant(tenant)
+    setActividad(null)
+    setActividadLoading(true)
+    const [ventasPagina, productosPagina, movimientosStock] = await Promise.all([
+      getVentas(tenant.slug, { porPagina: 1 }),
+      getProductos(tenant.slug, { porPagina: 1, incluirInactivos: true }),
+      getMovimientosCount(tenant.slug),
+    ])
+    setActividad({
+      turnos: turnosPorSlug[tenant.slug] ?? 0,
+      ventas: ventasPagina.total,
+      productos: productosPagina.total,
+      movimientosStock,
+    })
+    setActividadLoading(false)
   }
 
   return (
@@ -209,6 +239,11 @@ export default function SuperAdminPage() {
                             <div className="flex flex-col gap-1">
                               <span className={`text-xs font-mono ${new Date(t.trialExpiresAt) < new Date() ? "text-destructive" : "text-muted-foreground"}`}>
                                 {new Date(t.trialExpiresAt).toLocaleDateString("es-AR")}
+                                {t.createdAt && (
+                                  <span className="text-muted-foreground/70">
+                                    {" "}· creada {new Date(t.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                )}
                               </span>
                               <div className="flex gap-1">
                                 <Button
@@ -228,13 +263,29 @@ export default function SuperAdminPage() {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">
+                              —
+                              {t.createdAt && (
+                                <span className="text-muted-foreground/70">
+                                  {" "}· creada {new Date(t.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              )}
+                            </span>
                           )}
                         </td>
 
                         {/* Acciones */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7"
+                              onClick={() => handleVerActividad(t)}
+                            >
+                              <Activity className="h-3 w-3 mr-1" />
+                              Actividad
+                            </Button>
                             <Button
                               variant={isPaused ? "outline" : "ghost"}
                               size="sm"
@@ -341,6 +392,42 @@ export default function SuperAdminPage() {
           </p>
         </section>
       </div>
+
+      {/* Modal de actividad */}
+      <Dialog open={!!actividadTenant} onOpenChange={(open) => { if (!open) setActividadTenant(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Actividad de {actividadTenant?.nombre ?? actividadTenant?.slug}</DialogTitle>
+            <DialogDescription>
+              Movimientos registrados por esta veterinaria en la plataforma.
+            </DialogDescription>
+          </DialogHeader>
+          {actividadLoading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Cargando...
+            </div>
+          ) : actividad ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border p-4">
+                <p className="text-2xl font-extrabold">{actividad.turnos}</p>
+                <p className="text-xs text-muted-foreground mt-1">Turnos creados</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-2xl font-extrabold">{actividad.ventas}</p>
+                <p className="text-xs text-muted-foreground mt-1">Ventas registradas</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-2xl font-extrabold">{actividad.productos}</p>
+                <p className="text-xs text-muted-foreground mt-1">Productos cargados</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-2xl font-extrabold">{actividad.movimientosStock}</p>
+                <p className="text-xs text-muted-foreground mt-1">Movimientos de stock</p>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

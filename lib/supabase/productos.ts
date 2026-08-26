@@ -662,6 +662,20 @@ export async function getMovimientos(
   }))
 }
 
+/** Cantidad total de movimientos de stock del tenant (para el panel de super admin). */
+export async function getMovimientosCount(tenantId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("stock_movimientos")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+
+  if (error) {
+    console.error("Error contando movimientos de stock:", error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
 // ── Auditoría de precios ──
 
 /**
