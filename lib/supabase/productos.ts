@@ -51,6 +51,7 @@ function aProducto(f: Fila): Producto {
     ofertaTipo: (f.oferta_tipo as OfertaTipo) ?? undefined,
     ofertaValor: num(f.oferta_valor),
     ofertaCantidad: f.oferta_cantidad != null ? num(f.oferta_cantidad) : undefined,
+    ofertaHasta: (f.oferta_hasta as string) ?? undefined,
     activo: (f.activo as boolean) ?? true,
     revisar: (f.revisar as boolean) ?? false,
     publicadoEnLanding: (f.publicado_en_landing as boolean) ?? false,
@@ -150,6 +151,8 @@ export interface ProductosFiltro {
   soloStockBajo?: boolean
   soloAgotados?: boolean
   soloRevisar?: boolean
+  /** Solo los que tienen oferta de catálogo activa (no filtra por vencimiento). */
+  soloOferta?: boolean
   /** Por defecto se ocultan los productos dados de baja. */
   incluirInactivos?: boolean
   pagina?: number
@@ -192,6 +195,7 @@ export async function getProductos(
   if (filtro.categoriaPrefijo) q = q.ilike("categoria", `${filtro.categoriaPrefijo}%`)
   if (filtro.marca) q = q.eq("marca", filtro.marca)
   if (filtro.soloRevisar) q = q.eq("revisar", true)
+  if (filtro.soloOferta) q = q.eq("oferta_activa", true)
 
   // `soloAgotados` es más específico que `soloStockBajo`, así que gana.
   // `stock_bajo` es una columna generada en la base (ver 004_productos.sql).
@@ -336,10 +340,11 @@ export interface StockStats {
   stockBajo: number
   agotados: number
   revisar: number
+  enOferta: number
 }
 
 /**
- * Contadores de las tarjetas. Son 4 `count` sin traer filas: más barato que
+ * Contadores de las tarjetas. Son `count` sin traer filas: más barato que
  * bajar el catálogo entero para contarlo en el navegador.
  */
 export async function getStockStats(tenantId: string): Promise<StockStats> {
@@ -350,11 +355,12 @@ export async function getStockStats(tenantId: string): Promise<StockStats> {
       .eq("tenant_id", tenantId)
       .eq("activo", true)
 
-  const [total, bajo, agotados, revisar] = await Promise.all([
+  const [total, bajo, agotados, revisar, enOferta] = await Promise.all([
     base(),
     base().eq("stock_bajo", true).gt("stock", 0),
     base().eq("controla_stock", true).lte("stock", 0),
     base().eq("revisar", true),
+    base().eq("oferta_activa", true),
   ])
 
   return {
@@ -362,6 +368,7 @@ export async function getStockStats(tenantId: string): Promise<StockStats> {
     stockBajo: bajo.count ?? 0,
     agotados: agotados.count ?? 0,
     revisar: revisar.count ?? 0,
+    enOferta: enOferta.count ?? 0,
   }
 }
 
@@ -542,6 +549,8 @@ export interface OfertaInput {
   tipo?: OfertaTipo
   valor?: number
   cantidad?: number
+  /** YYYY-MM-DD. `undefined`/`null` = sin vencimiento, hasta que se saque a mano. */
+  hasta?: string | null
 }
 
 export async function setOferta(
@@ -555,10 +564,11 @@ export async function setOferta(
         oferta_tipo: oferta.tipo ?? "monto",
         oferta_valor: oferta.valor ?? 0,
         oferta_cantidad: oferta.tipo === "combo" ? (oferta.cantidad ?? null) : null,
+        oferta_hasta: oferta.hasta ?? null,
       }
     : // Al desactivar se limpia todo: una oferta apagada con valores viejos
       // reaparece intacta si alguien vuelve a prender el switch sin mirar.
-      { oferta_activa: false, oferta_tipo: null, oferta_valor: 0, oferta_cantidad: null }
+      { oferta_activa: false, oferta_tipo: null, oferta_valor: 0, oferta_cantidad: null, oferta_hasta: null }
 
   const { error } = await supabase
     .from("productos").update(fila)

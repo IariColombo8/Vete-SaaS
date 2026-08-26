@@ -15,6 +15,8 @@ export interface ConOferta {
   ofertaTipo?: OfertaTipo | null
   ofertaValor?: number | null
   ofertaCantidad?: number | null
+  /** YYYY-MM-DD. `null`/`undefined` = sin vencimiento, dura hasta que se saque a mano. */
+  ofertaHasta?: string | null
 }
 
 /** Redondea a 2 decimales y nunca devuelve negativo. */
@@ -24,8 +26,14 @@ function round2(n: number): number {
 }
 
 /** ¿El producto tiene una oferta activa y además aplicable? */
-export function tieneOferta(p: ConOferta): boolean {
+export function tieneOferta(p: ConOferta, hoy: Date = new Date()): boolean {
   if (!p.ofertaActiva || !p.ofertaTipo) return false
+  if (p.ofertaHasta) {
+    // Vence al final del día indicado: cargar "hasta el 20" tiene que incluir
+    // todo el 20, no cortar la oferta a la medianoche del 19.
+    const vence = new Date(`${p.ofertaHasta}T23:59:59.999`)
+    if (!Number.isNaN(vence.getTime()) && hoy.getTime() > vence.getTime()) return false
+  }
   if (p.ofertaTipo === "combo") {
     return Number(p.ofertaCantidad) > 1 && Number(p.ofertaValor) > 0
   }

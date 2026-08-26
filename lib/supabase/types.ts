@@ -318,6 +318,8 @@ export interface Producto {
   ofertaTipo?: OfertaTipo
   ofertaValor: number
   ofertaCantidad?: number
+  /** YYYY-MM-DD. `undefined` = sin vencimiento, dura hasta que se saque a mano. */
+  ofertaHasta?: string
   activo: boolean
   /** Lo marca la importación cuando la fila del Excel venía incompleta. */
   revisar: boolean

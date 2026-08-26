@@ -32,6 +32,17 @@ describe("tieneOferta", () => {
     expect(tieneOferta({ ...base, ofertaActiva: true, ofertaTipo: "combo", ofertaValor: 1500, ofertaCantidad: 1 })).toBe(false)
     expect(tieneOferta({ ...base, ofertaActiva: true, ofertaTipo: "combo", ofertaValor: 1500, ofertaCantidad: 2 })).toBe(true)
   })
+
+  it("sin ofertaHasta dura indefinidamente", () => {
+    const hoy = new Date("2026-06-15T12:00:00")
+    expect(tieneOferta({ ...base, ofertaActiva: true, ofertaTipo: "monto", ofertaValor: 100 }, hoy)).toBe(true)
+  })
+
+  it("deja de aplicar pasado el día de ofertaHasta", () => {
+    const oferta = { ...base, ofertaActiva: true, ofertaTipo: "monto" as const, ofertaValor: 100, ofertaHasta: "2026-06-15" }
+    expect(tieneOferta(oferta, new Date("2026-06-15T23:00:00"))).toBe(true)
+    expect(tieneOferta(oferta, new Date("2026-06-16T00:00:01"))).toBe(false)
+  })
 })
 
 describe("precioFinal", () => {

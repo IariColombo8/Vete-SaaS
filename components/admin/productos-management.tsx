@@ -43,7 +43,7 @@ import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const POR_PAGINA = 10
 
-type FiltroRapido = "todos" | "stockBajo" | "agotados" | "revisar"
+type FiltroRapido = "todos" | "stockBajo" | "agotados" | "revisar" | "oferta"
 
 interface Props {
   tenantId: string
@@ -96,6 +96,7 @@ export function ProductosManagement({ tenantId }: Props) {
         soloStockBajo: filtro === "stockBajo",
         soloAgotados: filtro === "agotados",
         soloRevisar: filtro === "revisar",
+        soloOferta: filtro === "oferta",
         incluirInactivos,
         pagina,
         porPagina: POR_PAGINA,
@@ -262,6 +263,7 @@ export function ProductosManagement({ tenantId }: Props) {
       { key: "stockBajo" as const, label: "Stock bajo", valor: stats?.stockBajo, icon: Package, color: "text-amber-600" },
       { key: "agotados" as const, label: "Agotados", valor: stats?.agotados, icon: PackageX, color: "text-red-600" },
       { key: "revisar" as const, label: "A revisar", valor: stats?.revisar, icon: ClipboardList, color: "text-amber-600" },
+      { key: "oferta" as const, label: "En oferta", valor: stats?.enOferta, icon: Tag, color: "text-emerald-600" },
     ],
     [stats],
   )
@@ -304,7 +306,7 @@ export function ProductosManagement({ tenantId }: Props) {
       </div>
 
       {/* Tarjetas: además de informar, funcionan como filtro rápido */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {tarjetas.map((t) => (
           <button
             key={t.key}

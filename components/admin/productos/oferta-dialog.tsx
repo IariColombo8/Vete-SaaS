@@ -33,6 +33,8 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
   const [tipo, setTipo] = useState<OfertaTipo>("monto")
   const [valor, setValor] = useState("")
   const [cantidad, setCantidad] = useState("")
+  const [tieneVencimiento, setTieneVencimiento] = useState(false)
+  const [hasta, setHasta] = useState("")
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
@@ -41,6 +43,8 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
     setTipo(producto.ofertaTipo ?? "monto")
     setValor(producto.ofertaValor ? String(producto.ofertaValor) : "")
     setCantidad(producto.ofertaCantidad ? String(producto.ofertaCantidad) : "")
+    setTieneVencimiento(!!producto.ofertaHasta)
+    setHasta(producto.ofertaHasta ?? "")
   }, [open, producto])
 
   if (!producto) return null
@@ -53,9 +57,10 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
   // el insert no puede fallar por la constraint.
   const invalido =
     activa &&
-    (esCombo
+    ((esCombo
       ? valorNum <= 0 || cantidadNum <= 1
-      : valorNum <= 0 || (tipo === "porcentaje" && valorNum >= 100))
+      : valorNum <= 0 || (tipo === "porcentaje" && valorNum >= 100)) ||
+      (tieneVencimiento && !hasta))
 
   const preview = esCombo
     ? precioLinea(
@@ -73,6 +78,7 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
         tipo,
         valor: valorNum,
         cantidad: esCombo ? cantidadNum : undefined,
+        hasta: tieneVencimiento ? hasta : null,
       })
       onOpenChange(false)
     } finally {
@@ -146,9 +152,50 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
                     ? "Poné una cantidad mayor a 1 y un precio de combo mayor a 0"
                     : tipo === "porcentaje"
                       ? "El descuento tiene que ser mayor a 0 y menor a 100"
-                      : "El descuento tiene que ser mayor a 0"}
+                      : tieneVencimiento && !hasta
+                        ? "Elegí hasta qué día dura la oferta"
+                        : "El descuento tiene que ser mayor a 0"}
                 </p>
               )}
+
+              <div>
+                <Label className="mb-1 block text-xs text-muted-foreground">Duración</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTieneVencimiento(false)}
+                    className={cn(
+                      "rounded-lg border py-2 text-xs font-medium transition-colors",
+                      !tieneVencimiento
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    Hasta que la saque
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTieneVencimiento(true)}
+                    className={cn(
+                      "rounded-lg border py-2 text-xs font-medium transition-colors",
+                      tieneVencimiento
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    Hasta una fecha
+                  </button>
+                </div>
+                {tieneVencimiento && (
+                  <Input
+                    type="date"
+                    className="mt-2"
+                    value={hasta}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setHasta(e.target.value)}
+                  />
+                )}
+              </div>
 
               <div className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2.5">
                 <span className="text-sm text-muted-foreground">
