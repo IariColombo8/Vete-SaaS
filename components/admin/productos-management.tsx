@@ -56,6 +56,7 @@ export function ProductosManagement({ tenantId }: Props) {
   const [categoria, setCategoria] = useState("")
   const [categorias, setCategorias] = useState<string[]>([])
   const [incluirInactivos, setIncluirInactivos] = useState(false)
+  const [publicadoFiltro, setPublicadoFiltro] = useState<"todos" | "publicados" | "no_publicados">("todos")
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [total, setTotal] = useState(0)
@@ -85,7 +86,7 @@ export function ProductosManagement({ tenantId }: Props) {
   // Cualquier cambio de filtro invalida la página actual.
   useEffect(() => {
     setPagina(0)
-  }, [busquedaDebounced, filtro, categoria, incluirInactivos])
+  }, [busquedaDebounced, filtro, categoria, incluirInactivos, publicadoFiltro])
 
   const cargarLista = useCallback(async () => {
     setCargando(true)
@@ -97,6 +98,7 @@ export function ProductosManagement({ tenantId }: Props) {
         soloAgotados: filtro === "agotados",
         soloRevisar: filtro === "revisar",
         soloOferta: filtro === "oferta",
+        publicado: publicadoFiltro === "todos" ? undefined : publicadoFiltro === "publicados",
         incluirInactivos,
         pagina,
         porPagina: POR_PAGINA,
@@ -108,7 +110,7 @@ export function ProductosManagement({ tenantId }: Props) {
     } finally {
       setCargando(false)
     }
-  }, [tenantId, busquedaDebounced, categoria, filtro, incluirInactivos, pagina])
+  }, [tenantId, busquedaDebounced, categoria, filtro, publicadoFiltro, incluirInactivos, pagina])
 
   // Contadores, rubros y vencimientos: si fallan no se rompe la tabla.
   const cargarAuxiliares = useCallback(async () => {
@@ -128,7 +130,7 @@ export function ProductosManagement({ tenantId }: Props) {
   // Una selección que sobrevive a un cambio de filtro/página termina
   // aplicando el formato a productos que ya no se están viendo — más
   // confuso que útil, así que se limpia apenas cambia lo que se lista.
-  useEffect(() => { setSeleccionados(new Set()) }, [busquedaDebounced, categoria, filtro, incluirInactivos, pagina])
+  useEffect(() => { setSeleccionados(new Set()) }, [busquedaDebounced, categoria, filtro, publicadoFiltro, incluirInactivos, pagina])
 
   const recargarTodo = useCallback(async () => {
     await Promise.all([cargarLista(), cargarAuxiliares()])
@@ -263,7 +265,6 @@ export function ProductosManagement({ tenantId }: Props) {
       { key: "stockBajo" as const, label: "Stock bajo", valor: stats?.stockBajo, icon: Package, color: "text-amber-600" },
       { key: "agotados" as const, label: "Agotados", valor: stats?.agotados, icon: PackageX, color: "text-red-600" },
       { key: "revisar" as const, label: "A revisar", valor: stats?.revisar, icon: ClipboardList, color: "text-amber-600" },
-      { key: "oferta" as const, label: "En oferta", valor: stats?.enOferta, icon: Tag, color: "text-emerald-600" },
     ],
     [stats],
   )
@@ -306,7 +307,7 @@ export function ProductosManagement({ tenantId }: Props) {
       </div>
 
       {/* Tarjetas: además de informar, funcionan como filtro rápido */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tarjetas.map((t) => (
           <button
             key={t.key}
@@ -374,6 +375,25 @@ export function ProductosManagement({ tenantId }: Props) {
         >
           <option value="">Todos los rubros</option>
           {ordenarCategorias(categorias).map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+
+        <select
+          value={filtro === "oferta" ? "oferta" : "todos"}
+          onChange={(e) => setFiltro(e.target.value === "oferta" ? "oferta" : "todos")}
+          className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+        >
+          <option value="todos">Todas las ofertas</option>
+          <option value="oferta">En oferta</option>
+        </select>
+
+        <select
+          value={publicadoFiltro}
+          onChange={(e) => setPublicadoFiltro(e.target.value as typeof publicadoFiltro)}
+          className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+        >
+          <option value="todos">Publicados y no publicados</option>
+          <option value="publicados">Publicados</option>
+          <option value="no_publicados">No publicados</option>
         </select>
 
         <Button

@@ -153,6 +153,8 @@ export interface ProductosFiltro {
   soloRevisar?: boolean
   /** Solo los que tienen oferta de catálogo activa (no filtra por vencimiento). */
   soloOferta?: boolean
+  /** `true` = solo publicados en la landing, `false` = solo no publicados, sin definir = todos. */
+  publicado?: boolean
   /** Por defecto se ocultan los productos dados de baja. */
   incluirInactivos?: boolean
   pagina?: number
@@ -196,6 +198,7 @@ export async function getProductos(
   if (filtro.marca) q = q.eq("marca", filtro.marca)
   if (filtro.soloRevisar) q = q.eq("revisar", true)
   if (filtro.soloOferta) q = q.eq("oferta_activa", true)
+  if (filtro.publicado !== undefined) q = q.eq("publicado_en_landing", filtro.publicado)
 
   // `soloAgotados` es más específico que `soloStockBajo`, así que gana.
   // `stock_bajo` es una columna generada en la base (ver 004_productos.sql).
