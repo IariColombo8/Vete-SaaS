@@ -46,6 +46,8 @@ export interface TotalesCarrito {
   subtotal: number
   /** Descuento global que carga el vendedor a mano. */
   descuento: number
+  /** Recargo (débito/crédito), ya en pesos, aplicado después del descuento. */
+  recargo: number
   total: number
   /** Cuánto se ahorró el cliente por ofertas del catálogo. */
   ahorro: number
@@ -198,9 +200,15 @@ export function montoDescuento(subtotal: number, descuento: Descuento): number {
   return Math.min(round2(bruto), round2(subtotal))
 }
 
+/**
+ * El recargo de tarjeta se aplica sobre el subtotal YA con el descuento
+ * restado, no sobre el precio de lista — el mismo orden que ya usa el
+ * descuento con las ofertas del catálogo.
+ */
 export function totalesCarrito(
   carrito: LineaCarrito[],
   descuento: Descuento = SIN_DESCUENTO,
+  recargoPorcentaje = 0,
 ): TotalesCarrito {
   let subtotal = 0
   let sinOferta = 0
@@ -212,11 +220,19 @@ export function totalesCarrito(
 
   subtotal = round2(subtotal)
   const desc = montoDescuento(subtotal, descuento)
+  const baseConDescuento = Math.max(0, round2(subtotal - desc))
+
+  const pctRecargo = Number(recargoPorcentaje)
+  const recargo =
+    Number.isFinite(pctRecargo) && pctRecargo > 0
+      ? round2(baseConDescuento * (pctRecargo / 100))
+      : 0
 
   return {
     subtotal,
     descuento: desc,
-    total: Math.max(0, round2(subtotal - desc)),
+    recargo,
+    total: round2(baseConDescuento + recargo),
     ahorro: Math.max(0, round2(sinOferta - subtotal)),
     items: carrito.length,
   }
