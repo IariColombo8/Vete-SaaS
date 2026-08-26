@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { ClienteSelector } from "./cliente-selector"
+import { MixtoPagos, type LineaPagoMixto } from "./mixto-pagos"
 import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-dialog"
 import {
-  descripcionLinea, subtotalLinea, totalesCarrito,
+  descripcionLinea, pctRecargoDe, subtotalLinea, totalesCarrito,
   type Descuento, type LineaCarrito,
 } from "@/lib/ventas/carrito"
 import { formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO, type Cliente, type MedioPago } from "@/lib/supabase/types"
 import { useReadOnly } from "@/lib/auth/read-only-context"
+
+export const CUOTAS_DEFAULT: Record<number, number> = { 1: 0, 3: 10, 6: 20, 12: 35 }
 
 interface Props {
   tenantId: string
@@ -23,10 +26,18 @@ interface Props {
   cliente: Cliente | null
   medioPago: MedioPago
   descuento: Descuento
+  recargoPct: number
+  cuotas: number
+  recargoPorCuotas: Record<number, number>
+  pagosMixto: LineaPagoMixto[]
   cobrando: boolean
   onCliente: (c: Cliente | null) => void
   onMedioPago: (m: MedioPago) => void
   onDescuento: (d: Descuento) => void
+  onRecargoPct: (pct: number) => void
+  onCuotas: (cuotas: number) => void
+  onRecargoPorCuotas: (recargos: Record<number, number>) => void
+  onPagosMixto: (pagos: LineaPagoMixto[]) => void
   onCantidad: (lineaId: string, cantidad: number) => void
   onQuitar: (lineaId: string) => void
   onVaciar: () => void
@@ -40,18 +51,36 @@ export function CarritoPanel({
   cliente,
   medioPago,
   descuento,
+  recargoPct,
+  cuotas,
+  recargoPorCuotas,
+  pagosMixto,
   cobrando,
   onCliente,
   onMedioPago,
   onDescuento,
+  onRecargoPct,
+  onCuotas,
+  onRecargoPorCuotas,
+  onPagosMixto,
   onCantidad,
   onQuitar,
   onVaciar,
   onCobrar,
 }: Props) {
-  const totales = totalesCarrito(carrito, descuento)
+  const esDebito = medioPago === "debito"
+  const esCredito = medioPago === "credito"
+  const esMixto = medioPago === "mixto"
+  const esCtaCte = medioPago === "cuenta_corriente"
+  const pctAplicado = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
+
+  const totales = totalesCarrito(carrito, descuento, pctAplicado)
   const vacio = carrito.length === 0
   const esEfectivo = medioPago === "efectivo"
+
+  const sumaMixto = pagosMixto.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
+  const mixtoValido = !esMixto || Math.abs(sumaMixto - totales.total) < 0.01
+  const ctaCteValida = !esCtaCte || cliente !== null
 
   // Se corrige acá, en el momento en que el vendedor nota que agregó el
   // producto mal (ej. lo vendió entero cuando en realidad es suelto por
@@ -120,11 +149,9 @@ export function CarritoPanel({
       <Separator />
 
       <div className="space-y-3 p-4">
-        <ClienteSelector tenantId={tenantId} seleccionado={cliente} onCambiar={onCliente} />
-
         <div>
           <Label className="mb-1.5 block text-xs text-muted-foreground">Medio de pago</Label>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             {MEDIOS_PAGO.map(({ id, label }) => (
               <Button
                 key={id}
@@ -139,6 +166,69 @@ export function CarritoPanel({
             ))}
           </div>
         </div>
+
+        {esCtaCte && (
+          <ClienteSelector tenantId={tenantId} seleccionado={cliente} onCambiar={onCliente} obligatorio />
+        )}
+
+        {esDebito && (
+          <div>
+            <Label htmlFor="recargo-debito" className="mb-1.5 block text-xs text-muted-foreground">
+              Recargo %
+            </Label>
+            <Input
+              id="recargo-debito"
+              type="number"
+              min={0}
+              step={1}
+              value={recargoPct || ""}
+              placeholder="5"
+              onChange={(e) => onRecargoPct(Number(e.target.value) || 0)}
+            />
+          </div>
+        )}
+
+        {esCredito && (
+          <div>
+            <Label className="mb-1.5 block text-xs text-muted-foreground">Cuotas</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.keys(recargoPorCuotas).map(Number).sort((a, b) => a - b).map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  variant={cuotas === n ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onCuotas(n)}
+                  className={cuotas === n ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                >
+                  {n === 1 ? "1 pago" : `${n} cuotas`}
+                </Button>
+              ))}
+            </div>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <Label htmlFor="recargo-cuotas" className="text-xs text-muted-foreground">
+                Recargo de {cuotas === 1 ? "1 pago" : `${cuotas} cuotas`} %
+              </Label>
+              <Input
+                id="recargo-cuotas"
+                type="number"
+                min={0}
+                step={1}
+                className="h-7 w-20"
+                value={recargoPorCuotas[cuotas] ?? 0}
+                onChange={(e) =>
+                  onRecargoPorCuotas({ ...recargoPorCuotas, [cuotas]: Number(e.target.value) || 0 })
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {esMixto && (
+          <MixtoPagos total={totales.total} pagos={pagosMixto} onCambiar={onPagosMixto} />
+        )}
+
+        {!esCtaCte && <ClienteSelector tenantId={tenantId} seleccionado={cliente} onCambiar={onCliente} />}
 
         <div>
           <Label htmlFor="descuento" className="mb-1.5 block text-xs text-muted-foreground">
@@ -204,6 +294,12 @@ export function CarritoPanel({
               </div>
             </>
           )}
+          {totales.recargo > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Recargo</span>
+              <span className="tabular-nums">+ {formatCurrency(totales.recargo)}</span>
+            </div>
+          )}
           <div className="flex items-baseline justify-between pt-1">
             <span className="font-semibold">Total</span>
             <span className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
@@ -243,8 +339,16 @@ export function CarritoPanel({
 
         <Button
           onClick={onCobrar}
-          disabled={vacio || cobrando || readOnly}
-          title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+          disabled={vacio || cobrando || readOnly || !mixtoValido || !ctaCteValida}
+          title={
+            readOnly
+              ? "Reactivá tu cuenta para editar"
+              : !ctaCteValida
+                ? "Elegí un cliente para vender a cuenta corriente"
+                : !mixtoValido
+                  ? "El desglose de pagos tiene que coincidir con el total"
+                  : undefined
+          }
           className="h-12 w-full bg-emerald-600 text-base hover:bg-emerald-700"
         >
           {cobrando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

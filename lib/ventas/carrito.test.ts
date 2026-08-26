@@ -4,8 +4,10 @@ import {
   agregarAlCarrito,
   cambiarCantidad,
   itemsParaRPC,
+  pctRecargoDe,
   presentacionDe,
   quitarDelCarrito,
+  SIN_DESCUENTO,
   totalesCarrito,
   type LineaCarrito,
 } from "./carrito"
@@ -255,6 +257,59 @@ describe("totalesCarrito", () => {
 
   it("un carrito vacío da todo en cero", () => {
     expect(totalesCarrito([])).toMatchObject({ subtotal: 0, total: 0, ahorro: 0, items: 0 })
+  })
+})
+
+describe("totalesCarrito con recargo", () => {
+  it("sin recargo el total no cambia", () => {
+    const carrito = agregarAlCarrito([], producto({ precio: 1000 }), 2)
+    const totales = totalesCarrito(carrito)
+    expect(totales.total).toBe(2000)
+    expect(totales.recargo).toBe(0)
+  })
+
+  it("aplica el recargo sobre el subtotal ya con descuento", () => {
+    const carrito = agregarAlCarrito([], producto({ precio: 1000 }), 1)
+    const totales = totalesCarrito(carrito, SIN_DESCUENTO, 5)
+    // 1000 * 1.05 = 1050
+    expect(totales.recargo).toBe(50)
+    expect(totales.total).toBe(1050)
+  })
+
+  it("combina descuento y recargo: primero descuento, después recargo", () => {
+    const carrito = agregarAlCarrito([], producto({ precio: 1000 }), 1)
+    const totales = totalesCarrito(carrito, { tipo: "monto", valor: 100 }, 10)
+    // (1000 - 100) * 1.10 = 990
+    expect(totales.recargo).toBe(90)
+    expect(totales.total).toBe(990)
+  })
+
+  it("redondea a centavos", () => {
+    const carrito = agregarAlCarrito([], producto({ precio: 333 }), 1)
+    const totales = totalesCarrito(carrito, SIN_DESCUENTO, 15)
+    // 333 * 1.15 = 382.95
+    expect(totales.total).toBe(382.95)
+  })
+})
+
+describe("pctRecargoDe", () => {
+  it("usa recargoPct para débito", () => {
+    expect(pctRecargoDe("debito", 5, 1, {})).toBe(5)
+  })
+
+  it("usa el recargo de la cantidad de cuotas elegida para crédito", () => {
+    expect(pctRecargoDe("credito", 5, 6, { 1: 0, 6: 20 })).toBe(20)
+  })
+
+  it("da 0 si la cuota elegida no está en el mapa", () => {
+    expect(pctRecargoDe("credito", 5, 9, { 1: 0, 6: 20 })).toBe(0)
+  })
+
+  it("da 0 para cualquier otro medio de pago", () => {
+    expect(pctRecargoDe("efectivo", 5, 1, {})).toBe(0)
+    expect(pctRecargoDe("transferencia", 5, 1, {})).toBe(0)
+    expect(pctRecargoDe("mixto", 5, 1, {})).toBe(0)
+    expect(pctRecargoDe("cuenta_corriente", 5, 1, {})).toBe(0)
   })
 })
 

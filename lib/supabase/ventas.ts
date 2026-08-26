@@ -46,6 +46,7 @@ function aVentaItem(f: Fila): VentaItem {
 
 function aVenta(f: Fila): Venta {
   const items = f.venta_items as Fila[] | undefined
+  const pagos = f.venta_pagos as Fila[] | undefined
 
   return {
     id: f.id as string,
@@ -60,13 +61,19 @@ function aVenta(f: Fila): Venta {
     estado: (f.estado as VentaEstado) ?? "completada",
     subtotal: num(f.subtotal),
     descuento: num(f.descuento),
+    recargo: num(f.recargo),
+    cuotas: f.cuotas != null ? num(f.cuotas) : undefined,
     total: num(f.total),
     anuladaAt: (f.anulada_at as string) ?? undefined,
     anuladaMotivo: (f.anulada_motivo as string) ?? undefined,
     vendedorNombre: (f.vendedor_nombre as string) ?? undefined,
     observaciones: (f.observaciones as string) ?? "",
     createdAt: (f.created_at as string) ?? "",
+    esPagoCtaCte: Boolean(f.es_pago_cta_cte),
     items: items ? items.map(aVentaItem) : undefined,
+    pagos: pagos
+      ? pagos.map((p) => ({ medioPago: p.medio_pago as MedioPago, monto: num(p.monto) }))
+      : undefined,
   }
 }
 
@@ -90,7 +97,7 @@ function aCaja(f: Fila): Caja {
   }
 }
 
-const VENTA_COLS = "*, venta_items(*)"
+const VENTA_COLS = "*, venta_items(*), venta_pagos(*)"
 
 // ── Registrar la venta ──
 
@@ -100,6 +107,12 @@ export interface RegistrarVentaInput {
   clienteId?: string
   descuento?: number
   observaciones?: string
+  /** Recargo de débito/crédito, ya en pesos. */
+  recargo?: number
+  /** Solo cuando medioPago === "credito". */
+  cuotas?: number
+  /** Obligatorio cuando medioPago === "mixto". */
+  pagos?: { medioPago: MedioPago; monto: number }[]
 }
 
 export interface ResultadoVenta {
@@ -128,6 +141,9 @@ export async function registrarVenta(
     p_cliente_id: input.clienteId ?? null,
     p_descuento: input.descuento ?? 0,
     p_observaciones: input.observaciones ?? null,
+    p_recargo: input.recargo ?? 0,
+    p_cuotas: input.cuotas ?? null,
+    p_pagos: input.pagos?.map((p) => ({ medio_pago: p.medioPago, monto: p.monto })) ?? null,
   })
 
   if (error) throw new Error(error.message)
@@ -313,19 +329,47 @@ export interface ResumenCaja {
 
 export async function getResumenCaja(caja: Caja): Promise<ResumenCaja> {
   const { data } = await supabase
-    .from("ventas").select("medio_pago, total")
+    .from("ventas").select("id, medio_pago, total")
     .eq("caja_id", caja.id).eq("estado", "completada")
+
+  const ventas = (data ?? []) as Fila[]
+  const idsMixtos = ventas.filter((f) => f.medio_pago === "mixto").map((f) => f.id as string)
+
+  // La parte en efectivo de un "mixto" cuenta como efectivo: sin desglosarla,
+  // un cobro de $500 efectivo + $500 tarjeta quedaba entero afuera del cajón.
+  const efectivoPorMixto = new Map<string, number>()
+  if (idsMixtos.length > 0) {
+    const { data: pagos } = await supabase
+      .from("venta_pagos")
+      .select("venta_id, medio_pago, monto")
+      .in("venta_id", idsMixtos)
+    for (const p of (pagos ?? []) as Fila[]) {
+      const ventaId = p.venta_id as string
+      const monto = num(p.monto)
+      if (p.medio_pago === "efectivo") {
+        efectivoPorMixto.set(ventaId, (efectivoPorMixto.get(ventaId) ?? 0) + monto)
+      }
+    }
+  }
 
   const porMedio = new Map<MedioPago, number>()
   let efectivo = 0
   let otros = 0
 
-  for (const f of (data ?? []) as Fila[]) {
+  for (const f of ventas) {
     const total = num(f.total)
     const medio = f.medio_pago as MedioPago
     porMedio.set(medio, (porMedio.get(medio) ?? 0) + total)
-    if (medio === "efectivo") efectivo += total
-    else otros += total
+
+    if (medio === "mixto") {
+      const efectivoDeEstaVenta = efectivoPorMixto.get(f.id as string) ?? 0
+      efectivo += efectivoDeEstaVenta
+      otros += total - efectivoDeEstaVenta
+    } else if (medio === "efectivo") {
+      efectivo += total
+    } else {
+      otros += total
+    }
   }
 
   return {

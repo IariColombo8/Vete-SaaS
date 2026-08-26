@@ -92,14 +92,31 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio }: Props) {
                   <TableCell className="text-sm">
                     {anulada ? (
                       <Badge variant="destructive">Anulada</Badge>
+                    ) : venta.esPagoCtaCte ? (
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                        Pago cta. cte.
+                      </span>
                     ) : (
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
-                          COLOR_MEDIO_PAGO[venta.medioPago],
+                      <span className="flex items-center gap-1">
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs font-medium",
+                            COLOR_MEDIO_PAGO[venta.medioPago],
+                          )}
+                        >
+                          {MEDIOS_PAGO.find((m) => m.id === venta.medioPago)?.label}
+                          {venta.medioPago === "credito" && venta.cuotas ? ` x${venta.cuotas}` : ""}
+                        </span>
+                        {venta.medioPago === "mixto" && venta.pagos && venta.pagos.length > 0 && (
+                          <span
+                            className="text-xs text-muted-foreground"
+                            title={venta.pagos
+                              .map((p) => `${MEDIOS_PAGO.find((m) => m.id === p.medioPago)?.label}: ${formatCurrency(p.monto)}`)
+                              .join(" · ")}
+                          >
+                            ⓘ
+                          </span>
                         )}
-                      >
-                        {MEDIOS_PAGO.find((m) => m.id === venta.medioPago)?.label}
                       </span>
                     )}
                   </TableCell>

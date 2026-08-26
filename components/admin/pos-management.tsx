@@ -5,7 +5,8 @@ import { toast } from "sonner"
 import { BuscadorProductos } from "./pos/buscador-productos"
 import { CajaBar } from "./pos/caja-bar"
 import { CantidadDialog } from "./pos/cantidad-dialog"
-import { CarritoPanel } from "./pos/carrito-panel"
+import { CarritoPanel, CUOTAS_DEFAULT } from "./pos/carrito-panel"
+import type { LineaPagoMixto } from "./pos/mixto-pagos"
 import { AlimentoSelector } from "./pos/alimento-selector"
 import { AtencionDialog } from "./pos/atencion-dialog"
 import { RemitoDialog } from "./pos/remito-dialog"
@@ -14,6 +15,7 @@ import {
   agregarAtencion,
   cambiarCantidad,
   itemsParaRPC,
+  pctRecargoDe,
   quitarDelCarrito,
   subtotalLinea,
   totalesCarrito,
@@ -49,6 +51,10 @@ export function PosManagement({ tenantId }: Props) {
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [medioPago, setMedioPago] = useState<MedioPago>("efectivo")
   const [descuento, setDescuento] = useState<Descuento>(SIN_DESCUENTO)
+  const [recargoPct, setRecargoPct] = useState(5)
+  const [cuotas, setCuotas] = useState(1)
+  const [recargoPorCuotas, setRecargoPorCuotas] = useState<Record<number, number>>(CUOTAS_DEFAULT)
+  const [pagosMixto, setPagosMixto] = useState<LineaPagoMixto[]>([])
 
   const [caja, setCaja] = useState<Caja | null>(null)
   const [emisor, setEmisor] = useState<EmisorRemito>({ nombre: "" })
@@ -165,14 +171,34 @@ export function PosManagement({ tenantId }: Props) {
     setCliente(null)
     setDescuento(SIN_DESCUENTO)
     setMedioPago("efectivo")
+    setRecargoPct(5)
+    setCuotas(1)
+    setRecargoPorCuotas(CUOTAS_DEFAULT)
+    setPagosMixto([])
   }
 
   const cobrar = async () => {
     if (carrito.length === 0) return
 
-    // `totalesCarrito` ya recorta el descuento al subtotal, así que el monto
-    // que se manda nunca deja el total en negativo.
-    const totales = totalesCarrito(carrito, descuento)
+    if (medioPago === "cuenta_corriente" && !cliente) {
+      toast.error("Elegí un cliente para vender a cuenta corriente")
+      return
+    }
+
+    const pctRecargo = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
+
+    // `totalesCarrito` ya recorta el descuento al subtotal y aplica el
+    // recargo después, así que el monto que se manda nunca deja el total en
+    // negativo ni desincroniza lo que se ve en pantalla de lo que se cobra.
+    const totales = totalesCarrito(carrito, descuento, pctRecargo)
+
+    if (medioPago === "mixto") {
+      const suma = pagosMixto.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
+      if (Math.abs(suma - totales.total) >= 0.01) {
+        toast.error("El desglose de pagos tiene que coincidir con el total")
+        return
+      }
+    }
 
     setCobrando(true)
     try {
@@ -181,6 +207,9 @@ export function PosManagement({ tenantId }: Props) {
         medioPago,
         clienteId: cliente?.id,
         descuento: totales.descuento,
+        recargo: totales.recargo,
+        cuotas: medioPago === "credito" ? cuotas : undefined,
+        pagos: medioPago === "mixto" ? pagosMixto : undefined,
       })
 
       // Se relee la venta ya guardada en vez de armarla con lo que había en
@@ -233,10 +262,18 @@ export function PosManagement({ tenantId }: Props) {
             cliente={cliente}
             medioPago={medioPago}
             descuento={descuento}
+            recargoPct={recargoPct}
+            cuotas={cuotas}
+            recargoPorCuotas={recargoPorCuotas}
+            pagosMixto={pagosMixto}
             cobrando={cobrando}
             onCliente={setCliente}
             onMedioPago={setMedioPago}
             onDescuento={setDescuento}
+            onRecargoPct={setRecargoPct}
+            onCuotas={setCuotas}
+            onRecargoPorCuotas={setRecargoPorCuotas}
+            onPagosMixto={setPagosMixto}
             onCantidad={actualizarCantidad}
             onQuitar={(id) => setCarrito((actual) => quitarDelCarrito(actual, id))}
             onVaciar={limpiar}

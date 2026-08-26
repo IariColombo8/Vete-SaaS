@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  Banknote, CreditCard, History, Loader2, Receipt, Repeat, Wallet,
+  Banknote, CreditCard, History, Loader2, Receipt, Repeat, Split, UserRound, Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,6 +31,8 @@ const ICONO_MEDIO: Record<MedioPago, React.ComponentType<{ className?: string }>
   debito: CreditCard,
   credito: CreditCard,
   transferencia: Repeat,
+  mixto: Split,
+  cuenta_corriente: UserRound,
 }
 
 /** YYYY-MM-DD en hora local: `toISOString()` corre el día en Argentina. */
@@ -159,7 +161,13 @@ export function CajaManagement({ tenantId }: Props) {
                 icono={<Icono className="h-4 w-4" />}
                 titulo={label}
                 valor={formatCurrency(total)}
-                nota={id === "efectivo" ? `+ ${formatCurrency(caja.saldoInicial)} de apertura` : "No está en el cajón"}
+                nota={
+                  id === "efectivo"
+                    ? `+ ${formatCurrency(caja.saldoInicial)} de apertura`
+                    : id === "mixto"
+                      ? "La parte en efectivo ya está sumada arriba"
+                      : "No está en el cajón"
+                }
               />
             )
           })}
