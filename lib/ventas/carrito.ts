@@ -60,15 +60,18 @@ function round2(n: number): number {
 
 /**
  * Los kg admiten decimales; las unidades, no — salvo una bolsa cerrada con
- * peso detectado (`pesoKg`), que se puede fraccionar (0.5 = media bolsa,
- * vendida por peso desde `CantidadDialog`). Vender "1,5 collares" sigue
- * siendo un error de tipeo: ahí no hay ningún peso de por medio.
+ * peso detectado (`pesoKg`) o un paquete divisible (`unidadesPorBulto`, ej.
+ * una caja de 100 golosinas que se vende de a una), que se pueden fraccionar
+ * (0.5 = media bolsa o medio paquete, vendido desde `CantidadDialog`). Vender
+ * "1,5 collares" sigue siendo un error de tipeo: ahí no hay nada que fraccionar.
  */
 function validarCantidad(producto: Producto, cantidad: number): void {
   if (!Number.isFinite(cantidad) || cantidad <= 0) {
     throw new Error("La cantidad tiene que ser mayor a cero")
   }
-  const fraccionable = producto.pesoKg != null && producto.pesoKg > 0
+  const fraccionable =
+    (producto.pesoKg != null && producto.pesoKg > 0) ||
+    (producto.unidadesPorBulto != null && producto.unidadesPorBulto > 0)
   if (producto.unidad === "un" && !fraccionable && !Number.isInteger(cantidad)) {
     throw new Error(`"${producto.nombre}" se vende por unidad entera`)
   }
@@ -233,6 +236,9 @@ export function presentacionDe(producto: Producto): string {
   if (producto.unidad === "kg") return "por kg"
   if (producto.pesoKg != null && producto.pesoKg > 0) {
     return `${producto.pesoKg.toLocaleString("es-AR", { maximumFractionDigits: 3 })} kg`
+  }
+  if (producto.unidadesPorBulto != null && producto.unidadesPorBulto > 0) {
+    return `x${producto.unidadesPorBulto}`
   }
   return ""
 }

@@ -420,6 +420,74 @@ export async function updateProducto(
   if (error) throw mensajeError(error, "No se pudo actualizar el producto")
 }
 
+/**
+ * Formato de venta de un producto en el mostrador:
+ * - "kg": suelto, pesado en el momento (precio POR KILO).
+ * - "un": unidad entera simple (una lata, un juguete).
+ * - "bulto": unidad entera dentro de un paquete divisible (una caja de 100
+ *   golosinas que también se puede vender de a una), guardando cuántas
+ *   unidades trae el paquete completo.
+ */
+export type FormatoVenta =
+  | { tipo: "kg" }
+  | { tipo: "un" }
+  | { tipo: "bulto"; unidadesPorBulto: number }
+
+/**
+ * Cambia el formato de venta de uno o varios productos de una sola vez —
+ * pensado para corregir en bloque una lista que se importó sin distinguir
+ * "por peso" de "por unidad" (ver `lib/productos/importar.ts`).
+ *
+ * El precio de cada fila sigue significando "precio del producto completo"
+ * (la bolsa entera, el paquete entero): al pasar a "kg" hay que convertirlo a
+ * precio POR KILO, y la única forma de hacerlo bien es dividiendo por el peso
+ * de bolsa que ya tenía cargado ese producto puntual — por eso el cálculo es
+ * por producto, no un valor único para todo el lote. Un producto sin peso
+ * cargado no tiene con qué convertirse: se cambia la unidad igual, pero el
+ * precio queda tal cual para que el usuario lo corrija a mano (se informa en
+ * `sinPrecioRecalculado`).
+ */
+export async function actualizarFormatoVenta(
+  tenantId: string,
+  productos: Producto[],
+  formato: FormatoVenta,
+): Promise<{ actualizados: number; sinPrecioRecalculado: string[] }> {
+  const sinPrecioRecalculado: string[] = []
+
+  const filas = productos.map((p) => {
+    if (formato.tipo === "kg") {
+      const tienePeso = p.pesoKg != null && p.pesoKg > 0
+      if (!tienePeso) sinPrecioRecalculado.push(p.nombre)
+      const precio = tienePeso ? Math.round((p.precio / p.pesoKg!) * 100) / 100 : p.precio
+      return { id: p.id, unidad: "kg" as const, peso_kg: null, unidades_por_bulto: null, precio }
+    }
+    if (formato.tipo === "bulto") {
+      return {
+        id: p.id, unidad: "un" as const, peso_kg: null,
+        unidades_por_bulto: formato.unidadesPorBulto, precio: p.precio,
+      }
+    }
+    return { id: p.id, unidad: "un" as const, peso_kg: null, unidades_por_bulto: null, precio: p.precio }
+  })
+
+  // Cada fila puede necesitar un precio distinto (según su propio peso_kg
+  // previo), así que no hay un único `update` posible: se manda uno por id.
+  const resultados = await Promise.allSettled(
+    filas.map((f) =>
+      supabase
+        .from("productos")
+        .update({
+          unidad: f.unidad, peso_kg: f.peso_kg,
+          unidades_por_bulto: f.unidades_por_bulto, precio: f.precio,
+        })
+        .eq("tenant_id", tenantId).eq("id", f.id),
+    ),
+  )
+
+  const actualizados = resultados.filter((r) => r.status === "fulfilled").length
+  return { actualizados, sinPrecioRecalculado }
+}
+
 /** Código interno fijo del servicio de mostrador, para encontrarlo sin ambigüedad. */
 const CODIGO_SERVICIO_ATENCION = "SERVICIO-ATENCION"
 

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select"
 import { getMarcas, getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
 import { presentacionDe } from "@/lib/ventas/carrito"
+import { CambiarFormatoPos } from "@/components/admin/pos/cambiar-formato-pos"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -152,6 +153,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
         >
           <Stethoscope className="mr-2 h-4 w-4" /> Atención
         </Button>
+        <CambiarFormatoPos tenantId={tenantId} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

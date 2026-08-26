@@ -5,12 +5,13 @@ import { toast } from "sonner"
 import {
   Search, AlertTriangle, ChevronLeft, ChevronRight, Tag, Upload, Pencil,
   Package, PackageX, ClipboardList, Layers, Plus, CalendarClock, Trash2,
-  FileDown, Loader2, Percent,
+  FileDown, Loader2, Percent, Scale, X,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -22,6 +23,7 @@ import { ProductoDialog } from "@/components/admin/productos/producto-dialog"
 import { OfertaDialog } from "@/components/admin/productos/oferta-dialog"
 import { ImportDialog } from "@/components/admin/productos/import-dialog"
 import { MargenDialog } from "@/components/admin/productos/margen-dialog"
+import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-dialog"
 import {
   getProductos, getCategorias, getStockStats, getVencimientosProximos,
   getTodosLosProductosParaExportar,
@@ -71,6 +73,8 @@ export function ProductosManagement({ tenantId }: Props) {
   const [aDarDeBaja, setADarDeBaja] = useState<Producto | null>(null)
   const [exportando, setExportando] = useState(false)
   const [margenOpen, setMargenOpen] = useState(false)
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [formatoVentaOpen, setFormatoVentaOpen] = useState(false)
   const readOnly = useReadOnly()
 
   useEffect(() => {
@@ -120,9 +124,40 @@ export function ProductosManagement({ tenantId }: Props) {
   useEffect(() => { cargarLista() }, [cargarLista])
   useEffect(() => { cargarAuxiliares() }, [cargarAuxiliares])
 
+  // Una selección que sobrevive a un cambio de filtro/página termina
+  // aplicando el formato a productos que ya no se están viendo — más
+  // confuso que útil, así que se limpia apenas cambia lo que se lista.
+  useEffect(() => { setSeleccionados(new Set()) }, [busquedaDebounced, categoria, filtro, incluirInactivos, pagina])
+
   const recargarTodo = useCallback(async () => {
     await Promise.all([cargarLista(), cargarAuxiliares()])
   }, [cargarLista, cargarAuxiliares])
+
+  const toggleSeleccionado = (id: string) => {
+    setSeleccionados((actual) => {
+      const nuevo = new Set(actual)
+      if (nuevo.has(id)) nuevo.delete(id)
+      else nuevo.add(id)
+      return nuevo
+    })
+  }
+
+  const todosSeleccionadosEnPagina = productos.length > 0 && productos.every((p) => seleccionados.has(p.id))
+
+  const toggleTodosEnPagina = () => {
+    setSeleccionados((actual) => {
+      if (todosSeleccionadosEnPagina) {
+        const nuevo = new Set(actual)
+        productos.forEach((p) => nuevo.delete(p.id))
+        return nuevo
+      }
+      const nuevo = new Set(actual)
+      productos.forEach((p) => nuevo.add(p.id))
+      return nuevo
+    })
+  }
+
+  const productosSeleccionados = productos.filter((p) => seleccionados.has(p.id))
 
   const abrirNuevo = () => { setEditando(null); setProductoOpen(true) }
   const abrirEdicion = (p: Producto) => { setEditando(p); setProductoOpen(true) }
@@ -289,6 +324,22 @@ export function ProductosManagement({ tenantId }: Props) {
         </div>
       )}
 
+      {seleccionados.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <span className="text-sm font-medium text-emerald-800 dark:text-emerald-400">
+            {seleccionados.size} producto{seleccionados.size === 1 ? "" : "s"} seleccionado{seleccionados.size === 1 ? "" : "s"}
+          </span>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setFormatoVentaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+              <Scale className="mr-2 h-3.5 w-3.5" /> Cambiar formato de venta
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSeleccionados(new Set())}>
+              <X className="mr-2 h-3.5 w-3.5" /> Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -347,6 +398,13 @@ export function ProductosManagement({ tenantId }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={todosSeleccionadosEnPagina}
+                      onCheckedChange={toggleTodosEnPagina}
+                      aria-label="Seleccionar todos"
+                    />
+                  </TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden md:table-cell">Rubro</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
@@ -366,6 +424,13 @@ export function ProductosManagement({ tenantId }: Props) {
 
                   return (
                     <TableRow key={p.id} className={cn(!p.activo && "opacity-50")}>
+                      <TableCell>
+                        <Checkbox
+                          checked={seleccionados.has(p.id)}
+                          onCheckedChange={() => toggleSeleccionado(p.id)}
+                          aria-label={`Seleccionar ${p.nombre}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           {/* Las miniaturas quedan ocultas a propósito por ahora,
@@ -554,6 +619,17 @@ export function ProductosManagement({ tenantId }: Props) {
         open={margenOpen}
         onOpenChange={setMargenOpen}
         onAplicado={recargarTodo}
+      />
+
+      <FormatoVentaDialog
+        tenantId={tenantId}
+        productos={productosSeleccionados}
+        open={formatoVentaOpen}
+        onOpenChange={setFormatoVentaOpen}
+        onAplicado={() => {
+          setSeleccionados(new Set())
+          recargarTodo()
+        }}
       />
 
       <AlertDialog open={aDarDeBaja !== null} onOpenChange={(o) => !o && setADarDeBaja(null)}>

@@ -24,6 +24,9 @@ interface Props {
  */
 const KILOS_RAPIDOS = [0.1, 0.25, 0.5, 1, 2, 3, 5, 10]
 
+/** Atajos de unidades sueltas de un paquete divisible (ej. golosinas de a una). */
+const UNIDADES_RAPIDAS = [1, 2, 3, 5, 10]
+
 /** Atajos de montos: los pedidos típicos cuando el cliente pide "$1000 de alimento". */
 const MONTOS_RAPIDOS = [500, 1000, 1500, 2000, 3000, 5000]
 
@@ -34,66 +37,80 @@ function numeroLimpio(n: number): string {
 }
 
 /**
- * Pide cuánto se lleva el cliente. Dos campos siempre visibles — Kilos y
- * Monto — que se recalculan entre sí en cualquier dirección: escribir en uno
- * completa el otro solo, sin tener que elegir un "modo" antes de tipear.
+ * Pide cuánto se lleva el cliente. Dos campos siempre visibles — el campo
+ * "natural" (kilos, o unidades sueltas de un paquete) y el Monto — que se
+ * recalculan entre sí en cualquier dirección: escribir en uno completa el
+ * otro solo, sin tener que elegir un "modo" antes de tipear.
  *
- * Es el paso clave de la venta por peso: el vendedor escribe los kilos que
- * marcó la balanza (o el monto que pidió el cliente) y ve el total antes de
- * agregarlo al carrito, sin tener que hacer la cuenta de cabeza.
+ * Hay tres formas de vender algo fraccionado, y las tres comparten la misma
+ * mecánica (una "escala" que representa el producto completo, y una cantidad
+ * parcial de esa escala):
+ *  - Suelto por peso (`unidad === "kg"`): sin escala, el campo es kilos reales.
+ *  - Bolsa cerrada con peso conocido (`pesoKg`): la escala es el peso de la
+ *    bolsa; el campo sigue siendo kilos reales, la cantidad que ve el
+ *    carrito es la fracción de bolsa.
+ *  - Paquete divisible (`unidadesPorBulto`, ej. una caja de 100 golosinas):
+ *    la escala es cuántas unidades trae el paquete; el campo es la cantidad
+ *    de unidades sueltas, la cantidad que ve el carrito es la fracción del
+ *    paquete.
  */
 export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
-  const [valorKg, setValorKg] = useState("")
+  const [valorNatural, setValorNatural] = useState("")
   const [valorMonto, setValorMonto] = useState("")
   const [valorUnidades, setValorUnidades] = useState("1")
 
   const porKg = producto?.unidad === "kg"
-  // Una bolsa cerrada con peso detectado (import de alimentos) también se
-  // puede vender fraccionada: alguien abre la bolsa de 6 kg y vende 1 kg
-  // suelto. `pesoBolsa` es el peso de la bolsa completa; 0 si no aplica.
-  const pesoBolsa = producto?.unidad === "un" ? (producto?.pesoKg ?? 0) : 0
-  const fraccionable = porKg || pesoBolsa > 0
+  // Un paquete con cantidad de unidades tiene prioridad sobre el peso: si un
+  // producto tuviera los dos (una caja de sobres con peso por sobre
+  // detectado), tiene más sentido venderlo contando sobres que pesándolos.
+  const bultoUnidades = producto?.unidad === "un" ? (producto?.unidadesPorBulto ?? 0) : 0
+  const bultoPeso = producto?.unidad === "un" && bultoUnidades <= 0 ? (producto?.pesoKg ?? 0) : 0
+  const modoNatural: "kg" | "u" = bultoUnidades > 0 ? "u" : "kg"
+  // Tamaño del producto completo en su unidad natural: kilos de la bolsa, o
+  // unidades del paquete. 0 cuando se vende suelto por kg sin bolsa de por medio.
+  const escala = bultoUnidades > 0 ? bultoUnidades : bultoPeso
+  const fraccionable = porKg || escala > 0
   // El monto en pesos asume precio unitario fijo: no tiene forma limpia de
   // invertirse cuando hay un combo (N unidades a precio fijo) de por medio.
   const esCombo = producto ? tieneOferta(producto) && producto.ofertaTipo === "combo" : false
 
-  const precioPorKg = producto && pesoBolsa > 0 ? precioFinal(producto) / pesoBolsa : (producto ? precioFinal(producto) : 0)
+  const precioPorNatural = producto && escala > 0 ? precioFinal(producto) / escala : (producto ? precioFinal(producto) : 0)
 
-  /** Kilos reales → cantidad que espera el carrito (fracción de bolsa, o kilos directo). */
-  const kgACantidad = (kg: number) => (pesoBolsa > 0 ? kg / pesoBolsa : kg)
+  /** Cantidad en la unidad natural → cantidad que espera el carrito (fracción del completo, o directo). */
+  const naturalACantidad = (n: number) => (escala > 0 ? n / escala : n)
 
   // Cada vez que se abre con otro producto se reinicia: arrastrar "2,5" de la
-  // venta anterior es una forma muy fácil de despachar de más. Una bolsa con
-  // peso arranca en su propio peso completo — la venta más común es la bolsa
-  // entera — para que un simple Enter la agregue igual.
+  // venta anterior es una forma muy fácil de despachar de más. Un paquete o
+  // una bolsa arrancan en su propio tamaño completo — la venta más común es
+  // el producto entero — para que un simple Enter lo agregue igual.
   useEffect(() => {
     if (!producto) return
     setValorUnidades("1")
     if (!fraccionable) {
-      setValorKg("")
+      setValorNatural("")
       setValorMonto("")
       return
     }
-    const kgInicial = pesoBolsa > 0 ? pesoBolsa : 0
-    const precioInicial = pesoBolsa > 0 ? precioFinal(producto) / pesoBolsa : precioFinal(producto)
-    setValorKg(kgInicial > 0 ? String(kgInicial) : "")
-    setValorMonto(kgInicial > 0 && precioInicial > 0 ? numeroLimpio(kgInicial * precioInicial) : "")
-  }, [producto, fraccionable, pesoBolsa])
+    const naturalInicial = escala > 0 ? escala : 0
+    const precioInicial = escala > 0 ? precioFinal(producto) / escala : precioFinal(producto)
+    setValorNatural(naturalInicial > 0 ? String(naturalInicial) : "")
+    setValorMonto(naturalInicial > 0 && precioInicial > 0 ? numeroLimpio(naturalInicial * precioInicial) : "")
+  }, [producto, fraccionable, escala])
 
-  const escribirKg = (texto: string) => {
-    setValorKg(texto)
-    const kg = Number(texto.replace(",", "."))
-    setValorMonto(Number.isFinite(kg) && kg > 0 && precioPorKg > 0 ? numeroLimpio(kg * precioPorKg) : "")
+  const escribirNatural = (texto: string) => {
+    setValorNatural(texto)
+    const n = Number(texto.replace(",", "."))
+    setValorMonto(Number.isFinite(n) && n > 0 && precioPorNatural > 0 ? numeroLimpio(n * precioPorNatural) : "")
   }
 
   const escribirMonto = (texto: string) => {
     setValorMonto(texto)
     const monto = Number(texto.replace(",", "."))
-    setValorKg(Number.isFinite(monto) && monto > 0 && precioPorKg > 0 ? numeroLimpio(monto / precioPorKg) : "")
+    setValorNatural(Number.isFinite(monto) && monto > 0 && precioPorNatural > 0 ? numeroLimpio(monto / precioPorNatural) : "")
   }
 
   const cantidad = fraccionable
-    ? kgACantidad(Number(valorKg.replace(",", ".")) || 0)
+    ? naturalACantidad(Number(valorNatural.replace(",", ".")) || 0)
     : Number(valorUnidades.replace(",", ".")) || 0
 
   const importe = producto && cantidad > 0 ? precioLinea(producto, cantidad) : 0
@@ -105,10 +122,16 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
     onConfirmar(cantidad)
   }
 
-  // El peso de la bolsa entera va primero en los atajos, para que vender la
-  // bolsa completa (el caso más común) sea un solo click.
-  const atajosKilos =
-    pesoBolsa > 0 ? [pesoBolsa, ...KILOS_RAPIDOS.filter((k) => k !== pesoBolsa)] : KILOS_RAPIDOS
+  // El tamaño completo (bolsa o paquete) va primero en los atajos, para que
+  // vender el producto entero (el caso más común) sea un solo click.
+  const atajosNaturales =
+    modoNatural === "u"
+      ? escala > 0 && !UNIDADES_RAPIDAS.includes(escala)
+        ? [escala, ...UNIDADES_RAPIDAS]
+        : UNIDADES_RAPIDAS
+      : escala > 0 && !KILOS_RAPIDOS.includes(escala)
+        ? [escala, ...KILOS_RAPIDOS]
+        : KILOS_RAPIDOS
 
   return (
     <Dialog open={producto !== null} onOpenChange={(v) => !v && onCerrar()}>
@@ -144,36 +167,40 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="kilos">Kilos</Label>
+                  <Label htmlFor="natural">{modoNatural === "u" ? "Unidades sueltas" : "Kilos"}</Label>
                   <Input
-                    id="kilos"
+                    id="natural"
                     type="number"
                     inputMode="decimal"
-                    min={0.001}
-                    step={0.1}
-                    value={valorKg}
+                    min={modoNatural === "u" ? 1 : 0.001}
+                    step={modoNatural === "u" ? 1 : 0.1}
+                    value={valorNatural}
                     autoFocus
-                    placeholder="Ej: 0,1 para 100 g"
-                    onChange={(e) => escribirKg(e.target.value)}
+                    placeholder={modoNatural === "u" ? "Ej: 3" : "Ej: 0,1 para 100 g"}
+                    onChange={(e) => escribirNatural(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") confirmar()
                     }}
                     className="h-12 text-lg"
                   />
                   <div className="flex flex-wrap gap-1.5">
-                    {atajosKilos.map((n) => (
+                    {atajosNaturales.map((n) => (
                       <Button
                         key={n}
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => escribirKg(String(n))}
+                        onClick={() => escribirNatural(String(n))}
                       >
-                        {n === pesoBolsa
-                          ? `Bolsa (${formatCantidad(n)} kg)`
-                          : n < 1
-                            ? `${formatCantidad(n * 1000)} g`
-                            : `${formatCantidad(n)} kg`}
+                        {n === escala
+                          ? modoNatural === "u"
+                            ? `Paquete completo (${formatCantidad(n)})`
+                            : `Bolsa (${formatCantidad(n)} kg)`
+                          : modoNatural === "u"
+                            ? `${n} u.`
+                            : n < 1
+                              ? `${formatCantidad(n * 1000)} g`
+                              : `${formatCantidad(n)} kg`}
                       </Button>
                     ))}
                   </div>

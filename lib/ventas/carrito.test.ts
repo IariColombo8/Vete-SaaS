@@ -94,6 +94,14 @@ describe("agregarAlCarrito", () => {
     expect(mediaBolsa[0].cantidad).toBe(0.5)
     expect(totalesCarrito(mediaBolsa).subtotal).toBe(4500)
   })
+
+  it("permite vender unidades sueltas de un paquete divisible", () => {
+    const caja = producto({ unidad: "un", unidadesPorBulto: 100, precio: 50000, stock: 10 })
+    const tresSueltas = agregarAlCarrito([], caja, 0.03)
+
+    expect(tresSueltas[0].cantidad).toBe(0.03)
+    expect(totalesCarrito(tresSueltas).subtotal).toBe(1500)
+  })
 })
 
 describe("cambiarCantidad y quitarDelCarrito", () => {
@@ -265,6 +273,10 @@ describe("presentacionDe", () => {
 
   it("queda vacía cuando no es alimento", () => {
     expect(presentacionDe(producto())).toBe("")
+  })
+
+  it("describe el paquete divisible por su cantidad de unidades", () => {
+    expect(presentacionDe(producto({ unidadesPorBulto: 100 }))).toBe("x100")
   })
 })
 
