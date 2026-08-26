@@ -62,6 +62,17 @@ describe("precioFinal", () => {
     expect(precioFinal({ ...base, ofertaActiva: true, ofertaTipo: "monto", ofertaValor: 5000 })).toBe(0)
   })
 
+  it("descuenta sobre precioLista, no sobre precio, cuando hay margen aplicado", () => {
+    // precio (con margen) = 1200, pero la oferta tiene que descontar sobre
+    // el precio de lista (1000), no sobre el precio de venta ya marcado.
+    const conMargen = { ...base, precio: 1200, precioLista: 1000, ofertaActiva: true, ofertaTipo: "porcentaje" as const, ofertaValor: 10 }
+    expect(precioFinal(conMargen)).toBe(900)
+  })
+
+  it("sin precioLista usa precio como base (compatibilidad)", () => {
+    expect(precioFinal({ ...base, ofertaActiva: true, ofertaTipo: "porcentaje", ofertaValor: 10 })).toBe(900)
+  })
+
   it("redondea a dos decimales", () => {
     expect(precioFinal({ precio: 999.99, ofertaActiva: true, ofertaTipo: "porcentaje", ofertaValor: 33 })).toBe(669.99)
   })

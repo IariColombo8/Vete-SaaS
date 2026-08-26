@@ -67,7 +67,13 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
         { precio: producto.precio, ofertaActiva: true, ofertaTipo: "combo", ofertaValor: valorNum, ofertaCantidad: cantidadNum },
         cantidadNum || 1,
       )
-    : precioFinal({ precio: producto.precio, ofertaActiva: activa, ofertaTipo: tipo, ofertaValor: valorNum })
+    : precioFinal({
+        precio: producto.precio,
+        precioLista: producto.precioLista,
+        ofertaActiva: activa,
+        ofertaTipo: tipo,
+        ofertaValor: valorNum,
+      })
 
   const guardar = async () => {
     if (invalido) return
@@ -204,7 +210,7 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
                 <span className="flex items-baseline gap-2">
                   {!esCombo && (
                     <span className="text-xs text-muted-foreground line-through">
-                      {formatCurrency(producto.precio)}
+                      {formatCurrency(producto.precioLista)}
                     </span>
                   )}
                   <span className="text-lg font-bold text-emerald-600">{formatCurrency(preview)}</span>

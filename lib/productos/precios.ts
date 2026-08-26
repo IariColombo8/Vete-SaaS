@@ -11,6 +11,13 @@ import type { OfertaTipo } from "@/lib/supabase/types"
 /** Lo mínimo que hay que saber de un producto para calcular su precio. */
 export interface ConOferta {
   precio: number
+  /**
+   * Precio de lista/Excel. La oferta (monto o porcentaje) descuenta sobre
+   * este valor, no sobre `precio` — así una promoción se arma sobre el precio
+   * de referencia, sin importar qué margen esté aplicado en ese momento.
+   * `undefined` = usa `precio` como base (compatibilidad con datos viejos).
+   */
+  precioLista?: number
   ofertaActiva?: boolean
   ofertaTipo?: OfertaTipo | null
   ofertaValor?: number | null
@@ -52,16 +59,17 @@ export function tieneOferta(p: ConOferta, hoy: Date = new Date()): boolean {
  */
 export function precioFinal(p: ConOferta): number {
   if (!tieneOferta(p) || p.ofertaTipo === "combo") return round2(p.precio)
+  const base = p.precioLista ?? p.precio
   const valor = Number(p.ofertaValor) || 0
-  const bruto =
-    p.ofertaTipo === "porcentaje" ? p.precio * (1 - valor / 100) : p.precio - valor
+  const bruto = p.ofertaTipo === "porcentaje" ? base * (1 - valor / 100) : base - valor
   return round2(bruto)
 }
 
 /** Cuánto se ahorra el cliente por unidad respecto del precio de lista. */
 export function ahorroOferta(p: ConOferta): number {
   if (p.ofertaTipo === "combo") return 0
-  return round2(p.precio - precioFinal(p))
+  const base = p.precioLista ?? p.precio
+  return round2(base - precioFinal(p))
 }
 
 /**

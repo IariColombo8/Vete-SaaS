@@ -534,7 +534,7 @@ export function ProductosManagement({ tenantId }: Props) {
                         ) : enOferta ? (
                           <span className="flex flex-col items-end leading-tight">
                             <span className="text-xs text-muted-foreground line-through">
-                              {formatCurrency(p.precio)}
+                              {formatCurrency(p.precioLista)}
                             </span>
                             <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
                               <Tag className="h-3 w-3" /> {formatCurrency(precioFinal(p))}
