@@ -32,6 +32,10 @@ export function DetalleClienteDialog({ tenantId, cliente, onCerrar, onCambio }: 
 
   useEffect(() => {
     if (!cliente) return
+    // El diálogo se reutiliza para cada cliente: sin este reset, un monto
+    // tipeado para uno queda pegado y se le puede cobrar por error a otro.
+    setMonto("")
+    setMedioPago("efectivo")
     setCargando(true)
     getMovimientosCliente(tenantId, cliente.clienteId)
       .then(setMovimientos)
