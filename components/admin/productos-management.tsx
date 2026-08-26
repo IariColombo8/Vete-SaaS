@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import {
   Search, AlertTriangle, ChevronLeft, ChevronRight, Tag, Upload, Pencil,
   Package, PackageX, ClipboardList, Layers, Plus, CalendarClock, Trash2,
-  FileDown, Loader2, Percent, Scale, X,
+  FileDown, Loader2, Percent, Scale, X, Eye, EyeOff,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,7 @@ import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-d
 import {
   getProductos, getCategorias, getStockStats, getVencimientosProximos,
   getTodosLosProductosParaExportar,
-  createProducto, updateProducto, desactivarProducto, setOferta, ajustarStock,
+  createProducto, updateProducto, desactivarProducto, setOferta, ajustarStock, setPublicadoEnLanding,
   type ProductoInput, type OfertaInput, type StockStats,
 } from "@/lib/supabase/productos"
 import { getTenantConfig } from "@/lib/supabase/queries"
@@ -188,6 +188,20 @@ export function ProductosManagement({ tenantId }: Props) {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo guardar la oferta")
       throw e
+    }
+  }
+
+  const [publicando, setPublicando] = useState<string | null>(null)
+
+  const togglePublicado = async (p: Producto) => {
+    setPublicando(p.id)
+    try {
+      await setPublicadoEnLanding(tenantId, p.id, !p.publicadoEnLanding)
+      await cargarLista()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo actualizar la publicación")
+    } finally {
+      setPublicando(null)
     }
   }
 
@@ -513,6 +527,17 @@ export function ProductosManagement({ tenantId }: Props) {
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm" variant="ghost"
+                            className={cn("h-8 px-2", p.publicadoEnLanding && "text-emerald-600")}
+                            onClick={() => togglePublicado(p)}
+                            disabled={publicando === p.id || readOnly}
+                            title={p.publicadoEnLanding ? "Publicado en tu página" : "No publicado"}
+                          >
+                            {p.publicadoEnLanding
+                              ? <Eye className="h-3.5 w-3.5" />
+                              : <EyeOff className="h-3.5 w-3.5" />}
+                          </Button>
                           <Button
                             size="sm" variant="ghost"
                             className={cn("h-8 px-2", enOferta && "text-emerald-600")}
