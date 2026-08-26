@@ -123,14 +123,21 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
           <div className="max-h-[70vh] overflow-y-auto">
             {marca === null && (
               <Grilla>
-                {marcas.map((m) => (
-                  <Opcion key={m.marca} onClick={() => elegirMarca(m.marca)}>
-                    <span className="font-semibold">{m.marca}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {m.lineas.length} {m.lineas.length === 1 ? "línea" : "líneas"}
-                    </span>
-                  </Opcion>
-                ))}
+                {marcas.map((m) => {
+                  // La mayoría de las marcas de este catálogo no tienen línea
+                  // real (el Excel del proveedor no la trae), así que "1
+                  // línea" no dice nada útil: importa cuántos productos hay
+                  // adentro, no en cuántas líneas están repartidos.
+                  const totalItems = m.lineas.reduce((n, l) => n + l.presentaciones.length, 0)
+                  return (
+                    <Opcion key={m.marca} onClick={() => elegirMarca(m.marca)}>
+                      <span className="font-semibold">{m.marca}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {totalItems} {totalItems === 1 ? "producto" : "productos"}
+                      </span>
+                    </Opcion>
+                  )
+                })}
               </Grilla>
             )}
 
