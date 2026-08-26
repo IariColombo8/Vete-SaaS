@@ -548,10 +548,13 @@ export default function VetPublicPage() {
 
             <div className="flex flex-wrap justify-center gap-6 mb-12">
               {productos.slice(0, 8).map((p, i) => (
-                <Reveal key={p.id} delay={i * 80} direction={i % 2 === 0 ? "left" : "right"}>
-                  <div className="w-[calc(50%-12px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] xl:w-[calc(16.666%-20px)]">
-                    <ProductoTarjeta producto={p} logo={logo} />
-                  </div>
+                <Reveal
+                  key={p.id}
+                  delay={i * 80}
+                  direction={i % 2 === 0 ? "left" : "right"}
+                  className="w-[calc(50%-12px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] xl:w-[calc(16.666%-20px)]"
+                >
+                  <ProductoTarjeta producto={p} logo={logo} />
                 </Reveal>
               ))}
             </div>
