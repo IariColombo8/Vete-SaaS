@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/supabase/admin"
 import { getGmailCredentials, getEmailJsCredentials } from "@/lib/supabase/email-credentials"
 import { enviarEmailGmail } from "@/lib/google/gmail"
 import { enviarEmailJs } from "@/lib/email/emailjs"
+import { generarLinkGoogleCalendar } from "@/lib/email/google-calendar-link"
 
 /**
  * Envío de emails server-side. Dos proveedores posibles, elegidos por tenant:
@@ -35,6 +36,10 @@ interface TurnoEmailData {
   email: string
   /** Nombre de la veterinaria, para personalizar el asunto/cuerpo. */
   veterinaria?: string
+  /** Logo de la veterinaria, para el header del email. */
+  logoUrl?: string
+  /** Duración del servicio en minutos, para el link de "Agregar a Google Calendar". Default 60. */
+  duracionMin?: number
   /** Slug del tenant, para resolver el proveedor de email configurado. */
   tenantId?: string
 }
@@ -62,45 +67,75 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;")
 }
 
-function buildConfirmacionHtml(data: TurnoEmailData): string {
+function buildConfirmacionHtml(data: TurnoEmailData, calendarLink: string): string {
   const vet = data.veterinaria ? escapeHtml(data.veterinaria) : "tu veterinaria"
-  const row = (label: string, value: string) =>
+  const item = (icon: string, label: string, value: string) =>
     value
       ? `<tr>
-          <td style="padding:8px 0;color:#64748b;font-size:14px;">${escapeHtml(label)}</td>
-          <td style="padding:8px 0;color:#0f172a;font-size:14px;font-weight:600;text-align:right;">${escapeHtml(value)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eef2f6;" width="36">
+            <div style="width:28px;height:28px;border-radius:8px;background:#ecfdf5;text-align:center;line-height:28px;font-size:14px;">${icon}</div>
+          </td>
+          <td style="padding:10px 0 10px 10px;border-bottom:1px solid #eef2f6;">
+            <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">${escapeHtml(label)}</div>
+            <div style="color:#0f172a;font-size:15px;font-weight:600;">${escapeHtml(value)}</div>
+          </td>
         </tr>`
       : ""
 
+  const logo = data.logoUrl
+    ? `<img src="${escapeHtml(data.logoUrl)}" alt="${vet}" width="72" height="72" style="width:72px;height:72px;object-fit:contain;display:block;" />`
+    : `<div style="width:72px;height:72px;border-radius:14px;background:rgba(255,255,255,0.18);text-align:center;line-height:72px;font-size:30px;">🐾</div>`
+
   return `<!DOCTYPE html>
 <html lang="es">
-  <body style="margin:0;background:#f1f5f9;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">
-    <div style="max-width:520px;margin:0 auto;padding:32px 16px;">
-      <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-        <div style="background:linear-gradient(135deg,#10b981,#0d9488);padding:28px 32px;">
-          <h1 style="margin:0;color:#fff;font-size:20px;">Turno confirmado ✓</h1>
-          <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${vet}</p>
-        </div>
-        <div style="padding:28px 32px;">
-          <p style="margin:0 0 20px;color:#334155;font-size:15px;">
-            Hola <strong>${escapeHtml(data.nombre_y_apellido)}</strong>, registramos tu turno con éxito.
-          </p>
-          <table style="width:100%;border-collapse:collapse;">
-            ${row("Fecha", data.fecha)}
-            ${row("Hora", data.hora)}
-            ${row("Mascota", data.nombre_mascota)}
-            ${row("Tipo", data.tipo_mascota)}
-            ${row("Servicio", data.servicio_requerido)}
-            ${row("Dirección", data.direccion)}
+  <body style="margin:0;background:#f4f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">
+    <div style="max-width:540px;margin:0 auto;padding:40px 16px;">
+      <div style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(15,23,42,0.08);">
+        <div style="background:linear-gradient(135deg,#0d9488 0%,#0891b2 55%,#0e7490 100%);padding:32px;">
+          <table width="100%" style="border-collapse:collapse;">
+            <tr>
+              <td style="vertical-align:middle;">
+                <p style="margin:0 0 6px;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Turno confirmado</p>
+                <h1 style="margin:0;color:#fff;font-size:22px;line-height:1.3;">¡Nos vemos pronto! 🐶🐱</h1>
+              </td>
+              <td align="right" style="vertical-align:middle;" width="80">${logo}</td>
+            </tr>
           </table>
-          <p style="margin:24px 0 0;color:#94a3b8;font-size:12px;line-height:1.5;">
-            Si necesitás reprogramar o cancelar, respondé este email o contactá a la veterinaria.
+          <p style="margin:16px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">${vet}</p>
+        </div>
+
+        <div style="padding:32px;">
+          <p style="margin:0 0 24px;color:#334155;font-size:15px;line-height:1.6;">
+            Hola <strong>${escapeHtml(data.nombre_y_apellido)}</strong>, tu turno quedó reservado. Te dejamos el resumen abajo. 📅
+          </p>
+
+          <table style="width:100%;border-collapse:collapse;">
+            ${item("📆", "Fecha", data.fecha)}
+            ${item("🕐", "Hora", data.hora)}
+            ${item("🐾", "Mascota", `${data.nombre_mascota}${data.tipo_mascota ? ` · ${data.tipo_mascota}` : ""}`)}
+            ${item("🩺", "Servicio", data.servicio_requerido)}
+            ${item("📍", "Dirección", data.direccion)}
+          </table>
+
+          <div style="text-align:center;margin-top:28px;">
+            <a href="${calendarLink}" target="_blank" rel="noopener"
+               style="display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;
+                      font-size:14px;font-weight:600;padding:12px 24px;border-radius:10px;">
+              📅 Agregar a Google Calendar
+            </a>
+          </div>
+
+          <p style="margin:24px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">
+            ¿Necesitás reprogramar o cancelar? Respondé este email o contactá directamente a la veterinaria.
           </p>
         </div>
       </div>
-      <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:16px;">
-        Enviado por VetPanel
-      </p>
+
+      <div style="text-align:center;margin-top:24px;">
+        <p style="color:#94a3b8;font-size:12px;margin:0;">
+          🐾 Hecho desde <a href="https://vetpanel.com.ar" target="_blank" rel="noopener" style="color:#0f766e;font-weight:600;text-decoration:none;">VetPanel</a>
+        </p>
+      </div>
     </div>
   </body>
 </html>`
@@ -121,6 +156,15 @@ export async function POST(request: Request) {
   const subject = data.veterinaria
     ? `Turno confirmado en ${data.veterinaria} — ${data.fecha} ${data.hora}`
     : `Turno confirmado — ${data.fecha} ${data.hora}`
+
+  const calendarLink = generarLinkGoogleCalendar({
+    fecha: data.fecha,
+    hora: data.hora,
+    duracionMin: data.duracionMin,
+    titulo: `Turno · ${data.nombre_mascota || "mascota"} (${data.servicio_requerido || "consulta"})`,
+    descripcion: `Turno en ${data.veterinaria || "la veterinaria"} para ${data.nombre_mascota || "tu mascota"}.`,
+    direccion: data.direccion,
+  })
 
   const proveedor = await resolverProveedor(data.tenantId)
 
@@ -164,7 +208,7 @@ export async function POST(request: Request) {
           refreshToken: credenciales.refreshToken,
           senderEmail: credenciales.senderEmail,
         },
-        { to: data.email, subject, html: buildConfirmacionHtml(data) },
+        { to: data.email, subject, html: buildConfirmacionHtml(data, calendarLink) },
       )
       return NextResponse.json({ ok: true })
     } catch (error) {
@@ -193,7 +237,7 @@ export async function POST(request: Request) {
         from,
         to: [data.email],
         subject,
-        html: buildConfirmacionHtml(data),
+        html: buildConfirmacionHtml(data, calendarLink),
       }),
     })
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad";
 
 interface ModalConfirmacionProps {
   open: boolean;
@@ -28,7 +29,8 @@ interface ModalConfirmacionProps {
     domicilio: string;
     nombreMascota: string;
     tipoMascota: string;
-    edadMascota: string;
+    edadValorMascota: string;
+    edadUnidadMascota: UnidadEdad;
     razaMascota: string;
     pesoMascota: string;
     servicio: string;
@@ -98,13 +100,18 @@ export function ModalConfirmacion({
             </div>
             <div className="text-[11px] space-y-0.5">
               <p className="font-medium">{formData.nombreMascota} • <span className="capitalize">{formData.tipoMascota}</span></p>
-              {(formData.razaMascota || formData.edadMascota) && (
-                <p className="text-muted-foreground">
-                  {formData.razaMascota && <span>Raza: <span className="text-foreground font-medium">{formData.razaMascota}</span></span>}
-                  {formData.razaMascota && formData.edadMascota && " • "}
-                  {formData.edadMascota && <span>Edad: <span className="text-foreground font-medium">{formData.edadMascota}</span></span>}
-                </p>
-              )}
+              {(() => {
+                const edadTexto = formData.edadValorMascota
+                  ? formatearEdad({ valor: Number(formData.edadValorMascota), unidad: formData.edadUnidadMascota })
+                  : "";
+                return (formData.razaMascota || edadTexto) && (
+                  <p className="text-muted-foreground">
+                    {formData.razaMascota && <span>Raza: <span className="text-foreground font-medium">{formData.razaMascota}</span></span>}
+                    {formData.razaMascota && edadTexto && " • "}
+                    {edadTexto && <span>Edad: <span className="text-foreground font-medium">{edadTexto}</span></span>}
+                  </p>
+                );
+              })()}
             </div>
           </div>
 

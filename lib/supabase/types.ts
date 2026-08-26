@@ -155,6 +155,11 @@ export interface Mascota {
   nombre: string
   tipo: string
   edad?: string
+  /** Valor numérico de la edad tal como se cargó (ver edadUnidad/edadRegistradaEn). */
+  edadValor?: number
+  edadUnidad?: "meses" | "anios"
+  /** Fecha (YYYY-MM-DD) en la que se cargó edadValor/edadUnidad. */
+  edadRegistradaEn?: string
   raza?: string
   peso?: string
   /** Token aleatorio para la libreta pública por QR (no adivinable). */

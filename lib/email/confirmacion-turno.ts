@@ -9,6 +9,10 @@ interface DatosTurno {
   email: string
   /** Nombre de la veterinaria (opcional, para personalizar el email). */
   veterinaria?: string
+  /** Logo de la veterinaria (opcional, para el header del email). */
+  logoUrl?: string
+  /** Duración del servicio en minutos, para el evento de calendario adjunto (.ics). */
+  duracionMin?: number
   /** Slug del tenant, para resolver si envía por Resend o por Gmail API. */
   tenantId?: string
 }

@@ -6,7 +6,8 @@
       "http://localhost:3002",
       "http://127.0.0.1:3000",
       "http://127.0.0.1:3001",
-      "https://REEMPLAZAR-POR-TU-DOMINIO.vercel.app"
+      "https://www.vetpanel.com.ar",
+      "https://vetpanel-servitec.vercel.app"
     ],
     "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
     "maxAgeSeconds": 3600,

@@ -17,7 +17,8 @@ interface MascotaSectionProps {
     mascotaExistenteId: string;
     nombreMascota: string;
     tipoMascota: string;
-    edadMascota: string;
+    edadValorMascota: string;
+    edadUnidadMascota: "meses" | "anios";
     razaMascota: string;
     pesoMascota: string;
   };
@@ -172,16 +173,37 @@ export function MascotaSection({
 
           <div className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="edadMascota" className="text-sm font-semibold">
+              <Label htmlFor="edadValorMascota" className="text-sm font-semibold">
                 Edad
               </Label>
-              <Input
-                id="edadMascota"
-                placeholder="2 años"
-                value={formData.edadMascota}
-                onChange={(e) => handleChange("edadMascota", e.target.value)}
-                className="h-11 border-2 focus-visible:ring-primary/50"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="edadValorMascota"
+                  type="number"
+                  min="0"
+                  placeholder="8"
+                  value={formData.edadValorMascota}
+                  onChange={(e) => handleChange("edadValorMascota", e.target.value)}
+                  className="h-11 border-2 focus-visible:ring-primary/50"
+                />
+                <Select
+                  value={formData.edadUnidadMascota}
+                  onValueChange={(value) => handleChange("edadUnidadMascota", value)}
+                >
+                  <SelectTrigger className="h-11 w-28 border-2 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="meses">meses</SelectItem>
+                    <SelectItem value="anios">años</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {esMascotaExistente && (
+                <p className="text-xs text-muted-foreground">
+                  Calculada automáticamente desde el último registro
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="razaMascota" className="text-sm font-semibold">
@@ -199,13 +221,19 @@ export function MascotaSection({
               <Label htmlFor="pesoMascota" className="text-sm font-semibold">
                 Peso
               </Label>
-              <Input
-                id="pesoMascota"
-                placeholder="15 kg"
-                value={formData.pesoMascota}
-                onChange={(e) => handleChange("pesoMascota", e.target.value)}
-                className="h-11 border-2 focus-visible:ring-primary/50"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="pesoMascota"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="15"
+                  value={formData.pesoMascota}
+                  onChange={(e) => handleChange("pesoMascota", e.target.value)}
+                  className="h-11 border-2 focus-visible:ring-primary/50"
+                />
+                <span className="text-sm font-semibold text-muted-foreground shrink-0">kg</span>
+              </div>
             </div>
           </div>
         </>

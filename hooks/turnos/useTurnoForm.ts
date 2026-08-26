@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase/queries"
 import type { HorarioTenant, TenantConfig, TurnoConfig } from "@/lib/supabase/queries"
 import { enviarEmailConfirmacion } from "@/lib/email/confirmacion-turno"
+import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
 import { useClienteByDNI } from "./useClienteByDNI"
 import { useDisponibilidadTurnos } from "./useDisponibilidadTurnos"
 import {
@@ -75,7 +76,8 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
   const [formData, setFormData] = useState({
     nombre: "", telefono: "", email: "", dni: "", domicilio: "",
     mascotaExistenteId: "", nombreMascota: "", tipoMascota: "",
-    edadMascota: "", razaMascota: "", pesoMascota: "",
+    edadValorMascota: "", edadUnidadMascota: "meses" as UnidadEdad,
+    razaMascota: "", pesoMascota: "",
     servicio: "", motivo: "", fecha: "", hora: "",
     vacunas: [] as string[],
     lugar: "" as string,
@@ -162,16 +164,29 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
 
   const handleChange = (field: string, value: string) => {
     if (lockDni && field === "dni") return
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => ({ ...prev, [field]: value }) as typeof prev)
     if (["nombre", "telefono", "email", "domicilio"].includes(field) && clienteExistente) setDatosEditados(true)
     if (field === "servicio" && value !== "vacunacion") setFormData(prev => ({ ...prev, vacunas: [] }))
     if (field === "mascotaExistenteId") {
       setMostrarNuevaMascota(value === "nueva")
       if (value !== "nueva") {
         const m = mascotas.find(m => m.id === value)
-        if (m) setFormData(prev => ({ ...prev, nombreMascota: m.nombre || "", tipoMascota: m.tipo || "", edadMascota: m.edad || "", razaMascota: m.raza || "", pesoMascota: m.peso || "" }))
+        if (m) setFormData(prev => ({
+          ...prev,
+          nombreMascota: m.nombre || "",
+          tipoMascota: m.tipo || "",
+          edadValorMascota: m.edadValor !== undefined ? String(m.edadValor) : "",
+          edadUnidadMascota: m.edadUnidad || "meses",
+          razaMascota: m.raza || "",
+          pesoMascota: (m.peso || "").replace(/[^\d.,]/g, ""),
+        }))
       } else {
-        setFormData(prev => ({ ...prev, nombreMascota: "", tipoMascota: "", edadMascota: "", razaMascota: "", pesoMascota: "" }))
+        setFormData(prev => ({
+          ...prev,
+          nombreMascota: "", tipoMascota: "",
+          edadValorMascota: "", edadUnidadMascota: "meses",
+          razaMascota: "", pesoMascota: "",
+        }))
       }
     }
   }
@@ -224,16 +239,28 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
         })
       }
 
+      const hoy = format(new Date(), "yyyy-MM-dd")
+      const edadValor = formData.edadValorMascota ? Number(formData.edadValorMascota) : undefined
+      const datosEdad = edadValor !== undefined && !Number.isNaN(edadValor)
+        ? {
+            edad: formatearEdad({ valor: edadValor, unidad: formData.edadUnidadMascota }),
+            edadValor,
+            edadUnidad: formData.edadUnidadMascota,
+            edadRegistradaEn: hoy,
+          }
+        : {}
+      const peso = formData.pesoMascota ? `${formData.pesoMascota} kg` : ""
+
       if (mostrarNuevaMascota || !mascotaId) {
         const mascotaRef = await createMascota(tenantId, clienteId, {
           nombre: formData.nombreMascota, tipo: formData.tipoMascota,
-          edad: formData.edadMascota, raza: formData.razaMascota, peso: formData.pesoMascota,
+          raza: formData.razaMascota, peso, ...datosEdad,
         })
         mascotaId = mascotaRef.id
       } else {
         await updateMascota(tenantId, clienteId, mascotaId, {
           nombre: formData.nombreMascota, tipo: formData.tipoMascota,
-          edad: formData.edadMascota, raza: formData.razaMascota, peso: formData.pesoMascota,
+          raza: formData.razaMascota, peso, ...datosEdad,
         })
       }
 
@@ -253,6 +280,9 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       })
 
       try {
+        // Sin duenoEmail: no queremos que Google le mande su propia invitación
+        // por separado, la agenda del turno ya viaja adjunta (.ics) en el
+        // email de confirmación de abajo, en un único correo.
         await fetch("/api/calendar/create-event", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -260,19 +290,24 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
             tenantId,
             mascotaNombre: formData.nombreMascota, duenoNombre: formData.nombre,
             motivo: formData.motivo, fecha: formData.fecha, hora: formData.hora,
-            servicio: formData.servicio, duenoEmail: formData.email,
+            servicio: formData.servicio,
           }),
         })
       } catch (e) {
         console.error("No se pudo crear evento en Calendar:", e)
       }
 
+      const direccionVeterinaria = [tenantConfig?.direccion, tenantConfig?.ciudad].filter(Boolean).join(", ")
+
       const emailEnviado = await enviarEmailConfirmacion({
         nombre_y_apellido: formData.nombre,
         fecha: selectedDate ? format(selectedDate, "PPP", { locale: es }) : formData.fecha,
-        hora: formData.hora, direccion: formData.domicilio,
+        // Dirección de la veterinaria (adonde hay que ir), no el domicilio del cliente.
+        hora: formData.hora, direccion: direccionVeterinaria,
         nombre_mascota: formData.nombreMascota, tipo_mascota: formData.tipoMascota,
         servicio_requerido: formData.servicio, email: formData.email,
+        veterinaria: tenantConfig?.nombre, logoUrl: tenantConfig?.logo,
+        duracionMin: servicioSel?.duracionMin,
         tenantId,
       })
       if (!emailEnviado) console.warn("No se pudo enviar el email de confirmacion")
@@ -297,7 +332,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       track("turno_reservado", { tenant: tenantId, servicio: formData.servicio })
       toast({ title: "Turno agendado exitosamente", description: "Te enviamos un email de confirmacion." })
       onSuccess?.()
-      if (redirectOnSuccess) setTimeout(() => router.push("/"), 2000)
+      if (redirectOnSuccess) setTimeout(() => router.push(`/${tenantId}`), 2000)
 
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TENANT_PAUSED") {

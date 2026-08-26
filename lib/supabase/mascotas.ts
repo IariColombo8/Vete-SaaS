@@ -1,6 +1,7 @@
 import { supabase } from "./config"
 import { mascotaDocId } from "./ids"
 import type { Mascota } from "./types"
+import { calcularEdadActual, formatearEdad } from "@/lib/mascotas/edad"
 
 /**
  * Mascotas. Se conserva la firma `(tenantId, clienteId, ...)` de la versión
@@ -10,11 +11,23 @@ import type { Mascota } from "./types"
 type Fila = Record<string, unknown>
 
 export function aMascota(f: Fila): Mascota {
+  const edadValor = f.edad_valor != null ? Number(f.edad_valor) : undefined
+  const edadUnidad = (f.edad_unidad as Mascota["edadUnidad"]) ?? undefined
+  const edadRegistradaEn = (f.edad_registrada_en as string) ?? undefined
+
+  const edadCalculada =
+    edadValor !== undefined && edadUnidad && edadRegistradaEn
+      ? calcularEdadActual({ valor: edadValor, unidad: edadUnidad, registradaEn: edadRegistradaEn })
+      : null
+
   return {
     id: f.id as string,
     nombre: (f.nombre as string) ?? "",
     tipo: (f.tipo as string) ?? "",
-    edad: (f.edad as string) ?? undefined,
+    edad: edadCalculada ? formatearEdad(edadCalculada) : (f.edad as string) ?? undefined,
+    edadValor,
+    edadUnidad,
+    edadRegistradaEn,
     raza: (f.raza as string) ?? undefined,
     peso: (f.peso as string) ?? undefined,
     libretaToken: (f.libreta_token as string) ?? undefined,
@@ -36,6 +49,9 @@ export async function createMascota(
       nombre: data.nombre,
       tipo: data.tipo,
       edad: data.edad ?? null,
+      edad_valor: data.edadValor ?? null,
+      edad_unidad: data.edadUnidad ?? null,
+      edad_registrada_en: data.edadRegistradaEn ?? null,
       raza: data.raza ?? null,
       peso: data.peso ?? null,
       libreta_token: data.libretaToken ?? null,
@@ -82,6 +98,9 @@ export async function updateMascota(
   if (data.nombre !== undefined) fila.nombre = data.nombre
   if (data.tipo !== undefined) fila.tipo = data.tipo
   if (data.edad !== undefined) fila.edad = data.edad
+  if (data.edadValor !== undefined) fila.edad_valor = data.edadValor
+  if (data.edadUnidad !== undefined) fila.edad_unidad = data.edadUnidad
+  if (data.edadRegistradaEn !== undefined) fila.edad_registrada_en = data.edadRegistradaEn
   if (data.raza !== undefined) fila.raza = data.raza
   if (data.peso !== undefined) fila.peso = data.peso
   if (data.libretaToken !== undefined) fila.libreta_token = data.libretaToken
