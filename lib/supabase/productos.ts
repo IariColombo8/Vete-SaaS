@@ -53,6 +53,7 @@ function aProducto(f: Fila): Producto {
     ofertaCantidad: f.oferta_cantidad != null ? num(f.oferta_cantidad) : undefined,
     activo: (f.activo as boolean) ?? true,
     revisar: (f.revisar as boolean) ?? false,
+    publicadoEnLanding: (f.publicado_en_landing as boolean) ?? false,
     createdAt: (f.created_at as string) ?? undefined,
     updatedAt: (f.updated_at as string) ?? undefined,
   }
@@ -566,6 +567,24 @@ export async function setOferta(
   if (error) throw mensajeError(error, "No se pudo guardar la oferta")
 }
 
+/**
+ * Alterna la visibilidad del producto en la vidriera pública. Es un toggle de
+ * un solo campo, separado del flujo de edición completa del producto (que
+ * pasa por `updateProducto`) para no forzar a abrir el diálogo entero solo
+ * para publicar/despublicar.
+ */
+export async function setPublicadoEnLanding(
+  tenantId: string,
+  id: string,
+  publicado: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("productos").update({ publicado_en_landing: publicado })
+    .eq("tenant_id", tenantId).eq("id", id)
+
+  if (error) throw mensajeError(error, "No se pudo actualizar la publicación")
+}
+
 // ── Stock ──
 
 export interface ResultadoAjuste {
@@ -833,4 +852,31 @@ export async function aplicarMargen(
   }
 
   return { actualizados: conCosto.length, omitidosSinCosto }
+}
+
+// ── Vidriera pública ──
+
+/**
+ * Productos publicados en la landing, para el fetch client-side de
+ * `vet-public-view.tsx` y de `/[slug]/productos`. No trae `costo` ni datos
+ * de stock/margen — esos campos no deben llegar al cliente público, aunque
+ * `aProducto` los deje en `undefined`/`0` porque la fila no los trae.
+ */
+export async function getProductosPublicados(tenantId: string): Promise<Producto[]> {
+  const { data, error } = await supabase
+    .from("productos")
+    .select(
+      "id, nombre, imagen_url, precio, unidad, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad",
+    )
+    .eq("tenant_id", tenantId)
+    .eq("activo", true)
+    .eq("publicado_en_landing", true)
+    .order("nombre")
+
+  if (error) {
+    console.error("Error listando productos publicados:", error.message)
+    return []
+  }
+
+  return (data ?? []).map(aProducto)
 }

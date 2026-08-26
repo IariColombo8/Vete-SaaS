@@ -321,6 +321,8 @@ export interface Producto {
   activo: boolean
   /** Lo marca la importación cuando la fila del Excel venía incompleta. */
   revisar: boolean
+  /** true = aparece en la vidriera pública del tenant (/[slug]/productos). */
+  publicadoEnLanding: boolean
   createdAt?: string
   updatedAt?: string
 }

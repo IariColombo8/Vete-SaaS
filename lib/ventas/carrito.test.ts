@@ -28,6 +28,7 @@ function producto(over: Partial<Producto> = {}): Producto {
     ofertaValor: 0,
     activo: true,
     revisar: false,
+    publicadoEnLanding: false,
     ...over,
   }
 }
