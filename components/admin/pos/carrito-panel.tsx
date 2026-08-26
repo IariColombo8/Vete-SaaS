@@ -1,17 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { ClienteSelector } from "./cliente-selector"
+import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-dialog"
 import {
   descripcionLinea, subtotalLinea, totalesCarrito,
   type Descuento, type LineaCarrito,
 } from "@/lib/ventas/carrito"
-import { formatCantidad, formatCurrency } from "@/lib/format"
+import { formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO, type Cliente, type MedioPago } from "@/lib/supabase/types"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
@@ -50,6 +52,14 @@ export function CarritoPanel({
   const totales = totalesCarrito(carrito, descuento)
   const vacio = carrito.length === 0
   const esEfectivo = medioPago === "efectivo"
+
+  // Se corrige acá, en el momento en que el vendedor nota que agregó el
+  // producto mal (ej. lo vendió entero cuando en realidad es suelto por
+  // peso): la línea ya tiene cantidad/precio calculados con el formato
+  // viejo, así que después de cambiar el formato se saca del carrito en vez
+  // de dejarla con números que ya no tienen sentido — se vuelve a agregar
+  // con el formato correcto.
+  const [corrigiendo, setCorrigiendo] = useState<LineaCarrito | null>(null)
 
   // "Paga con" solo tiene sentido en efectivo, y solo mientras dure el
   // total que motivó ese monto: si cambia el carrito o el medio de pago,
@@ -100,6 +110,7 @@ export function CarritoPanel({
                 linea={linea}
                 onCantidad={(c) => onCantidad(linea.id, c)}
                 onQuitar={() => onQuitar(linea.id)}
+                onCorregirFormato={() => setCorrigiendo(linea)}
               />
             ))}
           </ul>
@@ -240,6 +251,20 @@ export function CarritoPanel({
           {cobrando ? "Cobrando…" : "Cobrar"}
         </Button>
       </div>
+
+      <FormatoVentaDialog
+        tenantId={tenantId}
+        productos={corrigiendo ? [corrigiendo.producto] : []}
+        open={corrigiendo !== null}
+        onOpenChange={(v) => !v && setCorrigiendo(null)}
+        onAplicado={() => {
+          if (corrigiendo) {
+            onQuitar(corrigiendo.id)
+            toast.info(`Formato corregido — agregá "${corrigiendo.producto.nombre}" de nuevo al carrito`)
+          }
+          setCorrigiendo(null)
+        }}
+      />
     </div>
   )
 }
@@ -253,10 +278,12 @@ function LineaItem({
   linea,
   onCantidad,
   onQuitar,
+  onCorregirFormato,
 }: {
   linea: LineaCarrito
   onCantidad: (cantidad: number) => void
   onQuitar: () => void
+  onCorregirFormato: () => void
 }) {
   const porKg = linea.producto.unidad === "kg"
   const paso = porKg ? 0.5 : 1
@@ -270,6 +297,18 @@ function LineaItem({
         <span className="min-w-0 flex-1 text-sm font-medium leading-snug">
           {descripcionLinea(linea.producto)}
         </span>
+        {!esServicioManual && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-emerald-600"
+            onClick={onCorregirFormato}
+            aria-label="Cambiar formato de venta"
+            title="¿Está mal cargado por peso/unidad? Cambiar formato de venta"
+          >
+            <Scale className="h-3.5 w-3.5" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -303,10 +342,7 @@ function LineaItem({
             >
               <Minus className="h-3 w-3" />
             </Button>
-            <span className="min-w-[3.5rem] text-center text-sm tabular-nums">
-              {formatCantidad(linea.cantidad)}
-              {porKg ? " kg" : ""}
-            </span>
+            <CantidadTexto cantidad={linea.cantidad} sufijo={porKg ? " kg" : ""} onCantidad={onCantidad} />
             <Button
               variant="outline"
               size="icon"
@@ -323,5 +359,55 @@ function LineaItem({
         </span>
       </div>
     </li>
+  )
+}
+
+/**
+ * Cantidad de la línea como campo de texto: tipear "3" es más rápido que
+ * apretar "+" tres veces, sobre todo con kilos donde la cantidad exacta la
+ * da la balanza. Mantiene un buffer propio para no pelear con el cursor
+ * mientras se escribe, y solo confirma al salir del campo o con Enter.
+ */
+function CantidadTexto({
+  cantidad,
+  sufijo,
+  onCantidad,
+}: {
+  cantidad: number
+  sufijo: string
+  onCantidad: (cantidad: number) => void
+}) {
+  const [texto, setTexto] = useState(String(cantidad))
+
+  useEffect(() => {
+    setTexto(String(cantidad))
+  }, [cantidad])
+
+  const confirmar = () => {
+    const n = Number(texto.replace(",", "."))
+    if (Number.isFinite(n) && n > 0) onCantidad(n)
+    else setTexto(String(cantidad))
+  }
+
+  return (
+    <span className="flex items-center gap-1">
+      <Input
+        type="number"
+        inputMode="decimal"
+        min={0.001}
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            confirmar()
+            e.currentTarget.blur()
+          }
+        }}
+        aria-label="Cantidad"
+        className="h-7 w-16 px-1 text-center text-sm tabular-nums"
+      />
+      {sufijo && <span className="text-xs text-muted-foreground">{sufijo.trim()}</span>}
+    </span>
   )
 }
