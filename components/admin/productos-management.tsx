@@ -436,6 +436,15 @@ export function ProductosManagement({ tenantId }: Props) {
                   const margen = margenPct(p.precio, p.costo)
                   const enOferta = tieneOferta(p)
                   const combo = comboLabel(p)
+                  // Precio efectivo por unidad con la oferta puesta: en combo no hay
+                  // precio unitario fijo, se aproxima con el precio del combo repartido
+                  // entre las unidades que incluye.
+                  const precioUnitOferta = enOferta
+                    ? combo && p.ofertaCantidad
+                      ? (p.ofertaValor ?? 0) / p.ofertaCantidad
+                      : precioFinal(p)
+                    : null
+                  const margenOferta = precioUnitOferta !== null ? margenPct(precioUnitOferta, p.costo) : null
 
                   return (
                     <TableRow key={p.id} className={cn(!p.activo && "opacity-50")}>
@@ -480,6 +489,16 @@ export function ProductosManagement({ tenantId }: Props) {
                       <TableCell className="hidden text-right text-xs lg:table-cell">
                         {margen === null ? (
                           <span className="text-muted-foreground">—</span>
+                        ) : enOferta ? (
+                          <span className="flex flex-col items-end leading-tight">
+                            <span className="text-muted-foreground line-through">{margen.toFixed(0)}%</span>
+                            <span className={cn(
+                              "font-medium",
+                              margenOferta !== null && margenOferta < 0 ? "text-red-600" : "text-emerald-600",
+                            )}>
+                              {margenOferta !== null ? `${margenOferta.toFixed(0)}%` : "—"}
+                            </span>
+                          </span>
                         ) : (
                           <span className={margen < 0 ? "font-medium text-red-600" : "text-muted-foreground"}>
                             {margen.toFixed(0)}%
@@ -493,8 +512,13 @@ export function ProductosManagement({ tenantId }: Props) {
                             <Tag className="h-3 w-3" /> {combo}
                           </span>
                         ) : enOferta ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
-                            <Tag className="h-3 w-3" /> {formatCurrency(precioFinal(p))}
+                          <span className="flex flex-col items-end leading-tight">
+                            <span className="text-xs text-muted-foreground line-through">
+                              {formatCurrency(p.precio)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                              <Tag className="h-3 w-3" /> {formatCurrency(precioFinal(p))}
+                            </span>
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
