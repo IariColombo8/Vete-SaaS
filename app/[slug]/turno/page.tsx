@@ -1,11 +1,15 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { TurnoForm } from "@/components/turnos/TurnoForm"
 import { Toaster } from "@/components/ui/toaster"
 import { useSlug } from "@/context/slug-context"
 
 export default function VetTurnoPage() {
   const slug = useSlug()
+  const searchParams = useSearchParams()
+  const dni = searchParams.get("dni") ?? undefined
+  const mascotaId = searchParams.get("mascotaId") ?? undefined
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30 py-8 md:py-16 overflow-hidden">
@@ -18,7 +22,7 @@ export default function VetTurnoPage() {
       </div>
 
       <div className="container max-w-4xl px-4 sm:px-6 lg:px-8 space-y-6">
-        <TurnoForm tenantId={slug} />
+        <TurnoForm tenantId={slug} defaultDni={dni} lockDni={!!dni} defaultMascotaId={mascotaId} />
       </div>
 
       <Toaster />

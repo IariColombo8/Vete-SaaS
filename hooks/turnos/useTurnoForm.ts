@@ -48,6 +48,7 @@ interface UseTurnoFormOptions {
   tenantId: string
   defaultDni?: string
   lockDni?: boolean
+  defaultMascotaId?: string
   redirectOnSuccess?: boolean
   onSuccess?: () => void
 }
@@ -57,6 +58,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
     tenantId,
     defaultDni,
     lockDni = false,
+    defaultMascotaId,
     redirectOnSuccess = true,
     onSuccess,
   } = options
@@ -120,6 +122,22 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       }))
     }
   }, [clienteExistente, datosEditados])
+
+  useEffect(() => {
+    if (!defaultMascotaId || formData.mascotaExistenteId) return
+    const m = mascotas.find(m => m.id === defaultMascotaId)
+    if (!m) return
+    setFormData(prev => ({
+      ...prev,
+      mascotaExistenteId: m.id!,
+      nombreMascota: m.nombre || "",
+      tipoMascota: m.tipo || "",
+      edadValorMascota: m.edadValor !== undefined ? String(m.edadValor) : "",
+      edadUnidadMascota: m.edadUnidad || "meses",
+      razaMascota: m.raza || "",
+      pesoMascota: (m.peso || "").replace(/[^\d.,]/g, ""),
+    }))
+  }, [defaultMascotaId, mascotas, formData.mascotaExistenteId])
 
   useEffect(() => {
     if (!selectedDate) return

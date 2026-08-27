@@ -10,12 +10,29 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MascotaFotoUploader } from "@/components/turnos/MascotaFotoUploader"
 import { getClienteByDNI } from "@/lib/supabase/clientes"
-import { getMascotaPublico } from "@/lib/supabase/mascotas"
+import {
+  getMascotaPublico,
+  esDuenoMascotaPublico,
+  getDuenosMascotaPublico,
+  agregarDuenoMascotaPublico,
+  type DuenoMascota,
+} from "@/lib/supabase/mascotas"
 import { getHistoriasPublico } from "@/lib/supabase/historias"
 import { getTurnosPublico } from "@/lib/supabase/turnos"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
+import { useToast } from "@/hooks/use-toast"
 import type { Mascota, Historia, Turno } from "@/lib/supabase/types"
-import { ArrowLeft, Loader2, Calendar, Clock, Stethoscope, Search } from "lucide-react"
+import { ArrowLeft, Loader2, Calendar, Clock, Stethoscope, Search, Paperclip, UserPlus } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+function esImagen(url: string): boolean {
+  return /\.(png|jpe?g|gif|webp|avif|heic)(\?.*)?$/i.test(url)
+}
 
 function emojiPorTipo(tipo: string): string {
   return MASCOTAS_DEFAULT.find((m) => m.id === tipo)?.emoji ?? "🐾"
@@ -51,6 +68,15 @@ export default function PerfilMascotaPage() {
   const [mascota, setMascota] = useState<Mascota | null>(null)
   const [historias, setHistorias] = useState<Historia[]>([])
   const [turnos, setTurnos] = useState<Turno[]>([])
+  const [archivosVer, setArchivosVer] = useState<string[] | null>(null)
+  const [mostrarTurnos, setMostrarTurnos] = useState(false)
+  const [duenos, setDuenos] = useState<DuenoMascota[]>([])
+  const [dniPropio, setDniPropio] = useState("")
+  const [mostrarAgregarDueno, setMostrarAgregarDueno] = useState(false)
+  const [dniNuevoDueno, setDniNuevoDueno] = useState("")
+  const [nombreNuevoDueno, setNombreNuevoDueno] = useState("")
+  const [agregandoDueno, setAgregandoDueno] = useState(false)
+  const { toast } = useToast()
 
   /**
    * El mascotaId de la URL es un uuid, no un secreto: cualquiera con el link
@@ -71,24 +97,52 @@ export default function PerfilMascotaPage() {
       }
 
       const encontrada = await getMascotaPublico(slug, mascotaId)
-      if (!encontrada || encontrada.clienteId !== cliente.id) {
+      const esDueno =
+        !!encontrada &&
+        (encontrada.clienteId === cliente.id || (await esDuenoMascotaPublico(slug, mascotaId, cliente.id)))
+      if (!encontrada || !esDueno) {
         setErrorDni("Ese DNI no corresponde a esta mascota.")
         return
       }
 
       setMascota(encontrada)
+      setDniPropio(dniValue.trim())
       setVerificado(true)
       setLoading(true)
 
-      const [misHistorias, misTurnos] = await Promise.all([
+      const [misHistorias, misTurnos, misDuenos] = await Promise.all([
         getHistoriasPublico(slug, mascotaId),
         getTurnosPublico(slug, cliente.id),
+        getDuenosMascotaPublico(slug, mascotaId),
       ])
       setHistorias(misHistorias.filter((h) => h.tipoVisita !== "turno_programado"))
       setTurnos(misTurnos.filter((t) => t.mascotaId === mascotaId))
+      setDuenos(misDuenos)
       setLoading(false)
     } finally {
       setVerificando(false)
+    }
+  }
+
+  const agregarDueno = async () => {
+    if (!dniNuevoDueno.trim()) return
+    setAgregandoDueno(true)
+    try {
+      await agregarDuenoMascotaPublico(slug, mascotaId, dniPropio, dniNuevoDueno.trim(), nombreNuevoDueno.trim())
+      const misDuenos = await getDuenosMascotaPublico(slug, mascotaId)
+      setDuenos(misDuenos)
+      setMostrarAgregarDueno(false)
+      setDniNuevoDueno("")
+      setNombreNuevoDueno("")
+      toast({ title: "Dueño agregado", description: "Ya puede entrar a esta ficha con su propio DNI." })
+    } catch (error: unknown) {
+      toast({
+        title: "No se pudo agregar",
+        description: error instanceof Error ? error.message : "Intenta nuevamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setAgregandoDueno(false)
     }
   }
 
@@ -191,13 +245,42 @@ export default function PerfilMascotaPage() {
       </div>
 
       <div className="container max-w-3xl px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
-        {/* Historia clínica */}
+        <Button
+          className="w-full bg-emerald-600 hover:bg-emerald-700"
+          onClick={() =>
+            router.push(
+              `/${slug}/turno?dni=${encodeURIComponent(dni)}&mascotaId=${encodeURIComponent(mascotaId)}`,
+            )
+          }
+        >
+          <Calendar className="mr-2 h-4 w-4" />
+          Pedir turno para {mascota.nombre}
+        </Button>
+
+        <section className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <span>
+            Dueños:{" "}
+            {duenos.length > 0
+              ? duenos.map((d) => d.nombre || d.dni).join(", ")
+              : "—"}
+          </span>
+          <Button variant="outline" size="sm" onClick={() => setMostrarAgregarDueno(true)}>
+            <UserPlus className="mr-2 h-3.5 w-3.5" />
+            Agregar otro dueño
+          </Button>
+        </section>
+
         <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Stethoscope className="h-4 w-4 text-emerald-600" />
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100">Historia clínica</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-emerald-600" />
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100">Historia clínica</h2>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setMostrarTurnos((v) => !v)}>
+              {mostrarTurnos ? "Ver historia clínica" : `Ver turnos (${turnos.length})`}
+            </Button>
           </div>
-          {historias.length === 0 ? (
+          {mostrarTurnos ? null : historias.length === 0 ? (
             <Card>
               <CardContent className="py-6 text-center text-sm text-muted-foreground">
                 Todavía no hay historia clínica cargada.
@@ -229,49 +312,124 @@ export default function PerfilMascotaPage() {
                     {h.observaciones && (
                       <p className="text-xs text-slate-500 dark:text-slate-400">{h.observaciones}</p>
                     )}
+                    {h.archivos && h.archivos.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-1"
+                        onClick={() => setArchivosVer(h.archivos!)}
+                      >
+                        <Paperclip className="mr-2 h-3.5 w-3.5" />
+                        Ver imágenes o archivos ({h.archivos.length})
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
-        </section>
-
-        {/* Turnos */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-emerald-600" />
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100">Turnos</h2>
-          </div>
-          {turnos.length === 0 ? (
-            <Card>
-              <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                Todavía no sacó turnos.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {turnos.map((t) => (
-                <Card key={t.id}>
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {t.servicio || "Consulta"}
-                      </span>
-                      <Badge className={ESTADO_BADGE[t.estado]}>{t.estado}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>{formatFecha(t.fecha ?? "")}</span>
-                      <Clock className="h-3.5 w-3.5 ml-2" />
-                      <span>{t.hora ?? "—"}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          {!mostrarTurnos ? null : turnos.length === 0 ? (
+              <Card>
+                <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                  Todavía no sacó turnos.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {turnos.map((t) => (
+                  <Card key={t.id}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {t.servicio || "Consulta"}
+                        </span>
+                        <Badge className={ESTADO_BADGE[t.estado]}>{t.estado}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{formatFecha(t.fecha ?? "")}</span>
+                        <Clock className="h-3.5 w-3.5 ml-2" />
+                        <span>{t.hora ?? "—"}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
         </section>
       </div>
+
+      <Dialog open={archivosVer !== null} onOpenChange={(open) => !open && setArchivosVer(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Imágenes y archivos</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 max-h-[70vh] overflow-y-auto">
+            {archivosVer?.map((url, i) =>
+              esImagen(url) ? (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Archivo ${i + 1}`}
+                    className="w-full h-32 object-cover rounded-md border"
+                  />
+                </a>
+              ) : (
+                <a
+                  key={i}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 h-32 rounded-md border p-3 text-xs text-slate-600 dark:text-slate-300 hover:bg-muted/50"
+                >
+                  <Paperclip className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Archivo {i + 1}</span>
+                </a>
+              ),
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={mostrarAgregarDueno} onOpenChange={setMostrarAgregarDueno}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Agregar otro dueño</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Esa persona va a poder entrar a esta misma ficha con su propio DNI.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="dni-nuevo-dueno">DNI</Label>
+              <Input
+                id="dni-nuevo-dueno"
+                value={dniNuevoDueno}
+                onChange={(e) => setDniNuevoDueno(e.target.value)}
+                placeholder="30123456"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="nombre-nuevo-dueno">Nombre (opcional)</Label>
+              <Input
+                id="nombre-nuevo-dueno"
+                value={nombreNuevoDueno}
+                onChange={(e) => setNombreNuevoDueno(e.target.value)}
+                placeholder="Nombre y apellido"
+              />
+            </div>
+            <Button
+              onClick={agregarDueno}
+              disabled={agregandoDueno || !dniNuevoDueno.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              {agregandoDueno && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Agregar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

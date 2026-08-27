@@ -22,6 +22,7 @@ interface TurnoFormProps {
   tenantId?: string;
   defaultDni?: string;
   lockDni?: boolean;
+  defaultMascotaId?: string;
   redirectOnSuccess?: boolean;
   onSuccess?: () => void;
 }
@@ -30,6 +31,7 @@ export function TurnoForm({
   tenantId: tenantIdProp,
   defaultDni,
   lockDni,
+  defaultMascotaId,
   redirectOnSuccess = true,
   onSuccess,
 }: TurnoFormProps) {
@@ -59,7 +61,7 @@ export function TurnoForm({
     closedDays,
     tenantHorarios,
     turnoConfig,
-  } = useTurnoForm({ tenantId, defaultDni, lockDni, redirectOnSuccess, onSuccess });
+  } = useTurnoForm({ tenantId, defaultDni, lockDni, defaultMascotaId, redirectOnSuccess, onSuccess });
 
   const vacunasMap = turnoConfig?.vacunas ?? VACUNAS_DEFAULT;
   const mostrarVacunas = formData.servicio === "vacunacion" && formData.tipoMascota &&
