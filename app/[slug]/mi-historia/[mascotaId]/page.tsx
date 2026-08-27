@@ -1,18 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { MascotaFotoUploader } from "@/components/turnos/MascotaFotoUploader"
+import { getClienteByDNI } from "@/lib/supabase/clientes"
 import { getMascotaPublico } from "@/lib/supabase/mascotas"
 import { getHistoriasPublico } from "@/lib/supabase/historias"
 import { getTurnosPublico } from "@/lib/supabase/turnos"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import type { Mascota, Historia, Turno } from "@/lib/supabase/types"
-import { ArrowLeft, Loader2, Calendar, Clock, Stethoscope } from "lucide-react"
+import { ArrowLeft, Loader2, Calendar, Clock, Stethoscope, Search } from "lucide-react"
 
 function emojiPorTipo(tipo: string): string {
   return MASCOTAS_DEFAULT.find((m) => m.id === tipo)?.emoji ?? "🐾"
@@ -36,56 +39,110 @@ export default function PerfilMascotaPage() {
   const slug = useSlug()
   const router = useRouter()
   const params = useParams<{ mascotaId: string }>()
+  const searchParams = useSearchParams()
   const mascotaId = params.mascotaId
 
-  const [loading, setLoading] = useState(true)
+  const [verificado, setVerificado] = useState(false)
+  const [verificando, setVerificando] = useState(false)
+  const [errorDni, setErrorDni] = useState<string | null>(null)
+  const [dni, setDni] = useState(searchParams.get("dni") ?? "")
+
+  const [loading, setLoading] = useState(false)
   const [mascota, setMascota] = useState<Mascota | null>(null)
   const [historias, setHistorias] = useState<Historia[]>([])
   const [turnos, setTurnos] = useState<Turno[]>([])
 
-  useEffect(() => {
-    let cancelado = false
-    async function cargar() {
-      setLoading(true)
-      const encontrada = await getMascotaPublico(slug, mascotaId)
-      if (cancelado) return
-      setMascota(encontrada)
-
-      if (encontrada) {
-        const [misHistorias, misTurnos] = await Promise.all([
-          getHistoriasPublico(slug, mascotaId),
-          encontrada.clienteId ? getTurnosPublico(slug, encontrada.clienteId) : Promise.resolve([]),
-        ])
-        if (cancelado) return
-        setHistorias(misHistorias.filter((h) => h.tipoVisita !== "turno_programado"))
-        setTurnos(misTurnos.filter((t) => t.mascotaId === mascotaId))
+  /**
+   * El mascotaId de la URL es un uuid, no un secreto: cualquiera con el link
+   * podría verla si no volviéramos a pedir el DNI acá. Esta verificación
+   * confirma que el DNI ingresado es efectivamente el dueño de la mascota
+   * (mismo criterio que app/api/mascota-foto) antes de cargar y mostrar la
+   * historia clínica y los turnos.
+   */
+  const verificar = async (dniValue: string) => {
+    if (!dniValue.trim()) return
+    setVerificando(true)
+    setErrorDni(null)
+    try {
+      const cliente = await getClienteByDNI(slug, dniValue.trim())
+      if (!cliente?.id) {
+        setErrorDni("No encontramos un cliente con ese DNI.")
+        return
       }
-      setLoading(false)
-    }
-    cargar()
-    return () => { cancelado = true }
-  }, [slug, mascotaId])
 
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </main>
-    )
+      const encontrada = await getMascotaPublico(slug, mascotaId)
+      if (!encontrada || encontrada.clienteId !== cliente.id) {
+        setErrorDni("Ese DNI no corresponde a esta mascota.")
+        return
+      }
+
+      setMascota(encontrada)
+      setVerificado(true)
+      setLoading(true)
+
+      const [misHistorias, misTurnos] = await Promise.all([
+        getHistoriasPublico(slug, mascotaId),
+        getTurnosPublico(slug, cliente.id),
+      ])
+      setHistorias(misHistorias.filter((h) => h.tipoVisita !== "turno_programado"))
+      setTurnos(misTurnos.filter((t) => t.mascotaId === mascotaId))
+      setLoading(false)
+    } finally {
+      setVerificando(false)
+    }
   }
 
-  if (!mascota) {
+  useEffect(() => {
+    const dniInicial = searchParams.get("dni")
+    if (dniInicial) verificar(dniInicial)
+    // Solo al montar: si viene el DNI en la URL (desde /mi-historia), lo verificamos una vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!verificado) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center space-y-4">
-            <p className="text-sm text-muted-foreground">No encontramos esa mascota.</p>
-            <Button variant="outline" onClick={() => router.push(`/${slug}/mi-historia`)}>
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <Card className="max-w-sm w-full">
+          <CardContent className="py-8 space-y-4">
+            <div className="text-center space-y-1">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Confirmá tu DNI</p>
+              <p className="text-xs text-muted-foreground">
+                Para ver la historia clínica necesitamos verificar que la mascota es tuya.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="perfil-dni">DNI</Label>
+              <Input
+                id="perfil-dni"
+                value={dni}
+                onChange={(e) => setDni(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && verificar(dni)}
+                placeholder="30123456"
+              />
+              {errorDni && <p className="text-sm text-destructive">{errorDni}</p>}
+            </div>
+            <Button
+              onClick={() => verificar(dni)}
+              disabled={verificando || !dni.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              {verificando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              Ver perfil
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => router.push(`/${slug}/mi-historia`)}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver a buscar
             </Button>
           </CardContent>
         </Card>
+      </main>
+    )
+  }
+
+  if (loading || !mascota) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </main>
     )
   }

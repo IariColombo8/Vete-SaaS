@@ -115,7 +115,7 @@ export default function MiHistoriaPage() {
                 <Card
                   key={mascota.id}
                   className="hover:border-emerald-400 transition-colors cursor-pointer overflow-hidden"
-                  onClick={() => router.push(`/${slug}/mi-historia/${mascota.id}`)}
+                  onClick={() => router.push(`/${slug}/mi-historia/${mascota.id}?dni=${encodeURIComponent(dni.trim())}`)}
                 >
                   <div
                     className="h-24 bg-cover bg-center flex items-center justify-center text-4xl"
