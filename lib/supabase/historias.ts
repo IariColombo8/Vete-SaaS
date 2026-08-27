@@ -134,6 +134,16 @@ export async function getHistorias(
   return (data ?? []).map(aHistoria)
 }
 
+/** Historias de una mascota, sin sesión (para /mi-historia/[mascotaId]). */
+export async function getHistoriasPublico(
+  tenantId: string,
+  mascotaId: string,
+): Promise<Historia[]> {
+  const { data } = await supabase
+    .rpc("obtener_historias_publico", { p_tenant: tenantId, p_mascota_id: mascotaId })
+  return (data ?? []).map(aHistoria)
+}
+
 export async function contarVisitasMascota(
   _tenantId: string,
   _clienteId: string,

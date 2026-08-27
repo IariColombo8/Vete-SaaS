@@ -222,6 +222,17 @@ export async function getTurnosByClienteEmail(
   return (data ?? []).map(aTurno)
 }
 
+/** Turnos de un cliente, sin sesión (para /mi-historia/[mascotaId]). */
+export async function getTurnosPublico(
+  tenantId: string,
+  clienteId: string,
+): Promise<Turno[]> {
+  if (!clienteId) return []
+  const { data } = await supabase
+    .rpc("obtener_turnos_publico", { p_tenant: tenantId, p_cliente_id: clienteId })
+  return (data ?? []).map(aTurno)
+}
+
 export async function updateTurno(
   _tenantId: string,
   turnoId: string,
