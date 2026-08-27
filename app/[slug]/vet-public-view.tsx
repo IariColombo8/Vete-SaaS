@@ -14,6 +14,7 @@ import Link from "next/link"
 import { getProductosPublicados } from "@/lib/supabase/productos"
 import { normalizePlan, PLANS } from "@/lib/plans"
 import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
+import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog"
 import type { Producto } from "@/lib/supabase/types"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
@@ -452,6 +453,8 @@ export default function VetPublicPage() {
               Sacar turno
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+
+            <RegistroClienteDialog tenantId={slug} />
           </div>
         </div>
 

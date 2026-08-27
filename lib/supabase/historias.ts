@@ -90,29 +90,33 @@ export const updateHistoriaClinica = updateHistoriaClinicaRegistro
  * había que buscar un sufijo libre para no pisar la consulta del mismo día—
  * acá cada historia es una fila propia.
  */
+/**
+ * Crea una historia vía RPC `security definer` (mismo patrón que
+ * `crear_turno` / `guardar_cliente_publico`): así funciona también sin
+ * sesión, para el auto-sync que dispara `createTurno()` al reservar un
+ * turno público.
+ */
 export async function createHistoria(
   tenantId: string,
   _clienteId: string,
   mascotaId: string,
   historiaData: Omit<Historia, "id">,
 ) {
-  const { data, error } = await supabase
-    .from("historias")
-    .insert({
-      tenant_id: tenantId,
-      mascota_id: mascotaId,
-      fecha_atencion: historiaData.fechaAtencion || new Date().toISOString().slice(0, 10),
+  const { data, error } = await supabase.rpc("crear_historia_publica", {
+    p_tenant: tenantId,
+    p_mascota_id: mascotaId,
+    p_datos: {
+      fechaAtencion: historiaData.fechaAtencion || new Date().toISOString().slice(0, 10),
       motivo: historiaData.motivo ?? "Consulta general",
       diagnostico: historiaData.diagnostico ?? "",
       tratamiento: historiaData.tratamiento ?? "—",
       observaciones: historiaData.observaciones ?? "",
-      proxima_visita: historiaData.proximaVisita || null,
+      proximaVisita: historiaData.proximaVisita || null,
       archivos: historiaData.archivos ?? [],
-      tipo_visita: historiaData.tipoVisita ?? "consulta",
-      turno_id: historiaData.turnoId || null,
-    })
-    .select("id")
-    .single()
+      tipoVisita: historiaData.tipoVisita ?? "consulta",
+      turnoId: historiaData.turnoId || null,
+    },
+  })
 
   if (error) throw new Error(`No se pudo crear la historia: ${error.message}`)
   return { id: data.id as string }

@@ -27,90 +27,46 @@ function aCliente(f: Fila): Cliente {
 
 const COLS_BASIC = "id, nombre, telefono, email, dni, domicilio, created_at, updated_at"
 
-/** Campos que se auditan en `historialDatos` cuando cambian. */
-const CAMPOS_AUDITADOS = ["domicilio", "telefono", "email", "nombre"] as const
-
-/** Devuelve el historial con una entrada nueva por cada campo que cambió. */
-function calcularCambios(
-  actual: Cliente,
-  nuevos: Partial<Cliente>,
-  previo: HistorialDato[],
-): HistorialDato[] {
-  const ahora = new Date().toISOString()
-  const cambios = [...previo]
-  for (const campo of CAMPOS_AUDITADOS) {
-    const valorNuevo = nuevos[campo]
-    if (valorNuevo !== undefined && actual[campo] !== valorNuevo) {
-      cambios.push({
-        campo,
-        valorAnterior: actual[campo] || "",
-        valorNuevo: valorNuevo || "",
-        fechaCambio: ahora,
-      })
-    }
-  }
-  return cambios
-}
+// El cálculo y la auditoría de `historialDatos` ahora corren en Postgres
+// (ver supabase/020_clientes_publico.sql), para que también funcionen sin
+// sesión desde el formulario público.
 
 export async function getClienteByDNI(tenantId: string, dni: string): Promise<Cliente | null> {
   if (!dni?.trim()) return null
   const { data } = await supabase
-    .from("clientes").select("*")
-    .eq("tenant_id", tenantId).eq("dni", dni.trim())
-    .maybeSingle()
-  return data ? aCliente(data) : null
+    .rpc("buscar_cliente_publico", { p_tenant: tenantId, p_dni: dni.trim() })
+  const fila = Array.isArray(data) ? data[0] : data
+  return fila ? aCliente(fila) : null
 }
 
 export async function getClienteByEmail(tenantId: string, email: string): Promise<Cliente | null> {
   if (!email) return null
   const { data } = await supabase
-    .from("clientes").select("*")
-    .eq("tenant_id", tenantId).ilike("email", email)
-    .limit(1).maybeSingle()
-  return data ? aCliente(data) : null
+    .rpc("buscar_cliente_publico", { p_tenant: tenantId, p_email: email })
+  const fila = Array.isArray(data) ? data[0] : data
+  return fila ? aCliente(fila) : null
 }
 
 /**
  * Crea el cliente, o actualiza el existente si ya hay uno con ese DNI
- * (registrando los cambios en `historialDatos`). Mismo contrato que la
- * versión Firestore.
+ * (registrando los cambios en `historialDatos`). Corre vía RPC
+ * `security definer` (igual que `crear_turno`): así funciona también sin
+ * sesión, para el visitante anónimo que reserva un turno o se autorregistra.
  */
 export async function createCliente(
   tenantId: string,
   data: Omit<Cliente, "id">,
 ): Promise<{ id: string } & Cliente> {
-  if (data.dni?.trim()) {
-    const existente = await getClienteByDNI(tenantId, data.dni.trim())
-    if (existente) {
-      const cambios = calcularCambios(existente, data, existente.historialDatos || [])
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          nombre: data.nombre,
-          telefono: data.telefono,
-          email: data.email,
-          domicilio: data.domicilio,
-          historial_datos: cambios,
-        })
-        .eq("id", existente.id!)
-      if (error) throw new Error(`No se pudo actualizar el cliente: ${error.message}`)
-      return { ...existente, ...data, historialDatos: cambios } as { id: string } & Cliente
-    }
-  }
-
-  const { data: creado, error } = await supabase
-    .from("clientes")
-    .insert({
-      tenant_id: tenantId,
+  const { data: creado, error } = await supabase.rpc("guardar_cliente_publico", {
+    p_tenant: tenantId,
+    p_datos: {
       nombre: data.nombre,
       telefono: data.telefono ?? "",
       email: data.email ?? "",
       dni: data.dni?.trim() || null,
       domicilio: data.domicilio ?? null,
-      historial_datos: [],
-    })
-    .select("*")
-    .single()
+    },
+  })
 
   if (error) throw new Error(`No se pudo crear el cliente: ${error.message}`)
   return aCliente(creado) as { id: string } & Cliente
@@ -219,21 +175,17 @@ export async function updateCliente(
   clienteId: string,
   data: Partial<Omit<Cliente, "id">>,
 ) {
-  const { data: actual } = await supabase
-    .from("clientes").select("*").eq("id", clienteId).maybeSingle()
-  if (!actual) throw new Error("Cliente no encontrado")
-
-  const cliente = aCliente(actual)
-  const cambios = calcularCambios(cliente, data, cliente.historialDatos || [])
-
-  const fila: Record<string, unknown> = { historial_datos: cambios }
-  if (data.nombre !== undefined) fila.nombre = data.nombre
-  if (data.telefono !== undefined) fila.telefono = data.telefono
-  if (data.email !== undefined) fila.email = data.email
-  if (data.dni !== undefined) fila.dni = data.dni || null
-  if (data.domicilio !== undefined) fila.domicilio = data.domicilio
-
-  const { error } = await supabase.from("clientes").update(fila).eq("id", clienteId)
+  const { error } = await supabase.rpc("actualizar_cliente_publico", {
+    p_tenant: tenantId,
+    p_cliente_id: clienteId,
+    p_datos: {
+      nombre: data.nombre,
+      telefono: data.telefono,
+      email: data.email,
+      ...(data.dni !== undefined ? { dni: data.dni } : {}),
+      domicilio: data.domicilio,
+    },
+  })
   if (error) {
     console.error("Error actualizando cliente:", error.message)
     throw error

@@ -1,5 +1,4 @@
 import { supabase } from "./config"
-import { mascotaDocId } from "./ids"
 import type { Mascota } from "./types"
 import { calcularEdadActual, formatearEdad } from "@/lib/mascotas/edad"
 
@@ -34,55 +33,40 @@ export function aMascota(f: Fila): Mascota {
   }
 }
 
+/**
+ * Crea la mascota (o reutiliza la existente con el mismo nombre+tipo) vía
+ * RPC `security definer` (igual que `crear_turno` / `guardar_cliente_publico`):
+ * así funciona también sin sesión, para el visitante anónimo que reserva un
+ * turno o se autorregistra. La función también crea el registro de historia
+ * clínica consolidada, en la misma transacción.
+ */
 export async function createMascota(
   tenantId: string,
   clienteId: string,
   data: Omit<Mascota, "id">,
 ) {
-  const slug = mascotaDocId(data.nombre, data.tipo)
-
-  const { data: creada, error } = await supabase
-    .from("mascotas")
-    .insert({
-      tenant_id: tenantId,
-      cliente_id: clienteId,
+  const { data: creada, error } = await supabase.rpc("guardar_mascota_publico", {
+    p_tenant: tenantId,
+    p_cliente_id: clienteId,
+    p_datos: {
       nombre: data.nombre,
       tipo: data.tipo,
       edad: data.edad ?? null,
-      edad_valor: data.edadValor ?? null,
-      edad_unidad: data.edadUnidad ?? null,
-      edad_registrada_en: data.edadRegistradaEn ?? null,
+      edadValor: data.edadValor ?? null,
+      edadUnidad: data.edadUnidad ?? null,
+      edadRegistradaEn: data.edadRegistradaEn ?? null,
       raza: data.raza ?? null,
       peso: data.peso ?? null,
-      libreta_token: data.libretaToken ?? null,
-      slug,
-    })
-    .select("id")
-    .single()
+    },
+  })
 
-  if (error) {
-    // unique (cliente_id, slug): ya existe esa mascota para ese cliente.
-    // En Firestore el setDoc la pisaba en silencio; acá la reutilizamos.
-    if (error.code === "23505") {
-      const { data: existente } = await supabase
-        .from("mascotas").select("id")
-        .eq("cliente_id", clienteId).eq("slug", slug)
-        .maybeSingle()
-      if (existente) return { id: existente.id as string }
-    }
-    throw new Error(`No se pudo crear la mascota: ${error.message}`)
-  }
-
-  const id = creada.id as string
-  await crearRegistroHistoriaClinica(tenantId, id)
-  return { id }
+  if (error) throw new Error(`No se pudo crear la mascota: ${error.message}`)
+  return { id: creada.id as string }
 }
 
 export async function getMascotas(tenantId: string, clienteId: string): Promise<Mascota[]> {
   const { data } = await supabase
-    .from("mascotas").select("*")
-    .eq("tenant_id", tenantId).eq("cliente_id", clienteId)
-    .order("nombre")
+    .rpc("obtener_mascotas_publico", { p_tenant: tenantId, p_cliente_id: clienteId })
   return (data ?? []).map(aMascota)
 }
 
@@ -94,46 +78,27 @@ export async function updateMascota(
   mascotaId: string,
   data: Partial<Omit<Mascota, "id">>,
 ) {
-  const fila: Record<string, unknown> = {}
-  if (data.nombre !== undefined) fila.nombre = data.nombre
-  if (data.tipo !== undefined) fila.tipo = data.tipo
-  if (data.edad !== undefined) fila.edad = data.edad
-  if (data.edadValor !== undefined) fila.edad_valor = data.edadValor
-  if (data.edadUnidad !== undefined) fila.edad_unidad = data.edadUnidad
-  if (data.edadRegistradaEn !== undefined) fila.edad_registrada_en = data.edadRegistradaEn
-  if (data.raza !== undefined) fila.raza = data.raza
-  if (data.peso !== undefined) fila.peso = data.peso
-  if (data.libretaToken !== undefined) fila.libreta_token = data.libretaToken
-  // El slug sigue al nombre/tipo para no desincronizarse
-  if (data.nombre !== undefined || data.tipo !== undefined) {
-    const { data: actual } = await supabase
-      .from("mascotas").select("nombre, tipo").eq("id", mascotaId).maybeSingle()
-    if (actual) {
-      fila.slug = mascotaDocId(
-        (data.nombre ?? actual.nombre) as string,
-        (data.tipo ?? actual.tipo) as string,
-      )
-    }
-  }
+  const datos: Record<string, unknown> = {}
+  if (data.nombre !== undefined) datos.nombre = data.nombre
+  if (data.tipo !== undefined) datos.tipo = data.tipo
+  if (data.edad !== undefined) datos.edad = data.edad
+  if (data.edadValor !== undefined) datos.edadValor = data.edadValor
+  if (data.edadUnidad !== undefined) datos.edadUnidad = data.edadUnidad
+  if (data.edadRegistradaEn !== undefined) datos.edadRegistradaEn = data.edadRegistradaEn
+  if (data.raza !== undefined) datos.raza = data.raza
+  if (data.peso !== undefined) datos.peso = data.peso
+  if (data.libretaToken !== undefined) datos.libretaToken = data.libretaToken
 
-  if (Object.keys(fila).length === 0) return { success: true, id: mascotaId }
+  if (Object.keys(datos).length === 0) return { success: true, id: mascotaId }
 
-  const { error } = await supabase.from("mascotas").update(fila).eq("id", mascotaId)
+  const { error } = await supabase.rpc("actualizar_mascota_publico", {
+    p_tenant: tenantId,
+    p_mascota_id: mascotaId,
+    p_datos: datos,
+  })
   if (error) {
     console.error("Error actualizando mascota:", error.message)
     throw error
   }
   return { success: true, id: mascotaId }
-}
-
-/** Crea la fila de resumen consolidado al dar de alta una mascota. */
-async function crearRegistroHistoriaClinica(tenantId: string, mascotaId: string) {
-  await supabase.from("historia_clinica").upsert(
-    {
-      mascota_id: mascotaId,
-      tenant_id: tenantId,
-      consultas: [], vacunas: [], tratamientos: [], alergias: [], cirugias: [],
-    },
-    { onConflict: "mascota_id" },
-  )
 }

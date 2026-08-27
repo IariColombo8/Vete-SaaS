@@ -7,6 +7,35 @@ import { supabase, BUCKET } from "./config"
  * el tenant del primer segmento: veterinarias/{tenantId}/...
  */
 
+/**
+ * Redimensiona una imagen en el browser antes de subirla. Sin esto, un logo
+ * de cámara (2576x2576, ~2.5MB) rompe el preview de WhatsApp: su crawler
+ * tiene timeouts cortos y descarta archivos grandes, aunque Facebook/Twitter
+ * los toleren.
+ */
+async function redimensionarImagen(file: File, maxDimension: number): Promise<File> {
+  if (typeof window === "undefined" || !file.type.startsWith("image/")) return file
+
+  const bitmap = await createImageBitmap(file).catch(() => null)
+  if (!bitmap) return file
+  if (bitmap.width <= maxDimension && bitmap.height <= maxDimension) return file
+
+  const scale = maxDimension / Math.max(bitmap.width, bitmap.height)
+  const width = Math.round(bitmap.width * scale)
+  const height = Math.round(bitmap.height * scale)
+
+  const canvas = document.createElement("canvas")
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return file
+  ctx.drawImage(bitmap, 0, 0, width, height)
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, file.type, 0.85))
+  if (!blob) return file
+  return new File([blob], file.name, { type: file.type })
+}
+
 /** Sube un archivo de historia clínica y devuelve su URL pública. */
 export async function uploadArchivoHistoria(
   tenantId: string,
@@ -33,11 +62,14 @@ export async function uploadFotoTenant(
   carpeta: string,
   file: File,
 ): Promise<string> {
+  const maxDimension = carpeta === "logo" ? 600 : 1600
+  const archivo = await redimensionarImagen(file, maxDimension)
+
   const timestamp = Date.now()
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
   const path = `${tenantId}/${carpeta}/${timestamp}-${safeName}`
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, archivo, {
     cacheControl: "3600",
     upsert: false,
   })
