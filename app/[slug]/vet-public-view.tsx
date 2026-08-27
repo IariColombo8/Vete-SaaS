@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback, type ReactNode } from "react"
+import { useEffect, useState, useRef, useCallback, Children, type ReactNode } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { getTenant, getTenantConfig } from "@/lib/supabase/queries"
 import type { TenantConfig, ServicioTenant, HorarioTenant, Modalidad } from "@/lib/supabase/queries"
@@ -11,11 +11,15 @@ import {
   Heart, Shield, Star, Home, PawPrint,
 } from "lucide-react"
 import Link from "next/link"
-import { getProductosPublicados } from "@/lib/supabase/productos"
+import { getProductosPublicados, getProductosPublicadosPorIds } from "@/lib/supabase/productos"
+import { getPromocionesPublicadas } from "@/lib/supabase/promociones"
+import { tieneOferta } from "@/lib/productos/precios"
 import { normalizePlan, PLANS } from "@/lib/plans"
 import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
+import { PromocionTarjeta } from "@/components/public/promocion-tarjeta"
+import { DetalleDialog } from "@/components/public/detalle-dialog"
 import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog"
-import type { Producto } from "@/lib/supabase/types"
+import type { Producto, Promocion } from "@/lib/supabase/types"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
 
@@ -269,6 +273,74 @@ function FeaturePill({ icon: Icon, label, desc, i }: {
   )
 }
 
+/* ═══════════════════════ VIDRIERA CARRUSEL ═══════════════════════ */
+
+/**
+ * En mobile: grilla estática 2×2 (4 tarjetas, sin scroll). Desde `sm` hacia
+ * arriba: fila única con scroll horizontal y flechas (4 visibles en tablet,
+ * 6 en desktop) — el resto se descubre deslizando o con las flechas, sin
+ * saltar a una segunda fila.
+ */
+function VidrieraCarrusel({ children }: { children: ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const items = Children.toArray(children).filter(Boolean)
+
+  const desplazar = (direccion: 1 | -1) => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: direccion * el.clientWidth * 0.85, behavior: "smooth" })
+  }
+
+  return (
+    <div className="mb-12">
+      {/* Mobile: 2 columnas × 2 filas, sin scroll */}
+      <div className="grid grid-cols-2 gap-4 sm:hidden">
+        {items.slice(0, 4).map((child, i) => <div key={i}>{child}</div>)}
+      </div>
+
+      {/* Tablet/desktop: fila única con flechas */}
+      <div className="relative hidden sm:block">
+        <button
+          type="button"
+          aria-label="Anterior"
+          onClick={() => desplazar(-1)}
+          className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-x-4 -translate-y-1/2 items-center justify-center
+                     rounded-full bg-white shadow-lg ring-1 ring-slate-900/5 transition-transform duration-300
+                     hover:scale-110 dark:bg-slate-800"
+        >
+          <ChevronLeft className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+        </button>
+
+        <div
+          ref={scrollRef}
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2
+                     [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {items.map((child, i) => (
+            <div
+              key={i}
+              className="w-[calc(25%-12px)] shrink-0 snap-start lg:w-[calc(16.666%-14px)]"
+            >
+              {child}
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          aria-label="Siguiente"
+          onClick={() => desplazar(1)}
+          className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 translate-x-4 items-center justify-center
+                     rounded-full bg-white shadow-lg ring-1 ring-slate-900/5 transition-transform duration-300
+                     hover:scale-110 dark:bg-slate-800"
+        >
+          <ChevronRight className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ═══════════════════════ MAIN PAGE ═══════════════════════ */
 
 export default function VetPublicPage() {
@@ -280,15 +352,24 @@ export default function VetPublicPage() {
   const [loading, setLoading] = useState(true)
   const [heroVisible, setHeroVisible] = useState(false)
   const [productos, setProductos] = useState<Producto[]>([])
+  const [promociones, setPromociones] = useState<Promocion[]>([])
+  const [productosDePromos, setProductosDePromos] = useState<Record<string, Producto>>({})
+  const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null)
+  const [promocionSeleccionada, setPromocionSeleccionada] = useState<Promocion | null>(null)
 
   useEffect(() => {
-    Promise.all([getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug)]).then(
-      ([t, cfg, prods]) => {
+    Promise.all([getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug)]).then(
+      async ([t, cfg, prods, promos]) => {
         setExists(!!t)
         setConfig(cfg)
         setProductos(prods)
+        setPromociones(promos)
         setLoading(false)
         requestAnimationFrame(() => setTimeout(() => setHeroVisible(true), 100))
+
+        const ids = Array.from(new Set(promos.flatMap((p) => p.items.map((i) => i.productoId))))
+        const productosPromo = await getProductosPublicadosPorIds(slug, ids)
+        setProductosDePromos(Object.fromEntries(productosPromo.map((p) => [p.id, p])))
       },
     )
   }, [slug])
@@ -344,6 +425,10 @@ export default function VetPublicPage() {
   const muestraMapa = (modalidad === "local" || modalidad === "ambos") && googleMapsUrl
   const tieneFeatureProductos = PLANS[normalizePlan(config?.plan)].features.productos
   const muestraProductos = tieneFeatureProductos && productos.length > 0
+  const tieneFeaturePromos = PLANS[normalizePlan(config?.plan)].features.promosSorteos
+  const muestraPromociones = tieneFeaturePromos && promociones.length > 0
+  // Prioridad en la vidriera: promo primero, después ofertas, después el resto.
+  const productosOrdenados = [...productos].sort((a, b) => Number(tieneOferta(b)) - Number(tieneOferta(a)))
 
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
@@ -538,9 +623,9 @@ export default function VetPublicPage() {
       </section>
 
       {/* ╔══════════════════════════════════════════════════╗
-          ║                  PRODUCTOS                       ║
+          ║           PRODUCTOS (promos primero)             ║
           ╚══════════════════════════════════════════════════╝ */}
-      {muestraProductos && (
+      {(muestraProductos || muestraPromociones) && (
         <section className="py-28 bg-slate-50 dark:bg-slate-900 relative">
           <div className="container max-w-6xl mx-auto px-6 relative">
             <Reveal>
@@ -559,18 +644,17 @@ export default function VetPublicPage() {
               </div>
             </Reveal>
 
-            <div className="flex flex-wrap justify-center gap-6 mb-12">
-              {productos.slice(0, 8).map((p, i) => (
-                <Reveal
-                  key={p.id}
-                  delay={i * 80}
-                  direction={i % 2 === 0 ? "left" : "right"}
-                  className="w-[calc(50%-12px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] xl:w-[calc(16.666%-20px)]"
-                >
-                  <ProductoTarjeta producto={p} logo={logo} />
-                </Reveal>
+            <VidrieraCarrusel>
+              {muestraPromociones && promociones[0] && (
+                <PromocionTarjeta
+                  promocion={promociones[0]} productos={productosDePromos} logo={logo}
+                  onClick={() => setPromocionSeleccionada(promociones[0])}
+                />
+              )}
+              {muestraProductos && productosOrdenados.slice(0, 11).map((p) => (
+                <ProductoTarjeta key={p.id} producto={p} logo={logo} onClick={() => setProductoSeleccionado(p)} />
               ))}
-            </div>
+            </VidrieraCarrusel>
 
             <div className="flex justify-center">
               <Button
@@ -774,6 +858,15 @@ export default function VetPublicPage() {
         </div>
       </footer>
 
+      <DetalleDialog
+        producto={productoSeleccionado}
+        promocion={promocionSeleccionada}
+        productosDePromos={productosDePromos}
+        logo={logo}
+        onOpenChange={(open) => {
+          if (!open) { setProductoSeleccionado(null); setPromocionSeleccionada(null) }
+        }}
+      />
     </main>
   )
 }

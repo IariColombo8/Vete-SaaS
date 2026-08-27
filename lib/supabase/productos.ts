@@ -915,7 +915,7 @@ export async function getProductosPublicados(tenantId: string): Promise<Producto
   const { data, error } = await supabase
     .from("productos")
     .select(
-      "id, nombre, imagen_url, precio, unidad, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad",
+      "id, nombre, categoria, marca, imagen_url, precio, unidad, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad",
     )
     .eq("tenant_id", tenantId)
     .eq("activo", true)
@@ -924,6 +924,29 @@ export async function getProductosPublicados(tenantId: string): Promise<Producto
 
   if (error) {
     console.error("Error listando productos publicados:", error.message)
+    return []
+  }
+
+  return (data ?? []).map(aProducto)
+}
+
+/**
+ * Datos públicos mínimos de un set de productos, por id. Los usa la landing
+ * para armar la lista de productos de una promoción sin depender de que cada
+ * uno esté publicado individualmente en la vidriera.
+ */
+export async function getProductosPublicadosPorIds(tenantId: string, ids: string[]): Promise<Producto[]> {
+  if (ids.length === 0) return []
+
+  const { data, error } = await supabase
+    .from("productos")
+    .select("id, nombre, imagen_url, precio, unidad")
+    .eq("tenant_id", tenantId)
+    .eq("activo", true)
+    .in("id", ids)
+
+  if (error) {
+    console.error("Error listando productos de promociones:", error.message)
     return []
   }
 

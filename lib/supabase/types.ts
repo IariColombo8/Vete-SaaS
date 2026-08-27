@@ -360,6 +360,7 @@ export interface Promocion {
   id: string
   nombre: string
   descripcion?: string
+  imagenUrl?: string
   precioFinal: number
   activa: boolean
   /** YYYY-MM-DD. undefined = sin fecha de inicio. */

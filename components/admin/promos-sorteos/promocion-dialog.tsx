@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { getProductos, getProductoPorId } from "@/lib/supabase/productos"
+import { uploadFotoTenant } from "@/lib/supabase/storage"
 import { formatCurrency } from "@/lib/format"
 import type { Producto, Promocion } from "@/lib/supabase/types"
 import type { PromocionInput } from "@/lib/supabase/promociones"
@@ -31,6 +32,8 @@ interface ItemForm {
 export function PromocionDialog({ tenantId, promocion, open, onOpenChange, onGuardar }: Props) {
   const [nombre, setNombre] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [fotoUrlActual, setFotoUrlActual] = useState<string | undefined>(undefined)
   const [precioFinal, setPrecioFinal] = useState("")
   const [activa, setActiva] = useState(true)
   const [desde, setDesde] = useState("")
@@ -44,6 +47,8 @@ export function PromocionDialog({ tenantId, promocion, open, onOpenChange, onGua
     if (!open) return
     setNombre(promocion?.nombre ?? "")
     setDescripcion(promocion?.descripcion ?? "")
+    setFotoFile(null)
+    setFotoUrlActual(promocion?.imagenUrl)
     setPrecioFinal(promocion ? String(promocion.precioFinal) : "")
     setActiva(promocion?.activa ?? true)
     setDesde(promocion?.desde ?? "")
@@ -109,7 +114,7 @@ export function PromocionDialog({ tenantId, promocion, open, onOpenChange, onGua
     setItems((prev) => prev.filter((i) => i.producto.id !== productoId))
   }
 
-  const precioListaTotal = items.reduce((acc, i) => acc + i.producto.precio * i.cantidad, 0)
+  const precioListaTotal = items.reduce((acc, i) => acc + i.producto.precioLista * i.cantidad, 0)
   const invalido =
     !nombre.trim() || items.length === 0 || !precioFinal || Number(precioFinal) < 0 || items.some((i) => i.cantidad <= 0)
 
@@ -117,9 +122,13 @@ export function PromocionDialog({ tenantId, promocion, open, onOpenChange, onGua
     if (invalido) return
     setGuardando(true)
     try {
+      const imagenUrl = fotoFile
+        ? await uploadFotoTenant(tenantId, "promociones", fotoFile)
+        : fotoUrlActual ?? null
       await onGuardar({
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || undefined,
+        imagenUrl,
         precioFinal: Number(precioFinal),
         activa,
         desde: desde || null,
@@ -151,6 +160,15 @@ export function PromocionDialog({ tenantId, promocion, open, onOpenChange, onGua
           </div>
 
           <div>
+            <Label className="mb-1 block text-xs text-muted-foreground">Foto de la promoción (opcional)</Label>
+            {fotoUrlActual && !fotoFile && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fotoUrlActual} alt="" className="mb-2 h-24 w-24 rounded-lg border object-cover" />
+            )}
+            <Input type="file" accept="image/*" onChange={(e) => setFotoFile(e.target.files?.[0] ?? null)} />
+          </div>
+
+          <div>
             <Label className="mb-1 block text-xs text-muted-foreground">Buscar producto para agregar</Label>
             <div className="relative">
               <Input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre del producto" />
@@ -174,19 +192,26 @@ export function PromocionDialog({ tenantId, promocion, open, onOpenChange, onGua
 
           {items.length > 0 && (
             <div className="space-y-2 rounded-lg border p-3">
-              {items.map((i) => (
-                <div key={i.producto.id} className="flex items-center gap-2">
-                  <span className="flex-1 truncate text-sm">{i.producto.nombre}</span>
-                  <Input
-                    type="number" min={1} className="w-16"
-                    value={i.cantidad}
-                    onChange={(e) => cambiarCantidad(i.producto.id, Number(e.target.value) || 1)}
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => quitarItem(i.producto.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
+              {items.map((i) => {
+                const porPeso = i.producto.unidad === "kg"
+                return (
+                  <div key={i.producto.id} className="flex items-center gap-2">
+                    <span className="flex-1 truncate text-sm">{i.producto.nombre}</span>
+                    <Input
+                      type="number"
+                      min={porPeso ? 0.1 : 1}
+                      step={porPeso ? 0.1 : 1}
+                      className="w-20"
+                      value={i.cantidad}
+                      onChange={(e) => cambiarCantidad(i.producto.id, Number(e.target.value) || (porPeso ? 0.1 : 1))}
+                    />
+                    <span className="w-6 text-xs text-muted-foreground">{porPeso ? "kg" : "un"}</span>
+                    <Button size="sm" variant="ghost" onClick={() => quitarItem(i.producto.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )
+              })}
               <p className="text-xs text-muted-foreground">
                 Precio de lista del combo: {formatCurrency(precioListaTotal)}
               </p>

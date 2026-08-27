@@ -248,6 +248,7 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 
 - **Nunca entregar código con errores de TypeScript.** Antes de dar código al usuario, verificar que compila (`tsc --noEmit`). Si hay errores, corregirlos antes de responder.
 - Sin `console.log` de debug (ver sección Calidad de código).
+- **Todo el trabajo es local.** No usar git worktrees ni mencionar "working tree". El repo se trabaja directo sobre la carpeta del proyecto, sin crear branches/worktrees paralelos para las tareas. Los cambios se prueban con `npm run dev` en localhost.
 
 ---
 

@@ -12,7 +12,7 @@ import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { KeyRound, PawPrint, ChevronDown } from "lucide-react"
+import { KeyRound, PawPrint, ChevronDown, Store } from "lucide-react"
 import Link from "next/link"
 
 export default function LoginPage() {
@@ -23,15 +23,24 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showEmailForm, setShowEmailForm] = useState(false)
+  const [pidiendoDestino, setPidiendoDestino] = useState(false)
 
   // Supabase inicia sesión por redirect: el usuario vuelve acá desde /auth/callback.
   // Recién en ese momento podemos resolver su panel y mandarlo al destino correcto.
+  // Si el rol es "usuario" (sin tenant asociado), no sabemos si es un cliente
+  // normal o alguien que empezó a registrar su veterinaria y no terminó —
+  // se le pregunta en vez de asumir.
   useEffect(() => {
     if (authLoading || !user) return
     let cancelado = false
     resolveUserDashboard(user.id)
-      .then(({ redirectTo }) => {
-        if (!cancelado) router.replace(redirectTo)
+      .then(({ role, redirectTo }) => {
+        if (cancelado) return
+        if (role === "usuario" || role === null) {
+          setPidiendoDestino(true)
+          return
+        }
+        router.replace(redirectTo)
       })
       .catch((error) => {
         console.error("No se pudo resolver el panel del usuario:", error)
@@ -87,6 +96,33 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Tu panel de gestión veterinaria</p>
         </div>
 
+        {pidiendoDestino ? (
+          <Card className="border-emerald-100 shadow-xl shadow-emerald-950/5 dark:border-emerald-900/40">
+            <CardHeader className="pb-0" />
+            <CardContent className="space-y-4 px-6 pb-6 pt-2 text-center">
+              <p className="font-medium">No completaste el registro de tu veterinaria</p>
+              <p className="text-sm text-muted-foreground">
+                Todavía no encontramos una veterinaria asociada a tu cuenta.
+              </p>
+              <div className="space-y-2 pt-2">
+                <Button
+                  className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={() => router.push("/registro")}
+                >
+                  <Store className="mr-2 h-4 w-4" />
+                  Registrar mi veterinaria
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() => router.push("/mis-turnos")}
+                >
+                  Ver mis turnos
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
         <Card className="border-emerald-100 shadow-xl shadow-emerald-950/5 dark:border-emerald-900/40">
           <CardHeader className="pb-0" />
           <CardContent className="space-y-4 px-6 pb-6 pt-2">
@@ -150,6 +186,7 @@ export default function LoginPage() {
             </Collapsible>
           </CardContent>
         </Card>
+        )}
 
         <p className="text-center text-xs text-muted-foreground">
           ¿Querés sumar tu veterinaria?{" "}

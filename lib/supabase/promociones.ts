@@ -19,6 +19,7 @@ function aPromocion(f: Fila, items: Fila[]): Promocion {
     id: f.id as string,
     nombre: (f.nombre as string) ?? "",
     descripcion: (f.descripcion as string) ?? undefined,
+    imagenUrl: (f.foto_url as string) ?? undefined,
     precioFinal: num(f.precio_final),
     activa: (f.activa as boolean) ?? false,
     desde: (f.desde as string) ?? undefined,
@@ -71,9 +72,35 @@ export async function getPromocionesVigentes(tenantId: string): Promise<Promocio
   return todas.filter((p) => promocionVigente(p))
 }
 
+/**
+ * Promociones vigentes para la landing pública (sin sesión). Usa la policy
+ * `promociones_publico` (ver 022), que solo deja leer filas `activa = true`
+ * — la vigencia por fecha (`desde`/`hasta`) se filtra acá igual que en
+ * `getPromocionesVigentes`.
+ */
+export async function getPromocionesPublicadas(tenantId: string): Promise<Promocion[]> {
+  const { data, error } = await supabase
+    .from("promociones")
+    .select("id, nombre, descripcion, foto_url, precio_final, activa, desde, hasta, promocion_items(id, producto_id, cantidad)")
+    .eq("tenant_id", tenantId)
+    .eq("activa", true)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error listando promociones publicadas:", error.message)
+    return []
+  }
+
+  return (data ?? [])
+    .map((f: Fila) => aPromocion(f, (f.promocion_items as Fila[]) ?? []))
+    .filter((p) => promocionVigente(p))
+}
+
 export interface PromocionInput {
   nombre: string
   descripcion?: string
+  /** `undefined` = sin cambios (edición sin tocar la foto). `null` = sacarla. */
+  imagenUrl?: string | null
   precioFinal: number
   activa: boolean
   desde?: string | null
@@ -88,6 +115,7 @@ export async function createPromocion(tenantId: string, input: PromocionInput): 
       tenant_id: tenantId,
       nombre: input.nombre,
       descripcion: input.descripcion || null,
+      foto_url: input.imagenUrl || null,
       precio_final: input.precioFinal,
       activa: input.activa,
       desde: input.desde || null,
@@ -116,6 +144,8 @@ export async function updatePromocion(
     .update({
       nombre: input.nombre,
       descripcion: input.descripcion || null,
+      // `undefined` no se manda: no pisa la foto ya guardada si no se tocó.
+      ...(input.imagenUrl !== undefined ? { foto_url: input.imagenUrl || null } : {}),
       precio_final: input.precioFinal,
       activa: input.activa,
       desde: input.desde || null,

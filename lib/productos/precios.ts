@@ -159,3 +159,16 @@ export function diasHastaVencimiento(
   const MS_POR_DIA = 86_400_000
   return Math.round((vence.getTime() - inicioHoy.getTime()) / MS_POR_DIA)
 }
+
+/**
+ * Texto de cuenta regresiva para mostrar en la vidriera pública ("Termina en
+ * 3 días"). `null` si no hay fecha o si ya venció — no tiene sentido avisar
+ * de algo que ya no está vigente.
+ */
+export function textoContadorDias(fechaVencimiento?: string | null, hoy: Date = new Date()): string | null {
+  const dias = diasHastaVencimiento(fechaVencimiento, hoy)
+  if (dias === null || dias < 0) return null
+  if (dias === 0) return "Último día"
+  if (dias === 1) return "Termina mañana"
+  return `Termina en ${dias} días`
+}
