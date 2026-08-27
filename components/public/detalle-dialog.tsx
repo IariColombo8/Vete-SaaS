@@ -151,8 +151,11 @@ function DetallePromocion({
 }: { promocion: Promocion; productosDePromos: Record<string, Producto>; logo?: string; onClose: () => void }) {
   const imagen = p.imagenUrl || logo
   const items = p.items.map((i) => ({ item: i, producto: productosDePromos[i.productoId] }))
+  // "Sin la promo" usa el precio con oferta individual ya aplicada (precioFinal
+  // de cada producto), no el de lista: si un producto además tiene su propia
+  // oferta activa, ese es el precio real que se pagaría por fuera de la promo.
   const precioListaTotal = items.reduce(
-    (acc, { item, producto }) => (producto ? acc + producto.precio * item.cantidad : acc),
+    (acc, { item, producto }) => (producto ? acc + precioFinal(producto) * item.cantidad : acc),
     0,
   )
   const hayDescuento = precioListaTotal > p.precioFinal
@@ -161,9 +164,11 @@ function DetallePromocion({
   const contador = textoContadorDias(p.hasta)
 
   return (
-    <div className="grid max-h-[85vh] grid-cols-1 overflow-y-auto sm:max-h-[80vh] sm:grid-cols-2 sm:overflow-hidden">
-      {/* Media */}
-      <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 sm:aspect-auto">
+    <div className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-h-[80vh]">
+      {/* Media: siempre arriba, ancho completo, con altura fija (no
+          aspect-ratio, que compite mal con max-height) para que no domine
+          todo el modal en pantallas anchas. */}
+      <div className="relative h-56 w-full shrink-0 overflow-hidden bg-white dark:bg-slate-900 sm:h-64">
         <BotonCerrar onClose={onClose} />
         <div className="absolute left-0 top-0 z-10 flex items-center gap-1.5 rounded-br-2xl bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-2 text-white">
           <Tag className="h-4 w-4" />
@@ -171,7 +176,7 @@ function DetallePromocion({
           {descuento > 0 && <span className="ml-1 text-xs font-extrabold">-{descuento}%</span>}
         </div>
         {imagen ? (
-          <img src={imagen} alt={p.nombre} className="h-full w-full object-cover" />
+          <img src={imagen} alt={p.nombre} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <Gift className="h-20 w-20 text-emerald-300 dark:text-emerald-800" />
@@ -179,8 +184,8 @@ function DetallePromocion({
         )}
       </div>
 
-      {/* Info */}
-      <div className="flex flex-col justify-center gap-5 bg-white p-8 dark:bg-slate-900 sm:overflow-y-auto">
+      {/* Info: abajo, con los productos incluidos */}
+      <div className="flex flex-col gap-5 bg-white p-8 dark:bg-slate-900">
         <DialogHeader className="gap-2 text-left">
           <DialogTitle className="text-2xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             {p.nombre}
@@ -203,10 +208,17 @@ function DetallePromocion({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
                     ✓
                   </span>
-                  <span className="flex-1">{producto ? producto.nombre : "…"}</span>
-                  <span className="text-xs font-semibold text-slate-400">
-                    × {item.cantidad}{producto?.unidad === "kg" ? " kg" : ""}
+                  <span className="flex-1">
+                    {producto ? producto.nombre : "…"}
+                    <span className="ml-1.5 text-xs font-semibold text-slate-400">
+                      × {item.cantidad}{producto?.unidad === "kg" ? " kg" : ""}
+                    </span>
                   </span>
+                  {producto && (
+                    <span className="text-xs font-semibold text-slate-400">
+                      {formatCurrency(precioFinal(producto) * item.cantidad)} sin promo
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -216,9 +228,13 @@ function DetallePromocion({
         <div className="h-px w-full bg-gradient-to-r from-emerald-200 via-slate-100 to-transparent dark:from-emerald-500/20 dark:via-slate-800" />
 
         <div>
-          {hayDescuento && (
-            <span className="block text-base text-slate-400 line-through dark:text-slate-500">
-              {formatCurrency(precioListaTotal)}
+          {precioListaTotal > 0 && (
+            <span className={
+              hayDescuento
+                ? "block text-base text-slate-400 line-through dark:text-slate-500"
+                : "block text-sm font-medium text-slate-400 dark:text-slate-500"
+            }>
+              Total sin promo: {formatCurrency(precioListaTotal)}
             </span>
           )}
           <div className="flex items-end justify-between gap-2">

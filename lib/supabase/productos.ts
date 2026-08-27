@@ -915,7 +915,7 @@ export async function getProductosPublicados(tenantId: string): Promise<Producto
   const { data, error } = await supabase
     .from("productos")
     .select(
-      "id, nombre, categoria, marca, imagen_url, precio, unidad, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad",
+      "id, nombre, categoria, marca, imagen_url, precio, unidad, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad, oferta_hasta",
     )
     .eq("tenant_id", tenantId)
     .eq("activo", true)
@@ -940,7 +940,7 @@ export async function getProductosPublicadosPorIds(tenantId: string, ids: string
 
   const { data, error } = await supabase
     .from("productos")
-    .select("id, nombre, imagen_url, precio, unidad")
+    .select("id, nombre, imagen_url, precio, unidad, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad, oferta_hasta")
     .eq("tenant_id", tenantId)
     .eq("activo", true)
     .in("id", ids)

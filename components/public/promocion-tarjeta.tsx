@@ -1,5 +1,5 @@
 import { Gift, Tag, Clock } from "lucide-react"
-import { textoContadorDias } from "@/lib/productos/precios"
+import { precioFinal, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
 import type { Producto, Promocion } from "@/lib/supabase/types"
 
@@ -17,8 +17,11 @@ interface Props {
 export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Props) {
   const imagen = p.imagenUrl || logo
   const items = p.items.map((i) => ({ item: i, producto: productos[i.productoId] }))
+  // "Sin la promo" usa el precio con oferta individual ya aplicada (precioFinal),
+  // no el de lista: si un producto además tiene su propia oferta activa, ese es
+  // el precio real que se estaría pagando por fuera de la promo.
   const precioListaTotal = items.reduce(
-    (acc, { item, producto }) => (producto ? acc + producto.precio * item.cantidad : acc),
+    (acc, { item, producto }) => (producto ? acc + precioFinal(producto) * item.cantidad : acc),
     0,
   )
   const hayDescuento = precioListaTotal > p.precioFinal
@@ -47,8 +50,9 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
         {descuento > 0 && <span className="text-xs font-extrabold">-{descuento}%</span>}
       </div>
 
-      {/* Media */}
-      <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+      {/* Media: mismo aspect-square que ProductoTarjeta, para que ambas
+          queden del mismo tamaño una al lado de la otra en la grilla. */}
+      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
         {imagen ? (
           <img
             src={imagen || "/placeholder.svg"}
@@ -70,21 +74,10 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
           {p.nombre}
         </h3>
 
-        {items.length > 0 && (
-          <ul className="mb-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
-            {items.map(({ item, producto }) => (
-              <li key={item.productoId} className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-                <span className="line-clamp-1">
-                  {producto ? producto.nombre : "…"}
-                  <span className="ml-1 text-slate-400 dark:text-slate-500">
-                    × {item.cantidad}
-                    {producto?.unidad === "kg" ? " kg" : ""}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+        {p.descripcion && (
+          <p className="mb-3 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+            {p.descripcion}
+          </p>
         )}
 
         <div className="mt-auto">
@@ -93,16 +86,14 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
               {formatCurrency(precioListaTotal)}
             </span>
           )}
-          <div className="flex items-end justify-between gap-2">
-            <span className="text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(p.precioFinal)}
+          <span className="block text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
+            {formatCurrency(p.precioFinal)}
+          </span>
+          {ahorro > 0 && (
+            <span className="mt-1 inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+              Ahorrás {formatCurrency(ahorro)}
             </span>
-            {ahorro > 0 && (
-              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                Ahorrás {formatCurrency(ahorro)}
-              </span>
-            )}
-          </div>
+          )}
           {contador && (
             <span className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-orange-600 dark:text-orange-400">
               <Clock className="h-3 w-3" />
