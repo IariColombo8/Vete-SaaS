@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OfertasTab } from "@/components/admin/promos-sorteos/ofertas-tab"
+import { PromocionesTab } from "@/components/admin/promos-sorteos/promociones-tab"
 
 interface Props {
   tenantId: string
@@ -34,7 +35,7 @@ export function PromosSorteosManagement({ tenantId }: Props) {
           <OfertasTab tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="promociones">
-          {/* Tarea 9: se agrega en un commit posterior */}
+          <PromocionesTab tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="sorteos">
           {/* Tarea 11: se agrega en un commit posterior */}

@@ -174,6 +174,14 @@ export interface ProductosPagina {
   total: number
 }
 
+export async function getProductoPorId(tenantId: string, id: string): Promise<Producto | null> {
+  const { data } = await supabase
+    .from("productos").select(COLS)
+    .eq("tenant_id", tenantId).eq("id", id)
+    .maybeSingle()
+  return data ? aProducto(data) : null
+}
+
 /**
  * Limpia el término y le saca los acentos, para que coincida con la columna
  * `busqueda_normalizada` (generada en la base con `unaccent`, ver
