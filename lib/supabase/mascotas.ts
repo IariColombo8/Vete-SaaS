@@ -21,6 +21,7 @@ export function aMascota(f: Fila): Mascota {
 
   return {
     id: f.id as string,
+    clienteId: (f.cliente_id as string) ?? undefined,
     nombre: (f.nombre as string) ?? "",
     tipo: (f.tipo as string) ?? "",
     edad: edadCalculada ? formatearEdad(edadCalculada) : (f.edad as string) ?? undefined,
@@ -30,6 +31,7 @@ export function aMascota(f: Fila): Mascota {
     raza: (f.raza as string) ?? undefined,
     peso: (f.peso as string) ?? undefined,
     libretaToken: (f.libreta_token as string) ?? undefined,
+    fotoUrl: (f.foto_url as string) ?? undefined,
   }
 }
 
@@ -101,4 +103,15 @@ export async function updateMascota(
     throw error
   }
   return { success: true, id: mascotaId }
+}
+
+/** Una mascota puntual, sin sesión (para /mi-historia/[mascotaId]). */
+export async function getMascotaPublico(
+  tenantId: string,
+  mascotaId: string,
+): Promise<Mascota | null> {
+  const { data } = await supabase
+    .rpc("obtener_mascota_publico", { p_tenant: tenantId, p_mascota_id: mascotaId })
+  const fila = Array.isArray(data) ? data[0] : data
+  return fila ? aMascota(fila) : null
 }
