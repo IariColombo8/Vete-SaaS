@@ -53,6 +53,7 @@ const TITULOS: Record<AdminSection, string> = {
   ventas: "Ventas",
   caja: "Caja",
   cuentaCorriente: "Cuenta corriente",
+  promosSorteos: "Promos y sorteos",
   configuracion: "Configuración",
 }
 
