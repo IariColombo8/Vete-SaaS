@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OfertasTab } from "@/components/admin/promos-sorteos/ofertas-tab"
 import { PromocionesTab } from "@/components/admin/promos-sorteos/promociones-tab"
+import { SorteosTab } from "@/components/admin/promos-sorteos/sorteos-tab"
 
 interface Props {
   tenantId: string
@@ -38,7 +39,7 @@ export function PromosSorteosManagement({ tenantId }: Props) {
           <PromocionesTab tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="sorteos">
-          {/* Tarea 11: se agrega en un commit posterior */}
+          <SorteosTab tenantId={tenantId} />
         </TabsContent>
       </Tabs>
     </div>
