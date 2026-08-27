@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAdminDb } from "@/lib/supabase/admin"
-import { getGmailCredentials, getEmailJsCredentials } from "@/lib/supabase/email-credentials"
+import { getGmailCredentialsConFallback, getEmailJsCredentials } from "@/lib/supabase/email-credentials"
 import { enviarEmailGmail } from "@/lib/google/gmail"
 import { enviarEmailJs } from "@/lib/email/emailjs"
 import { generarLinkGoogleCalendar } from "@/lib/email/google-calendar-link"
@@ -15,8 +15,10 @@ import { generarLinkGoogleCalendar } from "@/lib/email/google-calendar-link"
  *  - EmailJS: el tenant tiene su propia cuenta de EmailJS (Service ID,
  *    Template ID, Public/Private Key). Mismo lugar de credenciales.
  *
- * `tenants.email_provider` decide cuál. Si falta `tenantId` en el body, o el
- * tenant no existe, se asume Resend (compatibilidad con el flujo anterior).
+ * `tenants.email_provider` decide cuál. Si el tenant no eligió explícitamente
+ * "emailjs" (ni tiene su propio "gmail" ya conectado), se usa Gmail con la
+ * cuenta compartida de VetPanel como fallback (`getGmailCredentialsConFallback`).
+ * Solo cae a Resend si falta `tenantId` o el tenant no existe.
  *
  * Si falta la config del proveedor elegido, responde 200 con
  * `{ ok: false, skipped: true }` para no romper el flujo de reserva (el email
@@ -55,8 +57,12 @@ async function resolverProveedor(tenantId?: string): Promise<"resend" | "gmail" 
     .eq("slug", tenantId)
     .maybeSingle()
 
-  if (data?.email_provider === "gmail" || data?.email_provider === "emailjs") return data.email_provider
-  return "resend"
+  if (!data) return "resend"
+  if (data.email_provider === "emailjs") return "emailjs"
+  // "gmail" propio o "resend" (default de la columna): en ambos casos se
+  // resuelve por Gmail, con fallback a la cuenta compartida si el tenant no
+  // conectó la suya.
+  return "gmail"
 }
 
 function escapeHtml(value: string): string {
@@ -194,9 +200,9 @@ export async function POST(request: Request) {
   }
 
   if (proveedor === "gmail") {
-    const credenciales = await getGmailCredentials(data.tenantId!)
+    const credenciales = await getGmailCredentialsConFallback(data.tenantId!)
     if (!credenciales?.refreshToken || !credenciales.senderEmail) {
-      console.warn(`[email] Tenant ${data.tenantId} tiene proveedor "gmail" pero no conectó su cuenta — email omitido`)
+      console.warn(`[email] Tenant ${data.tenantId}: ni cuenta propia ni cuenta compartida disponibles — email omitido`)
       return NextResponse.json({ ok: false, skipped: true })
     }
 

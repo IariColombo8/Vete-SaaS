@@ -42,6 +42,26 @@ export async function getGmailCredentials(
   }
 }
 
+/** Slug del tenant "cuenta compartida": fallback de Gmail/Calendar para tenants que no conectaron su propia cuenta. */
+const DEFAULT_GMAIL_TENANT = "default"
+
+/**
+ * Como `getGmailCredentials`, pero si el tenant no conectó su propia cuenta
+ * (sin `refresh_token`), cae en la cuenta de Gmail compartida de VetPanel
+ * (`tenant_email_credentials` con `tenant_id = 'default'`). Pensada para
+ * tenants que no armaron su propio proyecto de Google Cloud — hoy, cualquiera
+ * salvo vipvet y mundo-animal (que tienen su propia config explícita).
+ */
+export async function getGmailCredentialsConFallback(
+  tenantId: string,
+): Promise<GmailTenantCredentials | null> {
+  const propias = await getGmailCredentials(tenantId)
+  if (propias?.refreshToken) return propias
+
+  if (tenantId === DEFAULT_GMAIL_TENANT) return propias
+  return getGmailCredentials(DEFAULT_GMAIL_TENANT)
+}
+
 export async function upsertGmailClientCredentials(
   tenantId: string,
   clientId: string,

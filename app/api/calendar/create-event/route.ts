@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getTenantConfig } from "@/lib/supabase/queries";
-import { getGmailCredentials } from "@/lib/supabase/email-credentials";
+import { getGmailCredentialsConFallback } from "@/lib/supabase/email-credentials";
 import { crearEventoCalendar } from "@/lib/google/calendar";
 
 /**
@@ -9,16 +9,20 @@ import { crearEventoCalendar } from "@/lib/google/calendar";
  * Summary: "[TURNO] Mascota - Dueño"
  * Recordatorio: 14 horas antes (popup + email).
  *
- * Dos caminos posibles, según cómo esté conectado el tenant:
+ * Tres caminos posibles, según cómo esté conectado el tenant:
  *  - OAuth propio (tenant_email_credentials, misma conexión que Gmail): usa
  *    el calendario de esa cuenta directamente. `calendarId` del tenant, o
- *    "primary" si no especificó uno. Si viene `duenoEmail`, se lo invita al
- *    evento (Google le manda el mail de invitación con opción de agregarlo
- *    a SU calendario).
+ *    "primary" si no especificó uno.
+ *  - OAuth de la cuenta compartida de VetPanel (tenant "default"): mismo
+ *    mecanismo, para tenants que no armaron su propio proyecto de Google
+ *    Cloud (hoy, cualquiera salvo vipvet y mundo-animal).
+ *  - Ambos casos: si viene `duenoEmail`, se lo invita al evento (Google le
+ *    manda el mail de invitación con opción de agregarlo a SU calendario).
  *  - Service account global (env vars): requiere que el dueño comparta SU
- *    calendario con el email de la service account. Queda como fallback para
- *    tenants que no conectaron su cuenta de Google. Sin invitado: una
- *    service account sin domain-wide delegation no puede invitar attendees.
+ *    calendario con el email de la service account. Último fallback, para
+ *    cuando ni la cuenta propia ni la compartida están disponibles. Sin
+ *    invitado: una service account sin domain-wide delegation no puede
+ *    invitar attendees.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -51,9 +55,10 @@ export async function POST(request: NextRequest) {
     const timeZone = "America/Argentina/Buenos_Aires";
 
     const tenantConfig = tenantId ? await getTenantConfig(tenantId) : null;
-    const oauthCredenciales = tenantId ? await getGmailCredentials(tenantId) : null;
+    const oauthCredenciales = tenantId ? await getGmailCredentialsConFallback(tenantId) : null;
 
-    // Camino 1: el tenant conectó su propia cuenta de Google (Gmail + Calendar).
+    // Camino 1: el tenant conectó su propia cuenta de Google, o cae en la
+    // cuenta compartida de VetPanel (Gmail + Calendar).
     if (oauthCredenciales?.refreshToken) {
       try {
         const evento = await crearEventoCalendar(
