@@ -15,6 +15,8 @@ interface DatosTurno {
   duracionMin?: number
   /** Slug del tenant, para resolver si envía por Resend o por Gmail API. */
   tenantId?: string
+  /** true: notificación al veterinario de un turno nuevo, no la confirmación al cliente. */
+  paraVeterinario?: boolean
 }
 
 /**

@@ -44,7 +44,12 @@ interface TurnoEmailData {
   duracionMin?: number
   /** Slug del tenant, para resolver el proveedor de email configurado. */
   tenantId?: string
+  /** true: este email es la notificación al veterinario de un turno nuevo, no la confirmación al cliente. */
+  paraVeterinario?: boolean
 }
+
+/** Logo genérico de VetPanel, para cuando el tenant no cargó el suyo propio. */
+const DEFAULT_LOGO_URL = "https://vetpanel.com.ar/logo.png"
 
 async function resolverProveedor(tenantId?: string): Promise<"resend" | "gmail" | "emailjs"> {
   if (!tenantId) return "resend"
@@ -88,9 +93,15 @@ function buildConfirmacionHtml(data: TurnoEmailData, calendarLink: string): stri
         </tr>`
       : ""
 
-  const logo = data.logoUrl
-    ? `<img src="${escapeHtml(data.logoUrl)}" alt="${vet}" width="72" height="72" style="width:72px;height:72px;object-fit:contain;display:block;" />`
-    : `<div style="width:72px;height:72px;border-radius:14px;background:rgba(255,255,255,0.18);text-align:center;line-height:72px;font-size:30px;">🐾</div>`
+  const logoSrc = data.logoUrl || DEFAULT_LOGO_URL
+  const logo = `<img src="${escapeHtml(logoSrc)}" alt="${vet}" width="72" height="72" style="width:72px;height:72px;object-fit:contain;display:block;" />`
+
+  const esVeterinario = Boolean(data.paraVeterinario)
+  const titulo = esVeterinario ? "Nuevo turno reservado" : "Turno confirmado"
+  const encabezado = esVeterinario ? "Nuevo turno 🐾" : "¡Nos vemos pronto! 🐶🐱"
+  const saludo = esVeterinario
+    ? `<strong>${escapeHtml(data.nombre_y_apellido)}</strong> reservó un turno. Te dejamos el resumen abajo. 📅`
+    : `Hola <strong>${escapeHtml(data.nombre_y_apellido)}</strong>, tu turno quedó reservado. Te dejamos el resumen abajo. 📅`
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -101,8 +112,8 @@ function buildConfirmacionHtml(data: TurnoEmailData, calendarLink: string): stri
           <table width="100%" style="border-collapse:collapse;">
             <tr>
               <td style="vertical-align:middle;">
-                <p style="margin:0 0 6px;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Turno confirmado</p>
-                <h1 style="margin:0;color:#fff;font-size:22px;line-height:1.3;">¡Nos vemos pronto! 🐶🐱</h1>
+                <p style="margin:0 0 6px;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">${titulo}</p>
+                <h1 style="margin:0;color:#fff;font-size:22px;line-height:1.3;">${encabezado}</h1>
               </td>
               <td align="right" style="vertical-align:middle;" width="80">${logo}</td>
             </tr>
@@ -112,7 +123,7 @@ function buildConfirmacionHtml(data: TurnoEmailData, calendarLink: string): stri
 
         <div style="padding:32px;">
           <p style="margin:0 0 24px;color:#334155;font-size:15px;line-height:1.6;">
-            Hola <strong>${escapeHtml(data.nombre_y_apellido)}</strong>, tu turno quedó reservado. Te dejamos el resumen abajo. 📅
+            ${saludo}
           </p>
 
           <table style="width:100%;border-collapse:collapse;">
@@ -132,7 +143,9 @@ function buildConfirmacionHtml(data: TurnoEmailData, calendarLink: string): stri
           </div>
 
           <p style="margin:24px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">
-            ¿Necesitás reprogramar o cancelar? Respondé este email o contactá directamente a la veterinaria.
+            ${esVeterinario
+              ? "Este turno ya quedó agendado en tu panel de VetPanel."
+              : "¿Necesitás reprogramar o cancelar? Respondé este email o contactá directamente a la veterinaria."}
           </p>
         </div>
       </div>
@@ -159,9 +172,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Falta el email del destinatario" }, { status: 400 })
   }
 
-  const subject = data.veterinaria
-    ? `Turno confirmado en ${data.veterinaria} — ${data.fecha} ${data.hora}`
-    : `Turno confirmado — ${data.fecha} ${data.hora}`
+  const subject = data.paraVeterinario
+    ? `Nuevo turno: ${data.nombre_y_apellido} — ${data.fecha} ${data.hora}`
+    : data.veterinaria
+      ? `Turno confirmado en ${data.veterinaria} — ${data.fecha} ${data.hora}`
+      : `Turno confirmado — ${data.fecha} ${data.hora}`
 
   const calendarLink = generarLinkGoogleCalendar({
     fecha: data.fecha,

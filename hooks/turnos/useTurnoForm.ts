@@ -312,6 +312,20 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       })
       if (!emailEnviado) console.warn("No se pudo enviar el email de confirmacion")
 
+      // Notificación al veterinario, best-effort (no bloquea el flujo si falla).
+      if (tenantConfig?.email) {
+        enviarEmailConfirmacion({
+          nombre_y_apellido: formData.nombre,
+          fecha: selectedDate ? format(selectedDate, "PPP", { locale: es }) : formData.fecha,
+          hora: formData.hora, direccion: direccionVeterinaria,
+          nombre_mascota: formData.nombreMascota, tipo_mascota: formData.tipoMascota,
+          servicio_requerido: formData.servicio, email: tenantConfig.email,
+          veterinaria: tenantConfig?.nombre, logoUrl: tenantConfig?.logo,
+          duracionMin: servicioSel?.duracionMin,
+          tenantId, paraVeterinario: true,
+        }).catch((e) => console.error("No se pudo notificar al veterinario:", e))
+      }
+
       // WhatsApp best-effort (gated por el feature del plan en el servidor)
       try {
         await fetch("/api/whatsapp/notify", {
