@@ -3,7 +3,7 @@ import type { UserRole } from "@/lib/supabase/queries"
 /** Secciones del panel admin sujetas a control de acceso por rol. */
 export type AdminSection =
   | "dashboard" | "turnos" | "libreta" | "clientes" | "productos"
-  | "pos" | "ventas" | "caja" | "cuentaCorriente" | "configuracion"
+  | "pos" | "ventas" | "caja" | "cuentaCorriente" | "promosSorteos" | "configuracion"
 
 /**
  * Permisos por rol dentro del panel de una veterinaria.
@@ -24,6 +24,8 @@ const SECTION_ACCESS: Record<AdminSection, UserRole[]> = {
   caja: ["superadmin", "veterinario", "empleado"],
   // Cobrar cuentas pendientes es trabajo de mostrador, igual que vender.
   cuentaCorriente: ["superadmin", "veterinario", "empleado"],
+  // Armar ofertas/promos/sorteos es parte del mostrador, igual que vender.
+  promosSorteos: ["superadmin", "veterinario", "empleado"],
   configuracion: ["superadmin", "veterinario"],
 }
 

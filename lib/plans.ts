@@ -22,6 +22,7 @@ export type Feature =
   | "multipleProfesionales" // agendas independientes por profesional
   | "productos"          // catálogo de mercadería y control de stock
   | "ventas"             // punto de venta, caja y remitos
+  | "promosSorteos"      // ofertas, promociones y sorteos
 
 export interface PlanLimits {
   /** Máximo de turnos por mes. `null` = ilimitado. */
@@ -51,6 +52,7 @@ const ALL_FEATURES_OFF: Record<Feature, boolean> = {
   multipleProfesionales: false,
   productos: false,
   ventas: false,
+  promosSorteos: false,
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
@@ -104,6 +106,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       multipleProfesionales: true,
       productos: true,
       ventas: true,
+      promosSorteos: true,
     },
     highlights: [
       "Turnos ilimitados",
@@ -112,6 +115,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       "QR público por mascota",
       "Recordatorios automáticos de vacunas",
       "Múltiples profesionales con agendas",
+      "Ofertas, promociones y sorteos",
       "Usuarios ilimitados",
     ],
   },

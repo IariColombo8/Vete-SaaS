@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  Calendar, ExternalLink, FileText, LayoutDashboard, LogOut, Landmark, Package,
+  Calendar, ExternalLink, FileText, Gift, LayoutDashboard, LogOut, Landmark, Package,
   Receipt, Settings, ShoppingCart, Stethoscope, Users, Wallet,
 } from "lucide-react"
 import {
@@ -54,6 +54,7 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
         { href: `/${slug}/admin/Ventas`,          label: "Ventas",     icon: Receipt,      section: "ventas" },
         { href: `/${slug}/admin/Caja`,            label: "Caja",       icon: Wallet,       section: "caja" },
         { href: `/${slug}/admin/CuentaCorriente`, label: "Cta Cte",    icon: Landmark,     section: "cuentaCorriente" },
+        { href: `/${slug}/admin/PromosSorteos`,   label: "Promos",     icon: Gift,         section: "promosSorteos" },
       ],
     },
     {

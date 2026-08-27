@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+import { Tag } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { BuscadorProductos } from "./pos/buscador-productos"
 import { CajaBar } from "./pos/caja-bar"
 import { CantidadDialog } from "./pos/cantidad-dialog"
@@ -26,11 +28,13 @@ import {
 } from "@/lib/ventas/carrito"
 import { getCajaAbierta, getVenta, registrarVenta } from "@/lib/supabase/ventas"
 import { getTenantConfig } from "@/lib/supabase/queries"
-import { getOrCrearServicioAtencion } from "@/lib/supabase/productos"
+import { getOrCrearServicioAtencion, getProductoPorId, getProductos } from "@/lib/supabase/productos"
+import { getPromocionesVigentes } from "@/lib/supabase/promociones"
 import { createHistoria } from "@/lib/supabase/historias"
 import { formatCurrency } from "@/lib/format"
+import { OfertasPromosPanel } from "./pos/ofertas-promos-panel"
 import type { EmisorRemito } from "@/lib/ventas/remito"
-import type { Caja, Cliente, MedioPago, Producto, Venta } from "@/lib/supabase/types"
+import type { Caja, Cliente, MedioPago, Producto, Promocion, Venta } from "@/lib/supabase/types"
 
 interface Props {
   tenantId: string
@@ -64,6 +68,19 @@ export function PosManagement({ tenantId }: Props) {
   const [atencionAbierto, setAtencionAbierto] = useState(false)
   const [cobrando, setCobrando] = useState(false)
   const [ventaHecha, setVentaHecha] = useState<Venta | null>(null)
+
+  const [promociones, setPromociones] = useState<Promocion[]>([])
+  const [productosEnOferta, setProductosEnOferta] = useState<Producto[]>([])
+  const [ofertasPromosAbierto, setOfertasPromosAbierto] = useState(false)
+
+  // Se cargan una sola vez acá y se pasan tanto al panel de ofertas/promos
+  // como al carrito: si cada uno las pidiera por su cuenta, el total que ve
+  // el vendedor en pantalla podría no coincidir con el que se cobra.
+  useEffect(() => {
+    getPromocionesVigentes(tenantId).then(setPromociones)
+    getProductos(tenantId, { soloOferta: true, porPagina: 100 })
+      .then((pagina) => setProductosEnOferta(pagina.productos))
+  }, [tenantId])
 
   const recargarCaja = useCallback(() => {
     getCajaAbierta(tenantId)
@@ -166,6 +183,26 @@ export function PosManagement({ tenantId }: Props) {
     }
   }
 
+  /**
+   * Agrega todos los productos de una promoción al carrito de una sola vez.
+   * Se resuelve producto por producto (no hay un getProductosPorIds masivo)
+   * porque las promos tienen pocos ítems y esto no corre en un loop caliente.
+   */
+  const agregarPromocionAlCarrito = async (promocion: Promocion) => {
+    try {
+      let nuevo = carrito
+      for (const item of promocion.items) {
+        const producto = await getProductoPorId(tenantId, item.productoId)
+        if (producto) nuevo = agregarAlCarrito(nuevo, producto, item.cantidad)
+      }
+      setCarrito(nuevo)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo agregar la promoción")
+    } finally {
+      setOfertasPromosAbierto(false)
+    }
+  }
+
   const limpiar = () => {
     setCarrito([])
     setCliente(null)
@@ -190,7 +227,7 @@ export function PosManagement({ tenantId }: Props) {
     // `totalesCarrito` ya recorta el descuento al subtotal y aplica el
     // recargo después, así que el monto que se manda nunca deja el total en
     // negativo ni desincroniza lo que se ve en pantalla de lo que se cobra.
-    const totales = totalesCarrito(carrito, descuento, pctRecargo)
+    const totales = totalesCarrito(carrito, descuento, pctRecargo, promociones)
 
     if (medioPago === "mixto") {
       const suma = pagosMixto.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
@@ -203,7 +240,7 @@ export function PosManagement({ tenantId }: Props) {
     setCobrando(true)
     try {
       const resultado = await registrarVenta(tenantId, {
-        items: itemsParaRPC(carrito),
+        items: itemsParaRPC(carrito, promociones),
         medioPago,
         clienteId: cliente?.id,
         descuento: totales.descuento,
@@ -246,13 +283,24 @@ export function PosManagement({ tenantId }: Props) {
       <CajaBar tenantId={tenantId} caja={caja} onCambio={recargarCaja} />
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_360px]">
-        <div className="min-h-0 rounded-lg border bg-card p-3">
-          <BuscadorProductos
-            tenantId={tenantId}
-            onElegir={elegirProducto}
-            onAbrirAlimentos={() => setAlimentosAbierto(true)}
-            onAbrirAtencion={() => setAtencionAbierto(true)}
-          />
+        <div className="flex min-h-0 flex-col gap-2 rounded-lg border bg-card p-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={() => setOfertasPromosAbierto(true)}
+          >
+            <Tag className="mr-1.5 h-4 w-4" />
+            Ofertas/Promociones
+          </Button>
+          <div className="min-h-0 flex-1">
+            <BuscadorProductos
+              tenantId={tenantId}
+              onElegir={elegirProducto}
+              onAbrirAlimentos={() => setAlimentosAbierto(true)}
+              onAbrirAtencion={() => setAtencionAbierto(true)}
+            />
+          </div>
         </div>
 
         <div className="min-h-0 rounded-lg border bg-card">
@@ -267,6 +315,7 @@ export function PosManagement({ tenantId }: Props) {
             recargoPorCuotas={recargoPorCuotas}
             pagosMixto={pagosMixto}
             cobrando={cobrando}
+            promociones={promociones}
             onCliente={setCliente}
             onMedioPago={setMedioPago}
             onDescuento={setDescuento}
@@ -310,6 +359,18 @@ export function PosManagement({ tenantId }: Props) {
         venta={ventaHecha}
         emisor={emisor}
         onCerrar={() => setVentaHecha(null)}
+      />
+
+      <OfertasPromosPanel
+        open={ofertasPromosAbierto}
+        onOpenChange={setOfertasPromosAbierto}
+        productosEnOferta={productosEnOferta}
+        promociones={promociones}
+        onAgregarProducto={(p) => {
+          agregar(p, 1)
+          setOfertasPromosAbierto(false)
+        }}
+        onAgregarPromocion={agregarPromocionAlCarrito}
       />
     </div>
   )

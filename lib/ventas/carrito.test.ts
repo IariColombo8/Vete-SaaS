@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Producto } from "@/lib/supabase/types"
+import type { Producto, Promocion } from "@/lib/supabase/types"
 import {
   agregarAlCarrito,
   cambiarCantidad,
@@ -360,5 +360,99 @@ describe("itemsParaRPC", () => {
       precio_unitario: 1000,
       subtotal: 2500,
     })
+  })
+})
+
+describe("totalesCarrito con promociones", () => {
+  it("resta el descuento de la promocion detectada del subtotal", () => {
+    const collar = producto({ id: "collar", precio: 5000 })
+    const correa = producto({ id: "correa", precio: 3000 })
+    const carrito: LineaCarrito[] = [
+      { id: "collar", producto: collar, cantidad: 1 },
+      { id: "correa", producto: correa, cantidad: 1 },
+    ]
+    const promocion: Promocion = {
+      id: "p1",
+      nombre: "Combo",
+      precioFinal: 6500,
+      activa: true,
+      items: [
+        { productoId: "collar", cantidad: 1 },
+        { productoId: "correa", cantidad: 1 },
+      ],
+    }
+
+    const totales = totalesCarrito(carrito, undefined, 0, [promocion])
+    // 8000 de lista - 1500 de promo = 6500.
+    expect(totales.subtotal).toBe(6500)
+    expect(totales.ahorro).toBe(1500)
+  })
+
+  it("sin promociones se comporta como antes", () => {
+    const collar = producto({ id: "collar", precio: 5000 })
+    const carrito: LineaCarrito[] = [{ id: "collar", producto: collar, cantidad: 1 }]
+    const totales = totalesCarrito(carrito)
+    expect(totales.subtotal).toBe(5000)
+  })
+})
+
+describe("itemsParaRPC con promociones", () => {
+  it("reparte el descuento de la promocion proporcional al precio de lista de cada linea", () => {
+    const collar = producto({ id: "collar", precio: 5000 })
+    const correa = producto({ id: "correa", precio: 3000 })
+    const carrito: LineaCarrito[] = [
+      { id: "collar", producto: collar, cantidad: 1 },
+      { id: "correa", producto: correa, cantidad: 1 },
+    ]
+    const promocion: Promocion = {
+      id: "p1",
+      nombre: "Combo",
+      precioFinal: 6500,
+      activa: true,
+      items: [
+        { productoId: "collar", cantidad: 1 },
+        { productoId: "correa", cantidad: 1 },
+      ],
+    }
+
+    const items = itemsParaRPC(carrito, [promocion])
+    const totalSubtotales = items.reduce((acc, i) => acc + i.subtotal, 0)
+    expect(totalSubtotales).toBe(6500)
+  })
+
+  it("sin promociones se comporta como antes", () => {
+    const collar = producto({ id: "collar", precio: 5000 })
+    const carrito: LineaCarrito[] = [{ id: "collar", producto: collar, cantidad: 2 }]
+    const items = itemsParaRPC(carrito)
+    expect(items[0].subtotal).toBe(10000)
+  })
+
+  it("no arrastra centavos de diferencia al repartir entre 3+ items con precios que no dividen parejo", () => {
+    // Tres items al mismo precio: 1/3 del descuento de cada uno redondea a
+    // 0.33, y 0.33*3 = 0.99, no el $1 de descuento real. La última línea del
+    // combo tiene que absorber ese centavo.
+    const a = producto({ id: "a", precio: 100 })
+    const b = producto({ id: "b", precio: 100 })
+    const c = producto({ id: "c", precio: 100 })
+    const carrito: LineaCarrito[] = [
+      { id: "a", producto: a, cantidad: 1 },
+      { id: "b", producto: b, cantidad: 1 },
+      { id: "c", producto: c, cantidad: 1 },
+    ]
+    const promocion: Promocion = {
+      id: "p1",
+      nombre: "Combo triple",
+      precioFinal: 299,
+      activa: true,
+      items: [
+        { productoId: "a", cantidad: 1 },
+        { productoId: "b", cantidad: 1 },
+        { productoId: "c", cantidad: 1 },
+      ],
+    }
+
+    const items = itemsParaRPC(carrito, [promocion])
+    const totalSubtotales = items.reduce((acc, i) => acc + i.subtotal, 0)
+    expect(totalSubtotales).toBe(299)
   })
 })

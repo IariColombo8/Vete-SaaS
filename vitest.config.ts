@@ -6,6 +6,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Valores dummy: alcanza para que `lib/supabase/config.ts` no tire al
+    // importarse en tests que solo ejercitan funciones puras del módulo.
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-key",
+    },
     include: ["**/*.{test,spec}.{ts,tsx}"],
     // Los tests de rules requieren el emulador (correr con `npm run test:rules`).
     // "parte de kiosko" es el proyecto de referencia que se está portando:
