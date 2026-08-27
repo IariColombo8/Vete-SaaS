@@ -15,7 +15,7 @@ import {
   type Descuento, type LineaCarrito,
 } from "@/lib/ventas/carrito"
 import { formatCurrency } from "@/lib/format"
-import { MEDIOS_PAGO, type Cliente, type MedioPago } from "@/lib/supabase/types"
+import { MEDIOS_PAGO, type Cliente, type MedioPago, type Promocion } from "@/lib/supabase/types"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
 export const CUOTAS_DEFAULT: Record<number, number> = { 1: 5, 3: 10, 6: 20, 12: 35 }
@@ -31,6 +31,7 @@ interface Props {
   recargoPorCuotas: Record<number, number>
   pagosMixto: LineaPagoMixto[]
   cobrando: boolean
+  promociones: Promocion[]
   onCliente: (c: Cliente | null) => void
   onMedioPago: (m: MedioPago) => void
   onDescuento: (d: Descuento) => void
@@ -56,6 +57,7 @@ export function CarritoPanel({
   recargoPorCuotas,
   pagosMixto,
   cobrando,
+  promociones,
   onCliente,
   onMedioPago,
   onDescuento,
@@ -74,7 +76,7 @@ export function CarritoPanel({
   const esCtaCte = medioPago === "cuenta_corriente"
   const pctAplicado = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
 
-  const totales = totalesCarrito(carrito, descuento, pctAplicado)
+  const totales = totalesCarrito(carrito, descuento, pctAplicado, promociones)
   const vacio = carrito.length === 0
   const esEfectivo = medioPago === "efectivo"
 
