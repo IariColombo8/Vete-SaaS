@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
   Loader2, ChevronLeft, ChevronRight, ArrowRight,
-  Heart, Shield, Star, Home, PawPrint,
+  Heart, Shield, Star, Home, PawPrint, UserPlus, Gift, ShoppingBag, Info, Code2,
+
 } from "lucide-react"
 import Link from "next/link"
 import { getProductosPublicados, getProductosPublicadosPorIds } from "@/lib/supabase/productos"
@@ -552,14 +553,6 @@ export default function VetPublicPage() {
             </Button>
           </div>
         </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 animate-bounce">
-          <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Scroll</span>
-          <div className="w-5 h-8 rounded-full border-2 border-white/20 flex justify-center pt-1.5">
-            <div className="w-1 h-2 rounded-full bg-white/40 animate-pulse" />
-          </div>
-        </div>
       </section>
 
       {/* ╔══════════════════════════════════════════════════╗
@@ -674,111 +667,95 @@ export default function VetPublicPage() {
       {/* ╔══════════════════════════════════════════════════╗
           ║              HORARIOS + CONTACTO                 ║
           ╚══════════════════════════════════════════════════╝ */}
-      <section className="bg-white dark:bg-slate-950 py-24 sm:py-32">
+      <section className="bg-white dark:bg-slate-950 py-14 sm:py-20">
         <div className="container max-w-6xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+          <div className="grid lg:grid-cols-2 gap-6 items-stretch">
 
-            {/* ── IZQUIERDA: Contacto arriba + Horarios abajo ── */}
-            <div className="flex flex-col gap-6">
+            {/* ── IZQUIERDA: Contacto y Horarios en una sola tarjeta ── */}
+            <Reveal>
+              <div className="relative h-full rounded-3xl p-[1px] bg-gradient-to-br from-emerald-500/20 via-transparent to-teal-500/20">
+                <div className="h-full rounded-3xl bg-white dark:bg-slate-900 overflow-hidden">
+                  <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800 h-full">
 
-              {/* CONTACTO */}
-              <Reveal>
-                <div className="rounded-2xl border-2 border-slate-900 dark:border-white/20 bg-white dark:bg-slate-950 p-8 sm:p-10
-                                transition-all duration-500 hover:shadow-[8px_8px_0px_0px_rgba(16,185,129,0.15)]">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Contacto</h3>
-                  </div>
-
-                  {/* Modalidad */}
-                  {(modalidad === "domicilio" || modalidad === "ambos") && (
-                    <div className="flex items-center gap-3 mb-5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3">
-                      <Home className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                        {modalidad === "domicilio" ? "Atendemos a domicilio" : "Atendemos en local y a domicilio"}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    {(modalidad === "local" || modalidad === "ambos") && direccion && (
-                      <div className="flex items-start gap-3 group">
-                        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors">
-                          <MapPin className="h-4 w-4 text-slate-500 group-hover:text-emerald-500 transition-colors" />
+                    {/* CONTACTO */}
+                    <div className="p-6 sm:p-7 flex flex-col">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500
+                                        flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                          <MapPin className="h-5 w-5 text-white" />
                         </div>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{direccion}</p>
-                          {ciudad && <p className="text-slate-500 text-sm">{ciudad}</p>}
-                        </div>
+                        <h3 className="font-bold text-slate-900 dark:text-white">Contacto</h3>
                       </div>
-                    )}
-                    {email && (
-                      <a href={`mailto:${email}`} className="flex items-center gap-3 group">
-                        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors">
-                          <Mail className="h-4 w-4 text-slate-500 group-hover:text-emerald-500 transition-colors" />
-                        </div>
-                        <span className="font-semibold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors break-all">
-                          {email}
+
+                      {(modalidad === "domicilio" || modalidad === "ambos") && (
+                        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mb-4">
+                          <Home className="h-3 w-3" />
+                          {modalidad === "domicilio" ? "Atendemos a domicilio" : "Local y domicilio"}
                         </span>
-                      </a>
-                    )}
-                    {!(direccion || email || modalidad === "domicilio" || modalidad === "ambos") && (
-                      <p className="text-slate-400 italic text-sm">Datos de contacto no configurados aun.</p>
-                    )}
-                  </div>
+                      )}
 
-                  <Button
-                    className="mt-8 bg-emerald-500 hover:bg-emerald-400 text-white
-                               font-bold h-12 px-8 rounded-full shadow-lg shadow-emerald-500/20
-                               transition-all duration-300 hover:shadow-emerald-400/30 hover:scale-105 border-0"
-                    onClick={() => router.push(`/${slug}/turno`)}
-                  >
-                    <CalendarPlus className="mr-2 h-4 w-4" />
-                    Reservar turno
-                  </Button>
-                </div>
-              </Reveal>
-
-              {/* HORARIOS */}
-              <Reveal delay={150}>
-                <div className="rounded-2xl border-2 border-slate-900 dark:border-white/20 bg-white dark:bg-slate-950 p-8 sm:p-10 flex-1
-                                transition-all duration-500 hover:shadow-[8px_8px_0px_0px_rgba(16,185,129,0.15)]">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Horarios</h3>
-                  </div>
-
-                  <div className="space-y-0">
-                    {horarios.map((h, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between py-3.5 border-b border-slate-100 dark:border-slate-800 last:border-0"
-                      >
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">{h.dia}</span>
-                        {h.cerrado ? (
-                          <span className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-500/10 px-3 py-1 rounded-full uppercase tracking-wider">Cerrado</span>
-                        ) : (
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full text-sm">
-                            {h.apertura} – {h.cierre}
-                          </span>
+                      <div className="space-y-3 flex-1">
+                        {(modalidad === "local" || modalidad === "ambos") && direccion && (
+                          <div className="text-sm">
+                            <p className="font-semibold text-slate-800 dark:text-slate-100">{direccion}</p>
+                            {ciudad && <p className="text-slate-400 text-xs mt-0.5">{ciudad}</p>}
+                          </div>
+                        )}
+                        {email && (
+                          <a href={`mailto:${email}`} className="block text-sm font-semibold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors break-all">
+                            {email}
+                          </a>
+                        )}
+                        {!(direccion || email || modalidad === "domicilio" || modalidad === "ambos") && (
+                          <p className="text-slate-400 italic text-xs">Datos de contacto no configurados aun.</p>
                         )}
                       </div>
-                    ))}
+
+                      <Button
+                        className="mt-6 w-full bg-emerald-500 hover:bg-emerald-400 text-white
+                                   font-bold h-11 rounded-full text-sm border-0 shadow-lg shadow-emerald-500/20"
+                        onClick={() => router.push(`/${slug}/turno`)}
+                      >
+                        <CalendarPlus className="mr-2 h-4 w-4" />
+                        Reservar turno
+                      </Button>
+                    </div>
+
+                    {/* HORARIOS */}
+                    <div className="p-6 sm:p-7">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500
+                                        flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                          <Clock className="h-5 w-5 text-white" />
+                        </div>
+                        <h3 className="font-bold text-slate-900 dark:text-white">Horarios</h3>
+                      </div>
+                      <div className="space-y-2.5">
+                        {horarios.map((h, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-slate-600 dark:text-slate-300">{h.dia}</span>
+                            {h.cerrado ? (
+                              <span className="text-[11px] font-semibold text-slate-400">Cerrado</span>
+                            ) : (
+                              <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                {h.apertura} – {h.cierre}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
-              </Reveal>
-            </div>
+              </div>
+            </Reveal>
 
             {/* ── DERECHA: Mapa o placeholder ── */}
             <Reveal delay={200} direction="right">
-              <div className="h-full min-h-[400px] lg:min-h-0">
+              <div className="h-full min-h-[280px]">
                 {muestraMapa ? (
-                  <div className="rounded-2xl overflow-hidden border-2 border-slate-900 dark:border-white/20 h-full min-h-[400px]
-                                  transition-all duration-500 hover:shadow-[8px_8px_0px_0px_rgba(16,185,129,0.15)]">
+                  <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 h-full min-h-[280px]">
                     {googleMapsUrl.includes("<iframe") ? (
                       <div
                         className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
@@ -796,11 +773,10 @@ export default function VetPublicPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border-2 border-slate-900 dark:border-white/20 h-full min-h-[400px]
-                                  bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-4 p-10
-                                  transition-all duration-500 hover:shadow-[8px_8px_0px_0px_rgba(16,185,129,0.15)]">
-                    <Stethoscope className="h-10 w-10 text-slate-300 dark:text-slate-700" />
-                    <p className="text-slate-400 dark:text-slate-600 text-center text-sm max-w-xs">
+                  <div className="rounded-xl border border-slate-200 dark:border-white/10 h-full min-h-[280px]
+                                  bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-2 p-6">
+                    <Stethoscope className="h-6 w-6 text-slate-300 dark:text-slate-700" />
+                    <p className="text-slate-400 dark:text-slate-600 text-center text-xs max-w-xs">
                       {modalidad === "domicilio"
                         ? "Nos acercamos a tu domicilio para atender a tu mascota."
                         : "Agrega tu ubicacion de Google Maps desde la configuracion."}
@@ -817,38 +793,151 @@ export default function VetPublicPage() {
           ║                    FOOTER                        ║
           ╚══════════════════════════════════════════════════╝ */}
       <footer className="bg-slate-950 border-t border-slate-800/30">
-        <div className="container max-w-6xl mx-auto px-6 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              {logo ? (
-                <img src={logo} alt="" className="w-9 h-9 rounded-xl object-cover ring-1 ring-white/10" />
-              ) : (
-                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
-                  <Stethoscope className="h-4 w-4 text-white" />
-                </div>
-              )}
-              <span className="font-bold text-white">{nombre}</span>
+        <div className="container max-w-6xl mx-auto px-6 py-8">
+          <div className="flex items-center gap-3 mb-2">
+            {logo ? (
+              <img src={logo} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10" />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                <Stethoscope className="h-5 w-5 text-white" />
+              </div>
+            )}
+            <span className="font-bold text-white text-lg">{nombre}</span>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
+
+            {/* FILA 1 */}
+
+            {/* CONTACTO */}
+            <div>
+              <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
+                <MapPin className="h-4 w-4 text-emerald-500 shrink-0" />
+                Contacto y ubicacion
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed mb-4">{descripcion}</p>
+              <div className="space-y-2.5 text-sm">
+                {direccion && (
+                  <div className="flex items-start gap-2.5 text-slate-400">
+                    <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
+                    <span>{direccion}{ciudad ? `, ${ciudad}` : ""}</span>
+                  </div>
+                )}
+                {telefono && (
+                  <a href={`tel:${telefono}`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                    <Phone className="h-4 w-4 shrink-0 text-emerald-500" />
+                    {telefono}
+                  </a>
+                )}
+                {email && (
+                  <a href={`mailto:${email}`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors break-all">
+                    <Mail className="h-4 w-4 shrink-0 text-emerald-500" />
+                    {email}
+                  </a>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-              <Link href={`/${slug}/turno`} className="text-slate-400 hover:text-white transition-colors">Sacar turno</Link>
-              {telefono && <a href={`tel:${telefono}`} className="text-slate-400 hover:text-white transition-colors">{telefono}</a>}
-              {email && <a href={`mailto:${email}`} className="text-slate-400 hover:text-white transition-colors">{email}</a>}
+
+            {/* PARA CLIENTES */}
+            <div>
+              <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
+                <PawPrint className="h-4 w-4 text-emerald-500 shrink-0" />
+                Para clientes
+              </h4>
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link href={`/${slug}/turno`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                    <CalendarPlus className="h-4 w-4 shrink-0" />
+                    Sacar turno
+                  </Link>
+                </li>
+                <li>
+                  <RegistroClienteDialog
+                    tenantId={slug}
+                    trigger={
+                      <button type="button" className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                        <UserPlus className="h-4 w-4 shrink-0" />
+                        Registrarme como cliente
+                      </button>
+                    }
+                  />
+                </li>
+                <li>
+                  <Link href={`/${slug}/mi-historia`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                    <PawPrint className="h-4 w-4 shrink-0" />
+                    Historia clinica de mi mascota
+                  </Link>
+                </li>
+                <li>
+                  <Link href={`/${slug}/productos`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                    <ShoppingBag className="h-4 w-4 shrink-0" />
+                    Productos
+                  </Link>
+                </li>
+                <li>
+                  <span className="flex items-center gap-2.5 text-slate-600 cursor-default">
+                    <Gift className="h-4 w-4 shrink-0" />
+                    Sorteos
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-400 rounded-full px-2 py-0.5">Pronto</span>
+                  </span>
+                </li>
+              </ul>
             </div>
+
+            {/* FILA 2 */}
+
+            {/* QUE ES VETPANEL */}
+            <div>
+              <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
+                <Info className="h-4 w-4 text-emerald-500 shrink-0" />
+                Sobre VetPanel
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed mb-3">
+                <Link href="/" className="text-emerald-500 font-semibold hover:text-emerald-400 transition-colors">VetPanel</Link>{" "}
+                es la plataforma que le da a esta veterinaria su web, turnos online, historia clinica
+                digital y punto de venta.
+              </p>
+              <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors">
+                Conoce VetPanel
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {/* SERVITEC */}
+            <div>
+              <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
+                <Code2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                Desarrollado por ServiTec
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed mb-3">
+                <span className="text-white font-semibold">SERVITEC</span> es el estudio de desarrollo
+                detras de VetPanel: diseño, software y soporte tecnico a medida.
+              </p>
+              <a
+                href="https://servitec-cdelu.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+              >
+                servitec-cdelu.vercel.app
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+
           </div>
         </div>
 
         <div className="border-t border-slate-800/30">
-          <div className="container max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="container max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
             <p className="text-xs text-slate-500">
-              Esta pagina esta hecha desde{" "}
+              © {new Date().getFullYear()} {nombre}. Pagina hecha con{" "}
               <Link href="/" className="text-emerald-500 font-semibold hover:text-emerald-400 transition-colors">VetPanel</Link>
             </p>
-
             <a
               href="https://servitec-cdelu.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-extralight uppercase tracking-[0.4em] text-slate-500
+              className="text-xs font-extralight uppercase tracking-[0.4em] text-slate-500
                          hover:text-white transition-all duration-500"
               style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
             >

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import { UserPlus, PlusCircle, Trash2, Loader2, PartyPopper } from "lucide-react
 
 interface RegistroClienteDialogProps {
   tenantId: string
+  trigger?: ReactNode
 }
 
 interface MascotaBorrador {
@@ -39,7 +40,7 @@ interface MascotaBorrador {
 const CLIENTE_VACIO = { nombre: "", telefono: "", email: "", dni: "", domicilio: "" }
 const MASCOTA_VACIA: MascotaBorrador = { nombre: "", tipo: "perro", raza: "" }
 
-export function RegistroClienteDialog({ tenantId }: RegistroClienteDialogProps) {
+export function RegistroClienteDialog({ tenantId, trigger }: RegistroClienteDialogProps) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -105,15 +106,17 @@ export function RegistroClienteDialog({ tenantId }: RegistroClienteDialogProps) 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetear() }}>
       <DialogTrigger asChild>
-        <Button
-          size="lg"
-          variant="outline"
-          className="bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold text-lg h-14 px-10 rounded-full
-                     backdrop-blur-md transition-all duration-300 hover:scale-105"
-        >
-          <UserPlus className="mr-2 h-5 w-5" />
-          Registrarme como cliente
-        </Button>
+        {trigger ?? (
+          <Button
+            size="lg"
+            variant="outline"
+            className="bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold text-lg h-14 px-10 rounded-full
+                       backdrop-blur-md transition-all duration-300 hover:scale-105"
+          >
+            <UserPlus className="mr-2 h-5 w-5" />
+            Registrarme como cliente
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
