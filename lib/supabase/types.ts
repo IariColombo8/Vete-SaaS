@@ -152,6 +152,8 @@ export interface Cliente {
 
 export interface Mascota {
   id?: string
+  /** Dueño de la mascota. Solo viene poblado desde obtener_mascota_publico(). */
+  clienteId?: string
   nombre: string
   tipo: string
   edad?: string
@@ -164,6 +166,8 @@ export interface Mascota {
   peso?: string
   /** Token aleatorio para la libreta pública por QR (no adivinable). */
   libretaToken?: string
+  /** Foto opcional subida por el dueño; fondo del perfil público. */
+  fotoUrl?: string
 }
 
 export interface Turno {
