@@ -233,6 +233,22 @@ export async function getTurnosPublico(
   return (data ?? []).map(aTurno)
 }
 
+/**
+ * Turnos de una mascota puntual, sin sesión (para /mi-historia/[mascotaId]).
+ * A diferencia de `getTurnosPublico`, no depende de qué DNI reservó el
+ * turno: sirve para que un co-dueño (ver `mascota_duenos`) vea también los
+ * turnos que sacó el otro dueño para la misma mascota.
+ */
+export async function getTurnosPorMascotaPublico(
+  tenantId: string,
+  mascotaId: string,
+): Promise<Turno[]> {
+  if (!mascotaId) return []
+  const { data } = await supabase
+    .rpc("obtener_turnos_mascota_publico", { p_tenant: tenantId, p_mascota_id: mascotaId })
+  return (data ?? []).map(aTurno)
+}
+
 export async function updateTurno(
   _tenantId: string,
   turnoId: string,

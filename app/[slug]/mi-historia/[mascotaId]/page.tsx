@@ -18,7 +18,7 @@ import {
   type DuenoMascota,
 } from "@/lib/supabase/mascotas"
 import { getHistoriasPublico } from "@/lib/supabase/historias"
-import { getTurnosPublico } from "@/lib/supabase/turnos"
+import { getTurnosPorMascotaPublico } from "@/lib/supabase/turnos"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { useToast } from "@/hooks/use-toast"
 import type { Mascota, Historia, Turno } from "@/lib/supabase/types"
@@ -112,11 +112,11 @@ export default function PerfilMascotaPage() {
 
       const [misHistorias, misTurnos, misDuenos] = await Promise.all([
         getHistoriasPublico(slug, mascotaId),
-        getTurnosPublico(slug, cliente.id),
+        getTurnosPorMascotaPublico(slug, mascotaId),
         getDuenosMascotaPublico(slug, mascotaId),
       ])
       setHistorias(misHistorias.filter((h) => h.tipoVisita !== "turno_programado"))
-      setTurnos(misTurnos.filter((t) => t.mascotaId === mascotaId))
+      setTurnos(misTurnos)
       setDuenos(misDuenos)
       setLoading(false)
     } finally {
