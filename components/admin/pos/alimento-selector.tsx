@@ -122,7 +122,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
         ) : (
           <div className="max-h-[70vh] overflow-y-auto">
             {marca === null && (
-              <Grilla>
+              <Grilla variante="grid">
                 {marcas.map((m) => {
                   // La mayoría de las marcas de este catálogo no tienen línea
                   // real (el Excel del proveedor no la trae), así que "1
@@ -130,7 +130,7 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
                   // adentro, no en cuántas líneas están repartidos.
                   const totalItems = m.lineas.reduce((n, l) => n + l.presentaciones.length, 0)
                   return (
-                    <Opcion key={m.marca} onClick={() => elegirMarca(m.marca)}>
+                    <Opcion key={m.marca} variante="grid" onClick={() => elegirMarca(m.marca)}>
                       <span className="font-semibold">{m.marca}</span>
                       <span className="text-xs text-muted-foreground">
                         {totalItems} {totalItems === 1 ? "producto" : "productos"}
@@ -169,16 +169,31 @@ export function AlimentoSelector({ tenantId, abierto, onCerrar, onElegir }: Prop
   )
 }
 
-function Grilla({ children }: { children: React.ReactNode }) {
+function Grilla({ children, variante = "lista" }: { children: React.ReactNode; variante?: "lista" | "grid" }) {
+  if (variante === "grid") {
+    return <div className="grid grid-cols-2 gap-2 p-1 sm:grid-cols-3">{children}</div>
+  }
   return <div className="flex flex-col gap-2 p-1">{children}</div>
 }
 
-function Opcion({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function Opcion({
+  children,
+  onClick,
+  variante = "lista",
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  variante?: "lista" | "grid"
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between gap-2 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+      className={
+        variante === "grid"
+          ? "flex min-h-[72px] flex-col items-start justify-center gap-1 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+          : "flex w-full items-center justify-between gap-2 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+      }
     >
       {children}
     </button>

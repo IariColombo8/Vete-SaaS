@@ -22,13 +22,16 @@ interface Props {
  * Atajos de kilos: cubren tanto pedidos chicos (0,1 kg = 100 g, sin tener que
  * cambiar de campo para pensar en gramos) como los pedidos grandes típicos.
  */
-const KILOS_RAPIDOS = [0.1, 0.25, 0.5, 1, 2, 3, 5, 10]
+const KILOS_RAPIDOS = [0.25, 0.5, 1, 2, 10]
 
 /** Atajos de unidades sueltas de un paquete divisible (ej. golosinas de a una). */
-const UNIDADES_RAPIDAS = [1, 2, 3, 5, 10]
+const UNIDADES_RAPIDAS = [1, 2, 5, 10]
 
 /** Atajos de montos: los pedidos típicos cuando el cliente pide "$1000 de alimento". */
-const MONTOS_RAPIDOS = [500, 1000, 1500, 2000, 3000, 5000]
+const MONTOS_RAPIDOS = [500, 1000, 2000, 3000, 5000]
+
+/** Tope de botones de atajo que se muestran por fila, para no saturar el diálogo. */
+const MAX_ATAJOS = 5
 
 /** Redondea a 3 decimales y saca ceros de más, para que el campo no muestre "1.500000000004". */
 function numeroLimpio(n: number): string {
@@ -58,6 +61,11 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   const [valorNatural, setValorNatural] = useState("")
   const [valorMonto, setValorMonto] = useState("")
   const [valorUnidades, setValorUnidades] = useState("1")
+  // Qué campo escribió el usuario por última vez: define de cuál se deriva el
+  // importe. Si se deriva siempre de "natural", redondearlo a 3 decimales para
+  // mostrarlo (ver numeroLimpio) hace que tipear un monto redondo como $1000
+  // vuelva un importe distinto ($998, $1002...) por el vaivén de conversión.
+  const [origen, setOrigen] = useState<"natural" | "monto">("natural")
 
   const porKg = producto?.unidad === "kg"
   // Un paquete con cantidad de unidades tiene prioridad sobre el peso: si un
@@ -86,6 +94,7 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   useEffect(() => {
     if (!producto) return
     setValorUnidades("1")
+    setOrigen("natural")
     if (!fraccionable) {
       setValorNatural("")
       setValorMonto("")
@@ -98,22 +107,42 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   }, [producto, fraccionable, escala])
 
   const escribirNatural = (texto: string) => {
+    setOrigen("natural")
     setValorNatural(texto)
     const n = Number(texto.replace(",", "."))
     setValorMonto(Number.isFinite(n) && n > 0 && precioPorNatural > 0 ? numeroLimpio(n * precioPorNatural) : "")
   }
 
   const escribirMonto = (texto: string) => {
+    setOrigen("monto")
     setValorMonto(texto)
     const monto = Number(texto.replace(",", "."))
+    // El campo "natural" se actualiza solo para que se vea acompañado (y para
+    // los atajos), pero redondeado a 3 decimales — no es la fuente de verdad
+    // de la cantidad mientras el usuario esté escribiendo el monto.
     setValorNatural(Number.isFinite(monto) && monto > 0 && precioPorNatural > 0 ? numeroLimpio(monto / precioPorNatural) : "")
   }
 
-  const cantidad = fraccionable
-    ? naturalACantidad(Number(valorNatural.replace(",", ".")) || 0)
-    : Number(valorUnidades.replace(",", ".")) || 0
+  // Cuando el monto es lo último que se tipeó, la cantidad se deriva
+  // directamente de él (monto / precio unitario) en vez de rebotar por el
+  // campo "natural" redondeado — así el importe coincide exacto con lo
+  // tipeado: escribir $1000 tiene que dar Importe $1.000, no $998 ni $1.002.
+  const montoNum = Number(valorMonto.replace(",", "."))
+  const cantidadDesdeMonto =
+    precioPorNatural > 0 && Number.isFinite(montoNum) && montoNum > 0 ? montoNum / precioPorNatural : 0
 
-  const importe = producto && cantidad > 0 ? precioLinea(producto, cantidad) : 0
+  const cantidad = !fraccionable
+    ? Number(valorUnidades.replace(",", ".")) || 0
+    : origen === "monto" && !esCombo
+      ? naturalACantidad(cantidadDesdeMonto)
+      : naturalACantidad(Number(valorNatural.replace(",", ".")) || 0)
+
+  const importe =
+    fraccionable && origen === "monto" && !esCombo && Number.isFinite(montoNum) && montoNum > 0
+      ? montoNum
+      : producto && cantidad > 0
+        ? precioLinea(producto, cantidad)
+        : 0
   const excedeStock =
     producto?.controlaStock === true && cantidad > producto.stock
 
@@ -123,8 +152,9 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
   }
 
   // El tamaño completo (bolsa o paquete) va primero en los atajos, para que
-  // vender el producto entero (el caso más común) sea un solo click.
-  const atajosNaturales =
+  // vender el producto entero (el caso más común) sea un solo click. Se
+  // recorta a MAX_ATAJOS para no saturar el diálogo con botones.
+  const atajosNaturales = (
     modoNatural === "u"
       ? escala > 0 && !UNIDADES_RAPIDAS.includes(escala)
         ? [escala, ...UNIDADES_RAPIDAS]
@@ -132,10 +162,11 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
       : escala > 0 && !KILOS_RAPIDOS.includes(escala)
         ? [escala, ...KILOS_RAPIDOS]
         : KILOS_RAPIDOS
+  ).slice(0, MAX_ATAJOS)
 
   return (
     <Dialog open={producto !== null} onOpenChange={(v) => !v && onCerrar()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm lg:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{fraccionable ? "¿Cuánto se lleva?" : "¿Cuántas unidades?"}</DialogTitle>
           <DialogDescription>
