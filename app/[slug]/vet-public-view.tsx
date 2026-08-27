@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
   Loader2, ChevronLeft, ChevronRight, ArrowRight,
-  Heart, Shield, Star, Home,
+  Heart, Shield, Star, Home, PawPrint,
 } from "lucide-react"
 import Link from "next/link"
 import { getProductosPublicados } from "@/lib/supabase/productos"
@@ -455,6 +455,16 @@ export default function VetPublicPage() {
             </Button>
 
             <RegistroClienteDialog tenantId={slug} />
+
+            <Button
+              variant="ghost"
+              size="lg"
+              className="text-white/80 hover:text-white hover:bg-white/10 font-semibold text-lg h-14 px-10 rounded-full"
+              onClick={() => router.push(`/${slug}/mi-historia`)}
+            >
+              <PawPrint className="mr-2 h-5 w-5" />
+              Historia clínica de mi mascota
+            </Button>
           </div>
         </div>
 
