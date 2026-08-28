@@ -748,23 +748,30 @@ export function ProductosManagement({ tenantId }: Props) {
                         {estado === "servicio" ? (
                           <span className="text-xs text-muted-foreground">Servicio</span>
                         ) : (
-                          <span className="flex items-center justify-end gap-1.5">
-                            <span className={cn(
-                              "font-semibold",
-                              estado === "agotado" && "text-red-600",
-                              estado === "bajo" && "text-amber-600",
-                            )}>
-                              {formatCantidad(p.stock)}
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="flex items-center justify-end gap-1.5">
+                              <span className={cn(
+                                "font-semibold",
+                                estado === "agotado" && "text-red-600",
+                                estado === "bajo" && "text-amber-600",
+                              )}>
+                                {formatCantidad(p.stock)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">{p.unidad}</span>
+                              {estado === "bajo" && (
+                                <Badge variant="outline" className="border-amber-500 text-amber-600">
+                                  Bajo
+                                </Badge>
+                              )}
                             </span>
-                            <span className="text-xs text-muted-foreground">{p.unidad}</span>
-                            {estado === "agotado" ? (
+                            {estado === "agotado" && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     type="button"
                                     disabled={readOnly}
                                     title="Cargar stock"
-                                    className="rounded-full border border-emerald-500 px-2 py-0.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-50 disabled:opacity-60 dark:hover:bg-emerald-950/40"
+                                    className="rounded-full border border-emerald-500 px-1.5 py-px text-[11px] leading-tight font-medium text-emerald-600 transition-colors hover:bg-emerald-50 disabled:opacity-60 dark:hover:bg-emerald-950/40"
                                   >
                                     Agregar
                                   </button>
@@ -781,12 +788,8 @@ export function ProductosManagement({ tenantId }: Props) {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                            ) : estado === "bajo" && (
-                              <Badge variant="outline" className="border-amber-500 text-amber-600">
-                                Bajo
-                              </Badge>
                             )}
-                          </span>
+                          </div>
                         )}
                       </TableCell>
 
