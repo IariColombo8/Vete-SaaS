@@ -672,8 +672,8 @@ export function ProductosManagement({ tenantId }: Props) {
                         <div className="flex items-center gap-2.5">
                           {/* Las miniaturas quedan ocultas a propósito por ahora,
                               aunque el producto tenga imagenUrl cargada. */}
-                          <div className="min-w-0 max-w-[46vw] sm:max-w-xs">
-                            <p className="truncate font-medium">{p.nombre}</p>
+                          <div className="min-w-0 max-w-[60vw] sm:max-w-xs">
+                            <p className="font-medium">{p.nombre}</p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                               {(p.codigoBarras || p.codigo) && (
                                 <span className="truncate text-xs text-muted-foreground">
