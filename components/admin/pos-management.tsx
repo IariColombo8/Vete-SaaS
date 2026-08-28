@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Tag } from "lucide-react"
+import { ShoppingCart, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { BuscadorProductos } from "./pos/buscador-productos"
 import { CajaBar } from "./pos/caja-bar"
 import { CantidadDialog } from "./pos/cantidad-dialog"
@@ -72,6 +73,7 @@ export function PosManagement({ tenantId }: Props) {
   const [promociones, setPromociones] = useState<Promocion[]>([])
   const [productosEnOferta, setProductosEnOferta] = useState<Producto[]>([])
   const [ofertasPromosAbierto, setOfertasPromosAbierto] = useState(false)
+  const [carritoAbierto, setCarritoAbierto] = useState(false)
 
   // Se cargan una sola vez acá y se pasan tanto al panel de ofertas/promos
   // como al carrito: si cada uno las pidiera por su cuenta, el total que ve
@@ -264,6 +266,7 @@ export function PosManagement({ tenantId }: Props) {
       await anotarHistoriasClinicas(carrito)
 
       limpiar()
+      setCarritoAbierto(false)
       // El stock cambió, así que el resumen de la caja también.
       recargarCaja()
     } catch (e) {
@@ -275,61 +278,88 @@ export function PosManagement({ tenantId }: Props) {
     }
   }
 
+  const pctRecargo = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
+  const totales = totalesCarrito(carrito, descuento, pctRecargo, promociones)
+
+  const carritoPanel = (
+    <CarritoPanel
+      tenantId={tenantId}
+      carrito={carrito}
+      cliente={cliente}
+      medioPago={medioPago}
+      descuento={descuento}
+      recargoPct={recargoPct}
+      cuotas={cuotas}
+      recargoPorCuotas={recargoPorCuotas}
+      pagosMixto={pagosMixto}
+      cobrando={cobrando}
+      promociones={promociones}
+      onCliente={setCliente}
+      onMedioPago={setMedioPago}
+      onDescuento={setDescuento}
+      onRecargoPct={setRecargoPct}
+      onCuotas={setCuotas}
+      onRecargoPorCuotas={setRecargoPorCuotas}
+      onPagosMixto={setPagosMixto}
+      onCantidad={actualizarCantidad}
+      onQuitar={(id) => setCarrito((actual) => quitarDelCarrito(actual, id))}
+      onVaciar={limpiar}
+      onCobrar={cobrar}
+    />
+  )
+
   return (
-    // Alto fijo, no `min-h`: el carrito y el buscador scrollean por dentro y el
-    // botón de cobrar tiene que quedar siempre a la vista. Se descuenta el
-    // header del panel (3.5rem) y el padding vertical del main (3rem).
+    // Alto fijo, no `min-h`: el buscador scrollea por dentro y los botones de
+    // arriba tienen que quedar siempre a la vista. Se descuenta el header del
+    // panel (3.5rem) y el padding vertical del main (3rem).
     <div className="flex h-[calc(100vh-6.5rem)] flex-col gap-3">
       <CajaBar tenantId={tenantId} caja={caja} onCambio={recargarCaja} />
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_360px]">
-        <div className="flex min-h-0 flex-col gap-2 rounded-lg border bg-card p-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-fit"
-            onClick={() => setOfertasPromosAbierto(true)}
-          >
-            <Tag className="mr-1.5 h-4 w-4" />
-            Ofertas/Promociones
-          </Button>
-          <div className="min-h-0 flex-1">
-            <BuscadorProductos
-              tenantId={tenantId}
-              onElegir={elegirProducto}
-              onAbrirAlimentos={() => setAlimentosAbierto(true)}
-              onAbrirAtencion={() => setAtencionAbierto(true)}
-            />
-          </div>
-        </div>
-
-        <div className="min-h-0 rounded-lg border bg-card">
-          <CarritoPanel
+      <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border bg-card p-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => setOfertasPromosAbierto(true)}
+        >
+          <Tag className="mr-1.5 h-4 w-4" />
+          Ofertas/Promociones
+        </Button>
+        <div className="min-h-0 flex-1">
+          <BuscadorProductos
             tenantId={tenantId}
-            carrito={carrito}
-            cliente={cliente}
-            medioPago={medioPago}
-            descuento={descuento}
-            recargoPct={recargoPct}
-            cuotas={cuotas}
-            recargoPorCuotas={recargoPorCuotas}
-            pagosMixto={pagosMixto}
-            cobrando={cobrando}
-            promociones={promociones}
-            onCliente={setCliente}
-            onMedioPago={setMedioPago}
-            onDescuento={setDescuento}
-            onRecargoPct={setRecargoPct}
-            onCuotas={setCuotas}
-            onRecargoPorCuotas={setRecargoPorCuotas}
-            onPagosMixto={setPagosMixto}
-            onCantidad={actualizarCantidad}
-            onQuitar={(id) => setCarrito((actual) => quitarDelCarrito(actual, id))}
-            onVaciar={limpiar}
-            onCobrar={cobrar}
+            onElegir={elegirProducto}
+            onAbrirAlimentos={() => setAlimentosAbierto(true)}
+            onAbrirAtencion={() => setAtencionAbierto(true)}
           />
         </div>
       </div>
+
+      {/* Flotante en vez de panel fijo: el buscador ya necesita todo el ancho
+          para que la fila de resultados (descripción, stock, precio) respire. */}
+      <Button
+        onClick={() => setCarritoAbierto(true)}
+        className="fixed bottom-5 right-5 z-40 h-14 gap-2 rounded-full bg-emerald-600 px-5 shadow-lg hover:bg-emerald-700"
+      >
+        <ShoppingCart className="h-5 w-5" />
+        {carrito.length > 0 ? (
+          <span className="flex items-center gap-1.5">
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">
+              {totales.items}
+            </span>
+            {formatCurrency(totales.total)}
+          </span>
+        ) : (
+          "Carrito"
+        )}
+      </Button>
+
+      <Dialog open={carritoAbierto} onOpenChange={setCarritoAbierto}>
+        <DialogContent className="flex h-[95dvh] max-w-md flex-col gap-0 p-0 sm:h-[80vh]">
+          <DialogTitle className="sr-only">Carrito</DialogTitle>
+          {carritoPanel}
+        </DialogContent>
+      </Dialog>
 
       <AtencionDialog
         abierto={atencionAbierto}

@@ -134,47 +134,51 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
 
   return (
     <div className="flex h-full flex-col gap-3">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={busqueda}
-            autoFocus
-            placeholder="Escaneá un código o buscá por nombre / marca"
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                void buscarPorCodigo()
-              }
-            }}
-            className="h-12 pl-9 text-base"
-          />
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground sm:h-4 sm:w-4" />
+        <Input
+          ref={inputRef}
+          value={busqueda}
+          autoFocus
+          placeholder="Escaneá un código o buscá por nombre / marca"
+          onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              void buscarPorCodigo()
+            }
+          }}
+          className="h-9 w-full pl-8 text-sm sm:h-12 sm:pl-9 sm:text-base"
+        />
+      </div>
+
+      <div className="flex flex-nowrap gap-1.5 sm:gap-2">
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={() => setScannerOpen(true)}
-          className="h-12 shrink-0"
+          className="h-8 flex-1 px-2 text-xs sm:h-12 sm:px-3 sm:text-sm"
         >
-          <ScanBarcode className="mr-2 h-4 w-4" /> Escanear
+          <ScanBarcode className="h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Escanear</span>
         </Button>
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={onAbrirAlimentos}
-          className="h-12 shrink-0"
+          className="h-8 flex-1 px-2 text-xs sm:h-12 sm:px-3 sm:text-sm"
         >
-          <PawPrint className="mr-2 h-4 w-4" /> Alimentos
+          <PawPrint className="h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Alimentos</span>
         </Button>
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={onAbrirAtencion}
-          className="h-12 shrink-0"
+          className="h-8 flex-1 px-2 text-xs sm:h-12 sm:px-3 sm:text-sm"
         >
-          <Stethoscope className="mr-2 h-4 w-4" /> Atención
+          <Stethoscope className="h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Atención</span>
         </Button>
       </div>
 
@@ -280,12 +284,12 @@ function ResultadoProducto({
       type="button"
       onClick={onElegir}
       disabled={agotado}
-      className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
+      className="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate text-sm font-medium">{descripcionBuscador(producto)}</span>
+      <div className="flex min-w-0 flex-1 basis-full items-start gap-2 sm:basis-0">
+        <span className="text-sm font-medium leading-snug">{descripcionBuscador(producto)}</span>
         {tieneOferta(producto) && (
-          <Badge className="shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
+          <Badge className="mt-0.5 shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
       </div>
       {producto.controlaStock && (
@@ -293,7 +297,7 @@ function ResultadoProducto({
           {agotado ? "Sin stock" : `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`}
         </span>
       )}
-      <span className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400">
+      <span className="ml-auto shrink-0 font-bold text-emerald-600 dark:text-emerald-400 sm:ml-0">
         {formatCurrency(precioFinal(producto))}
         {porKg && <span className="text-xs font-normal"> / kg</span>}
       </span>
