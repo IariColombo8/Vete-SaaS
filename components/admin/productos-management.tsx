@@ -796,7 +796,7 @@ export function ProductosManagement({ tenantId }: Props) {
                       </TableCell>
 
                       <TableCell className="text-right py-3">
-                        <div className="flex flex-nowrap items-center justify-end gap-0.5">
+                        <div className="flex flex-col items-end gap-0.5 sm:flex-row sm:items-center">
                           <Button
                             size="sm" variant="ghost"
                             className={cn("h-7 w-7 shrink-0 px-0", p.publicadoEnLanding && "text-emerald-600")}
