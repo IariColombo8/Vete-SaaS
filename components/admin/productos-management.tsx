@@ -796,7 +796,41 @@ export function ProductosManagement({ tenantId }: Props) {
                       </TableCell>
 
                       <TableCell className="text-right py-3">
-                        <div className="flex flex-col items-end gap-0.5 sm:flex-row sm:items-center">
+                        {/* Celular: un solo botón (lápiz) con las 3 acciones adentro
+                            del menú — tres iconos sueltos no entraban en fila. */}
+                        <div className="flex justify-end sm:hidden">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 px-0">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => abrirEdicion(p)}>
+                                <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => togglePublicado(p)}
+                                disabled={publicando === p.id || readOnly}
+                              >
+                                {p.publicadoEnLanding
+                                  ? <EyeOff className="mr-2 h-3.5 w-3.5" />
+                                  : <Eye className="mr-2 h-3.5 w-3.5" />}
+                                {p.publicadoEnLanding ? "Despublicar" : "Publicar en la página"}
+                              </DropdownMenuItem>
+                              {p.activo && (
+                                <DropdownMenuItem
+                                  onClick={() => setADarDeBaja(p)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Dar de baja
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        <div className="hidden items-center justify-end gap-0.5 sm:flex">
                           <Button
                             size="sm" variant="ghost"
                             className={cn("h-7 w-7 shrink-0 px-0", p.publicadoEnLanding && "text-emerald-600")}
