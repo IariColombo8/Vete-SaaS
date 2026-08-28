@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 interface Props {
   open: boolean
@@ -28,6 +30,17 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Props) 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState<string | null>(null)
+  // Sin código de barras (producto sin impresión legible por ZXing): se
+  // pausa la decodificación continua y se lee el número a mano, una sola
+  // captura por vez, con OCR acotado a dígitos.
+  const [modo, setModo] = useState<"barras" | "numero">("barras")
+  const [leyendoNumero, setLeyendoNumero] = useState(false)
+  const modoRef = useRef(modo)
+  modoRef.current = modo
+
+  useEffect(() => {
+    if (!open) setModo("barras")
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -71,6 +84,12 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Props) 
 
         const detectar = () => {
           if (cancelado || !videoRef.current || !canvasRef.current) return
+          // En modo número el video sigue en vivo (para poder encuadrar y
+          // capturar), pero ZXing no tiene nada que decodificar acá.
+          if (modoRef.current === "numero") {
+            frameId = requestAnimationFrame(detectar)
+            return
+          }
           const video = videoRef.current
           const canvas = canvasRef.current
           const vw = video.videoWidth
@@ -116,12 +135,63 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Props) 
     }
   }, [open, onDetected])
 
+  /**
+   * Captura un solo frame y le pide a Tesseract solo dígitos: sin código de
+   * barras impreso, lo que hay para leer es el número a simple vista (ej. un
+   * medicamento con el lote tipeado a mano). Una sola pasada, no en loop —
+   * OCR es demasiado pesado para correr en cada frame como ZXing.
+   */
+  const capturarNumero = async () => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas || leyendoNumero) return
+
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    if (vw === 0 || vh === 0) return
+
+    const cw = vw * CROP_WIDTH_PCT
+    const ch = vh * CROP_HEIGHT_PCT
+    const sx = (vw - cw) / 2
+    const sy = (vh - ch) / 2
+    canvas.width = cw
+    canvas.height = ch
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.drawImage(video, sx, sy, cw, ch, 0, 0, cw, ch)
+
+    setLeyendoNumero(true)
+    try {
+      const Tesseract = await import("tesseract.js")
+      const { data } = await Tesseract.recognize(canvas, "eng", {
+        // @ts-expect-error -- tessedit_char_whitelist no está en los tipos públicos de la lib
+        tessedit_char_whitelist: "0123456789",
+      })
+      const digitos = data.text.replace(/\D/g, "")
+      if (digitos) {
+        onDetected(digitos)
+      } else {
+        toast.error("No se reconoció ningún número, probá encuadrar mejor")
+      }
+    } catch {
+      toast.error("No se pudo leer el número")
+    } finally {
+      setLeyendoNumero(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Escanear código de barras</DialogTitle>
-          <DialogDescription>Alineá el código dentro del recuadro.</DialogDescription>
+          <DialogTitle>
+            {modo === "barras" ? "Escanear código de barras" : "Leer número sin código de barras"}
+          </DialogTitle>
+          <DialogDescription>
+            {modo === "barras"
+              ? "Alineá el código dentro del recuadro."
+              : "Encuadrá el número dentro del recuadro y tocá \"Capturar\"."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="relative overflow-hidden rounded-lg bg-black">
@@ -150,6 +220,30 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Props) 
           )}
         </div>
         <canvas ref={canvasRef} className="hidden" />
+
+        {!error && modo === "numero" && (
+          <Button
+            type="button"
+            onClick={capturarNumero}
+            disabled={leyendoNumero}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {leyendoNumero ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {leyendoNumero ? "Leyendo…" : "Capturar"}
+          </Button>
+        )}
+
+        {!error && (
+          <button
+            type="button"
+            onClick={() => setModo((m) => (m === "barras" ? "numero" : "barras"))}
+            className="text-center text-xs text-muted-foreground underline underline-offset-2"
+          >
+            {modo === "barras"
+              ? "¿No tiene código de barras? Leer solo el número"
+              : "Volver a escanear código de barras"}
+          </button>
+        )}
       </DialogContent>
     </Dialog>
   )
