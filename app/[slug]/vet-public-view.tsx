@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, Children, type ReactNode } fr
 import { useParams, useRouter } from "next/navigation"
 import { getTenant, getTenantConfig } from "@/lib/supabase/queries"
 import type { TenantConfig, ServicioTenant, HorarioTenant, Modalidad } from "@/lib/supabase/queries"
+import { diaToWeekdays, formatDiasLabel } from "@/lib/turnos/horarios"
 import { Button } from "@/components/ui/button"
 import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
@@ -732,12 +733,15 @@ export default function VetPublicPage() {
                       </div>
                       <div className="space-y-2.5">
                         {horarios.map((h, i) => (
-                          <div key={i} className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-600 dark:text-slate-300">{h.dia}</span>
+                          <div key={i} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="font-medium text-slate-600 dark:text-slate-300 min-w-0">
+                              {formatDiasLabel(diaToWeekdays(h.dia)) || h.dia}
+                              {h.nombre && <span className="text-slate-400"> ({h.nombre})</span>}
+                            </span>
                             {h.cerrado ? (
-                              <span className="text-[11px] font-semibold text-slate-400">Cerrado</span>
+                              <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-400">Cerrado</span>
                             ) : (
-                              <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <span className="shrink-0 whitespace-nowrap font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                                 {h.apertura} – {h.cierre}
                               </span>
                             )}

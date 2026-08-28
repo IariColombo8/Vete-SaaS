@@ -118,4 +118,25 @@ describe("computeAvailableSlots", () => {
     // 12:00 no tiene 13:00 disponible
     expect(r).toEqual(["09:00", "10:00", "11:00"])
   })
+
+  it("con cupoSimultaneo 2, un slot con 1 ocupado sigue disponible", () => {
+    const r = computeAvailableSlots(slots, [{ hora: "10:00", duracionMin: 60 }], 60, { cupoSimultaneo: 2 })
+    expect(r).toEqual(slots)
+  })
+
+  it("con cupoSimultaneo 2, un slot con 2 ocupados ya no esta disponible", () => {
+    const ocupados = [
+      { hora: "10:00", duracionMin: 60 },
+      { hora: "10:00", duracionMin: 60 },
+    ]
+    const r = computeAvailableSlots(slots, ocupados, 60, { cupoSimultaneo: 2 })
+    expect(r).toEqual(["09:00", "11:00", "12:00"])
+  })
+
+  it("respeta intervaloMin de 15 minutos", () => {
+    const slots15 = generateTimeSlots("09:00", "10:00", 15)
+    expect(slots15).toEqual(["09:00", "09:15", "09:30", "09:45"])
+    const r = computeAvailableSlots(slots15, [{ hora: "09:15", duracionMin: 15 }], 15, { intervaloMin: 15 })
+    expect(r).toEqual(["09:00", "09:30", "09:45"])
+  })
 })

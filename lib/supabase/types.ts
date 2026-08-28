@@ -40,7 +40,10 @@ export interface ServicioTenant {
 }
 
 export interface HorarioTenant {
+  /** Días que cubre esta fila, ej "Lunes a Viernes" o "Lunes,Martes,Viernes" (formato interno, ver lib/turnos/horarios.ts) */
   dia: string
+  /** Etiqueta libre para esta fila (ej "Urgencias"). No afecta qué días cubre, solo cómo se muestra. */
+  nombre?: string
   apertura: string
   cierre: string
   cerrado: boolean
@@ -73,6 +76,12 @@ export interface ServicioTurnoConfig {
   descripcion?: string
   /** Duración del turno en minutos (default 60). Define cuántos slots ocupa. */
   duracionMin?: number
+  /** Horas mínimas de anticipación para pedir este servicio. Sin definir = usa minHorasAnticipacion del tenant. */
+  anticipacionHoras?: number
+  /** Cuántos turnos de este servicio pueden coexistir en el mismo horario (ej: 2 consultas generales en paralelo). Default 1. */
+  cupoSimultaneo?: number
+  /** Horarios propios de este servicio (ej: cirugía solo los jueves de 10 a 12). Vacío/ausente = usa los horarios generales del tenant. */
+  horarios?: HorarioTenant[]
 }
 
 export interface Profesional {

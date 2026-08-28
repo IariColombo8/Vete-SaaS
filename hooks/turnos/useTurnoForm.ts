@@ -19,12 +19,18 @@ import {
   generateTimeSlots,
   generateTimeSlotsConSiesta,
   getHorarioForDay,
+  getHorariosForDay,
+  computeSlotsForHorarios,
   computeAvailableSlots,
 } from "@/lib/turnos/horarios"
 
 // ── Horario helpers (exported for use in FechaHoraSection) ───────────────────
 
-export { diaToWeekdays, generateTimeSlots, generateTimeSlotsConSiesta, getHorarioForDay }
+export {
+  diaToWeekdays, generateTimeSlots, generateTimeSlotsConSiesta,
+  getHorarioForDay, getHorariosForDay, computeSlotsForHorarios,
+  computeClosedDays,
+}
 
 function computeClosedDays(horarios: HorarioTenant[]): number[] {
   const open = new Set<number>()
@@ -34,13 +40,14 @@ function computeClosedDays(horarios: HorarioTenant[]): number[] {
   return [0, 1, 2, 3, 4, 5, 6].filter(d => !open.has(d))
 }
 
-/** Filtra horarios que ya pasaron o estan dentro del minimo de anticipacion para hoy */
-function filtrarHorariosHoy(slots: string[], minHoras: number): string[] {
-  const ahora = new Date()
-  const horaMinima = ahora.getHours() + minHoras
+/** Filtra horarios que caen antes del mínimo de anticipación exigido (hoy o cualquier día futuro cercano). */
+function filtrarPorAnticipacion(slots: string[], fecha: string, anticipacionHoras: number): string[] {
+  const minimo = new Date(Date.now() + anticipacionHoras * 60 * 60 * 1000)
+  const [anio, mes, dia] = fecha.split("-").map(Number)
   return slots.filter(slot => {
-    const h = parseInt(slot.split(":")[0], 10)
-    return h >= horaMinima
+    const [h, m] = slot.split(":").map(Number)
+    const candidato = new Date(anio, mes - 1, dia, h, m)
+    return candidato >= minimo
   })
 }
 
@@ -143,39 +150,35 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
     if (!selectedDate) return
     const fechaSeleccionada = format(selectedDate, "yyyy-MM-dd")
 
-    // Turnos del día que ocupan agenda. Si hay profesional seleccionado, solo los suyos.
+    // Servicio seleccionado: define su propia duración, horarios y cupo (si los tiene configurados).
+    // La duración también funciona como intervalo entre horarios ofrecidos: un servicio de 15 min ofrece slots cada 15 min.
+    const servicioSel = turnoConfig?.servicios?.find((s) => s.id === formData.servicio)
+    const duracionNueva = servicioSel?.duracionMin ?? 60
+    const intervaloMin = duracionNueva
+    const cupoSimultaneo = servicioSel?.cupoSimultaneo ?? 1
+    const horariosParaServicio = servicioSel?.horarios?.length ? servicioSel.horarios : tenantHorarios
+
+    // Turnos del día que ocupan agenda del mismo servicio. Si hay profesional seleccionado, solo los suyos.
     const ocupados = turnosExistentes
       .filter((t) => t.turno?.fecha === fechaSeleccionada && t.estado !== "cancelado")
       .filter((t) => !formData.profesionalId || (t.profesionalId ?? "") === formData.profesionalId)
+      .filter((t) => !formData.servicio || (t.servicio ?? "") === formData.servicio)
       .map((t) => ({ hora: t.turno?.hora ?? "", duracionMin: t.duracionMin }))
       .filter((o) => o.hora)
 
     let todos: string[]
-    if (tenantHorarios.length > 0) {
-      const horario = getHorarioForDay(selectedDate.getDay(), tenantHorarios)
-      if (!horario || horario.cerrado) {
-        todos = []
-      } else if (horario.corrido === false && horario.cierre1 && horario.apertura2) {
-        todos = generateTimeSlotsConSiesta(horario.apertura, horario.cierre, horario.cierre1, horario.apertura2)
-      } else {
-        todos = generateTimeSlots(horario.apertura, horario.cierre)
-      }
+    if (horariosParaServicio.length > 0) {
+      const bloques = getHorariosForDay(selectedDate.getDay(), horariosParaServicio)
+      todos = computeSlotsForHorarios(bloques, intervaloMin)
     } else {
       todos = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"]
     }
 
-    // Filtrar horarios pasados si es hoy
-    const hoy = format(new Date(), "yyyy-MM-dd")
-    if (fechaSeleccionada === hoy) {
-      const minHoras = tenantConfig?.minHorasAnticipacion ?? 2
-      todos = filtrarHorariosHoy(todos, minHoras)
-    }
+    // Filtrar horarios que no cumplen la anticipación mínima (propia del servicio o general del tenant)
+    const anticipacionHoras = servicioSel?.anticipacionHoras ?? tenantConfig?.minHorasAnticipacion ?? 2
+    todos = filtrarPorAnticipacion(todos, fechaSeleccionada, anticipacionHoras)
 
-    // Duración del servicio seleccionado (define cuántos slots ocupa el nuevo turno)
-    const servicioSel = turnoConfig?.servicios?.find((s) => s.id === formData.servicio)
-    const duracionNueva = servicioSel?.duracionMin ?? 60
-
-    const disponibles = computeAvailableSlots(todos, ocupados, duracionNueva)
+    const disponibles = computeAvailableSlots(todos, ocupados, duracionNueva, { intervaloMin, cupoSimultaneo })
     setHorariosDisponibles(disponibles)
     if (formData.hora && !disponibles.includes(formData.hora)) handleChange("hora", "")
   }, [selectedDate, turnosExistentes, tenantHorarios, turnoConfig, tenantConfig, formData.profesionalId, formData.servicio])

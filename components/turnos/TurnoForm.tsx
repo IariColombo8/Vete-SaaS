@@ -178,6 +178,7 @@ export function TurnoForm({
               horariosDisponibles={horariosDisponibles}
               closedDays={closedDays}
               tenantHorarios={tenantHorarios}
+              servicioSel={turnoConfig?.servicios?.find((s) => s.id === formData.servicio)}
             />
 
             {/* Submit Button */}

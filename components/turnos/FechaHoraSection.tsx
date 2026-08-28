@@ -19,8 +19,8 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDisponibilidadTurnos } from "@/hooks/turnos/useDisponibilidadTurnos";
 import { useSlug } from "@/context/slug-context";
-import type { HorarioTenant } from "@/lib/supabase/queries";
-import { diaToWeekdays, generateTimeSlots, generateTimeSlotsConSiesta, getHorarioForDay } from "@/hooks/turnos/useTurnoForm";
+import type { HorarioTenant, ServicioTurnoConfig } from "@/lib/supabase/queries";
+import { getHorariosForDay, computeSlotsForHorarios, computeClosedDays } from "@/hooks/turnos/useTurnoForm";
 
 interface FechaHoraSectionProps {
   selectedDate: Date | undefined;
@@ -34,6 +34,8 @@ interface FechaHoraSectionProps {
   horariosDisponibles: string[];
   closedDays: number[];
   tenantHorarios: HorarioTenant[];
+  /** Servicio elegido: si tiene horarios/cupo propios (ej: cirugía solo jueves), rigen sobre los del tenant. */
+  servicioSel?: ServicioTurnoConfig;
 }
 
 export function FechaHoraSection({
@@ -45,9 +47,31 @@ export function FechaHoraSection({
   horariosDisponibles,
   closedDays,
   tenantHorarios,
+  servicioSel,
 }: FechaHoraSectionProps) {
   const slug = useSlug();
   const { turnosExistentes } = useDisponibilidadTurnos(slug);
+
+  const horariosEfectivos = servicioSel?.horarios?.length ? servicioSel.horarios : tenantHorarios;
+  const closedDaysEfectivos = servicioSel?.horarios?.length ? computeClosedDays(horariosEfectivos) : closedDays;
+  const cupoSimultaneo = servicioSel?.cupoSimultaneo ?? 1;
+
+  // Si hay slots con minutos (ej: cada 15 min), separamos la seleccion en Hora + Minutos
+  // para no forzar una lista larga tipo "10:00, 10:15, 10:30...". Si todo es en punto, un solo Select alcanza.
+  const usaMinutos = horariosDisponibles.some((h) => !h.endsWith(":00"));
+  const [horaSel, minSel] = formData.hora ? formData.hora.split(":") : ["", ""];
+  const horasDisponibles = Array.from(new Set(horariosDisponibles.map((h) => h.split(":")[0]))).sort();
+  const minutosDisponibles = horaSel
+    ? horariosDisponibles.filter((h) => h.startsWith(`${horaSel}:`)).map((h) => h.split(":")[1])
+    : [];
+
+  function onHoraSelect(hora: string) {
+    const mins = horariosDisponibles.filter((h) => h.startsWith(`${hora}:`)).map((h) => h.split(":")[1]);
+    handleChange("hora", `${hora}:${mins[0] ?? "00"}`);
+  }
+  function onMinutoSelect(min: string) {
+    handleChange("hora", `${horaSel}:${min}`);
+  }
 
   return (
     <div
@@ -101,31 +125,25 @@ export function FechaHoraSection({
                   // Fechas pasadas
                   if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
 
-                  // Dias cerrados segun configuracion
-                  if (closedDays.includes(date.getDay())) return true;
+                  // Dias cerrados segun configuracion (o los propios del servicio, si los tiene)
+                  if (closedDaysEfectivos.includes(date.getDay())) return true;
 
                   // Dias bloqueados manualmente
                   const fechaStr = format(date, "yyyy-MM-dd");
                   if (diasBloqueados.includes(fechaStr)) return true;
 
-                  // Dias llenos (todos los turnos ocupados)
+                  // Dias llenos (todos los turnos de este servicio ocupados, respetando el cupo simultaneo)
                   const turnosDelDia = turnosExistentes.filter(
                     (t) => t.turno?.fecha === fechaStr && t.estado !== "cancelado"
+                      && (!servicioSel || (t.servicio ?? "") === servicioSel.id)
                   );
-                  const horario = tenantHorarios.length > 0
-                    ? getHorarioForDay(date.getDay(), tenantHorarios)
-                    : null;
-                  let totalSlots: number;
-                  if (horario && !horario.cerrado) {
-                    if (horario.corrido === false && horario.cierre1 && horario.apertura2) {
-                      totalSlots = generateTimeSlotsConSiesta(horario.apertura, horario.cierre, horario.cierre1, horario.apertura2).length;
-                    } else {
-                      totalSlots = generateTimeSlots(horario.apertura, horario.cierre).length;
-                    }
-                  } else {
-                    totalSlots = 13;
-                  }
-                  if (turnosDelDia.length >= totalSlots) return true;
+                  const bloques = horariosEfectivos.length > 0
+                    ? getHorariosForDay(date.getDay(), horariosEfectivos)
+                    : [];
+                  const totalSlots = bloques.length > 0
+                    ? computeSlotsForHorarios(bloques, servicioSel?.duracionMin ?? 60).length
+                    : 13;
+                  if (turnosDelDia.length >= totalSlots * cupoSimultaneo) return true;
 
                   return false;
                 }}
@@ -148,31 +166,59 @@ export function FechaHoraSection({
             <Clock className="h-4 w-4" />
             Horario *
           </Label>
-          <Select
-            value={formData.hora}
-            onValueChange={(value) => handleChange("hora", value)}
-            required
-          >
-            <SelectTrigger className="h-12 border-2 text-base">
-              <SelectValue placeholder="Selecciona un horario..." />
-            </SelectTrigger>
-            <SelectContent>
-              {horariosDisponibles.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  No hay horarios disponibles para esta fecha
-                </div>
-              ) : (
-                horariosDisponibles.map((hora) => (
-                  <SelectItem key={hora} value={hora}>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{hora} hs</span>
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+          {usaMinutos ? (
+            <div className="flex gap-2">
+              <select
+                value={horaSel}
+                onChange={(e) => onHoraSelect(e.target.value)}
+                required
+                className="flex-1 h-12 rounded-md border-2 bg-transparent px-3 text-base"
+              >
+                <option value="" disabled>Hora...</option>
+                {horasDisponibles.map((h) => (
+                  <option key={h} value={h}>{h} hs</option>
+                ))}
+              </select>
+              <select
+                value={minSel}
+                onChange={(e) => onMinutoSelect(e.target.value)}
+                disabled={!horaSel}
+                required
+                className="w-24 h-12 rounded-md border-2 bg-transparent px-3 text-base disabled:opacity-50"
+              >
+                <option value="" disabled>Min.</option>
+                {minutosDisponibles.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <Select
+              value={formData.hora}
+              onValueChange={(value) => handleChange("hora", value)}
+              required
+            >
+              <SelectTrigger className="h-12 border-2 text-base">
+                <SelectValue placeholder="Selecciona un horario..." />
+              </SelectTrigger>
+              <SelectContent>
+                {horariosDisponibles.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No hay horarios disponibles para esta fecha
+                  </div>
+                ) : (
+                  horariosDisponibles.map((hora) => (
+                    <SelectItem key={hora} value={hora}>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>{hora} hs</span>
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          )}
           <p className="text-xs text-muted-foreground">
             {selectedDate
               ? `${horariosDisponibles.length} horario${horariosDisponibles.length !== 1 ? "s" : ""} disponible${horariosDisponibles.length !== 1 ? "s" : ""}`

@@ -5,6 +5,7 @@ import { useSlug } from "@/context/slug-context"
 import { getTenantConfig, updateTenantConfig, getTurnoConfig, updateTurnoConfig } from "@/lib/supabase/queries"
 import type { ServicioTenant, HorarioTenant, Modalidad, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional, TenantConfig } from "@/lib/supabase/queries"
 import { MASCOTAS_DEFAULT, SERVICIOS_DEFAULT, VACUNAS_DEFAULT } from "@/lib/turno-defaults"
+import { DIAS_SEMANA, diaToWeekdays, weekdaysToDiaString } from "@/lib/turnos/horarios"
 import { uploadFotoTenant, deleteFotoTenant } from "@/lib/supabase/storage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,9 +21,9 @@ import { EmailProviderConfig } from "@/components/admin/email-provider-config"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
-  { dia: "Lunes a Viernes", apertura: "09:00", cierre: "18:00", cerrado: false },
-  { dia: "Sabado",          apertura: "09:00", cierre: "13:00", cerrado: false },
-  { dia: "Domingo",         apertura: "",      cierre: "",      cerrado: true  },
+  { dia: "Lunes,Martes,Miercoles,Jueves,Viernes", apertura: "09:00", cierre: "18:00", cerrado: false },
+  { dia: "Sabado",                                apertura: "09:00", cierre: "13:00", cerrado: false },
+  { dia: "Domingo",                               apertura: "",      cierre: "",      cerrado: true  },
 ]
 
 const EMOJIS = ["🩺","💉","🏥","🛁","🚨","🧪","🐾","🐶","🐱","✂️","🦷","🔬","❤️","🌿","💊","🩻"]
@@ -241,10 +242,18 @@ export default function ConfiguracionPage() {
     setHorarios(prev => prev.map((h, idx) => idx === i ? { ...h, [field]: value } : h))
   }
   function addHorario() {
-    setHorarios(prev => [...prev, { dia: "", apertura: "09:00", cierre: "18:00", cerrado: false }])
+    setHorarios(prev => [...prev, { dia: "", nombre: "", apertura: "09:00", cierre: "18:00", cerrado: false }])
   }
   function removeHorario(i: number) {
     setHorarios(prev => prev.filter((_, idx) => idx !== i))
+  }
+  function toggleHorarioDia(i: number, diaNum: number) {
+    setHorarios(prev => prev.map((h, idx) => {
+      if (idx !== i) return h
+      const actuales = diaToWeekdays(h.dia)
+      const nuevos = actuales.includes(diaNum) ? actuales.filter(d => d !== diaNum) : [...actuales, diaNum]
+      return { ...h, dia: weekdaysToDiaString(nuevos) }
+    }))
   }
 
   // ── Mascotas turno handlers ──
@@ -294,6 +303,37 @@ export default function ConfiguracionPage() {
   function updateServicioTurnoDuracion(i: number, value: string) {
     const n = parseInt(value, 10)
     setServiciosTurno(prev => prev.map((s, idx) => idx === i ? { ...s, duracionMin: Number.isNaN(n) ? undefined : n } : s))
+  }
+  function updateServicioTurnoNumero(i: number, field: "anticipacionHoras" | "cupoSimultaneo", value: string) {
+    const n = parseInt(value, 10)
+    setServiciosTurno(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: Number.isNaN(n) ? undefined : n } : s))
+  }
+  function addServicioHorario(i: number) {
+    setServiciosTurno(prev => prev.map((s, idx) => idx === i
+      ? { ...s, horarios: [...(s.horarios ?? []), { dia: "", apertura: "10:00", cierre: "12:00", cerrado: false }] }
+      : s))
+  }
+  function removeServicioHorario(i: number, hi: number) {
+    setServiciosTurno(prev => prev.map((s, idx) => idx === i
+      ? { ...s, horarios: (s.horarios ?? []).filter((_, hidx) => hidx !== hi) }
+      : s))
+  }
+  function updateServicioHorarioField(i: number, hi: number, field: "apertura" | "cierre", value: string) {
+    setServiciosTurno(prev => prev.map((s, idx) => idx === i
+      ? { ...s, horarios: (s.horarios ?? []).map((h, hidx) => hidx === hi ? { ...h, [field]: value } : h) }
+      : s))
+  }
+  function toggleServicioHorarioDia(i: number, hi: number, diaNum: number) {
+    setServiciosTurno(prev => prev.map((s, idx) => {
+      if (idx !== i) return s
+      const horarios = (s.horarios ?? []).map((h, hidx) => {
+        if (hidx !== hi) return h
+        const actuales = diaToWeekdays(h.dia)
+        const nuevos = actuales.includes(diaNum) ? actuales.filter(d => d !== diaNum) : [...actuales, diaNum]
+        return { ...h, dia: weekdaysToDiaString(nuevos) }
+      })
+      return { ...s, horarios }
+    }))
   }
 
   // ── Profesionales handlers ──
@@ -765,7 +805,7 @@ export default function ConfiguracionPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">Horarios de atencion</CardTitle>
-                    <CardDescription>Se muestran en tu pagina publica. Si un dia no es de corrido, desactiva &quot;Corrido&quot; para definir dos bloques horarios.</CardDescription>
+                    <CardDescription>Se muestran en tu pagina publica. Marca los dias que cubre cada fila; el nombre (ej &quot;Urgencias&quot;) es solo una etiqueta y no afecta los dias. Si un dia no es de corrido, desactiva &quot;Corrido&quot; para definir dos bloques horarios.</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" type="button" onClick={addHorario}>
                     <Plus className="h-3.5 w-3.5 mr-1" />
@@ -775,15 +815,27 @@ export default function ConfiguracionPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {horarios.map((h, i) => (
+                  {horarios.map((h, i) => {
+                    const diasSeleccionados = diaToWeekdays(h.dia)
+                    return (
                     <div key={i} className="p-3 rounded-lg border bg-muted/30 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Input
-                          value={h.dia}
-                          onChange={e => updateHorario(i, "dia", e.target.value)}
-                          placeholder="Lunes a Viernes"
-                          className="h-8 text-sm flex-1"
-                        />
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {DIAS_SEMANA.map(d => (
+                            <button
+                              key={d.num}
+                              type="button"
+                              onClick={() => toggleHorarioDia(i, d.num)}
+                              className={`h-8 px-2 rounded-md text-xs font-medium border transition-colors ${
+                                diasSeleccionados.includes(d.num)
+                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  : "bg-background text-muted-foreground border-input hover:bg-muted"
+                              }`}
+                            >
+                              {d.nombre.slice(0, 3)}
+                            </button>
+                          ))}
+                        </div>
                         <label className="flex items-center gap-1 cursor-pointer text-xs text-muted-foreground select-none whitespace-nowrap">
                           <input
                             type="checkbox"
@@ -797,6 +849,13 @@ export default function ConfiguracionPage() {
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
+
+                      <Input
+                        value={h.nombre ?? ""}
+                        onChange={e => updateHorario(i, "nombre", e.target.value)}
+                        placeholder="Nombre (opcional, ej: Urgencias)"
+                        className="h-8 text-sm"
+                      />
 
                       {!h.cerrado && (
                         <>
@@ -837,7 +896,7 @@ export default function ConfiguracionPage() {
                         </>
                       )}
                     </div>
-                  ))}
+                  )})}
                 </div>
                 <div className="mt-4">
                   <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700" disabled={saving === "horarios"} onClick={() => saveDatos("horarios", { horarios })} type="button">
@@ -1004,34 +1063,92 @@ export default function ConfiguracionPage() {
                     </p>
                   )}
                   {serviciosTurno.map((s, i) => (
-                    <div key={i} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Icono</Label>
-                        <select
-                          value={s.emoji}
-                          onChange={e => updateServicioTurnoField(i, "emoji", e.target.value)}
-                          className="w-14 h-9 rounded-md border bg-background text-lg text-center cursor-pointer"
-                        >
-                          {EMOJIS_SERVICIO.map(em => <option key={em} value={em}>{em}</option>)}
-                        </select>
+                    <div key={i} className="p-3 rounded-lg border bg-muted/30 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Icono</Label>
+                          <select
+                            value={s.emoji}
+                            onChange={e => updateServicioTurnoField(i, "emoji", e.target.value)}
+                            className="w-14 h-9 rounded-md border bg-background text-lg text-center cursor-pointer"
+                          >
+                            {EMOJIS_SERVICIO.map(em => <option key={em} value={em}>{em}</option>)}
+                          </select>
+                        </div>
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Nombre *</Label>
+                            <Input value={s.nombre} onChange={e => updateServicioTurnoField(i, "nombre", e.target.value)} placeholder="Consulta general" className="h-9" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Descripcion</Label>
+                            <Input value={s.descripcion ?? ""} onChange={e => updateServicioTurnoField(i, "descripcion", e.target.value)} placeholder="Breve descripcion..." className="h-9" />
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" type="button" className="h-8 w-8 text-muted-foreground hover:text-destructive mt-5" onClick={() => removeServicioTurno(i)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Nombre *</Label>
-                          <Input value={s.nombre} onChange={e => updateServicioTurnoField(i, "nombre", e.target.value)} placeholder="Consulta general" className="h-9" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Descripcion</Label>
-                          <Input value={s.descripcion ?? ""} onChange={e => updateServicioTurnoField(i, "descripcion", e.target.value)} placeholder="Breve descripcion..." className="h-9" />
-                        </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pl-1">
                         <div className="space-y-1">
                           <Label className="text-xs">Duracion (min)</Label>
-                          <Input type="number" min={15} step={15} value={s.duracionMin ?? 60} onChange={e => updateServicioTurnoDuracion(i, e.target.value)} placeholder="60" className="h-9 font-mono" />
+                          <Input type="number" min={5} step={5} value={s.duracionMin ?? 60} onChange={e => updateServicioTurnoDuracion(i, e.target.value)} placeholder="60" className="h-9 font-mono" />
+                          <p className="text-[10px] text-muted-foreground">Tambien define cada cuanto se ofrece un horario (ej: 15 min = turnos cada 15 min).</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Cupo simultaneo</Label>
+                          <Input type="number" min={1} step={1} value={s.cupoSimultaneo ?? 1} onChange={e => updateServicioTurnoNumero(i, "cupoSimultaneo", e.target.value)} placeholder="1" className="h-9 font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Anticipacion minima (hs)</Label>
+                          <Input type="number" min={0} step={1} value={s.anticipacionHoras ?? ""} onChange={e => updateServicioTurnoNumero(i, "anticipacionHoras", e.target.value)} placeholder={`General: ${minHoras}`} className="h-9 font-mono" />
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" type="button" className="h-8 w-8 text-muted-foreground hover:text-destructive mt-5" onClick={() => removeServicioTurno(i)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+
+                      <div className="pl-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">Horarios propios (opcional)</Label>
+                          <Button variant="outline" size="sm" type="button" className="h-7 text-xs" onClick={() => addServicioHorario(i)}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Agregar bloque
+                          </Button>
+                        </div>
+                        {!s.horarios?.length && (
+                          <p className="text-xs text-muted-foreground">Sin horarios propios: usa los horarios generales de la veterinaria.</p>
+                        )}
+                        {s.horarios?.map((h, hi) => {
+                          const diasSeleccionados = diaToWeekdays(h.dia)
+                          return (
+                            <div key={hi} className="p-2 rounded-md border bg-background space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-1">
+                                {DIAS_SEMANA.map(d => (
+                                  <button
+                                    key={d.num}
+                                    type="button"
+                                    onClick={() => toggleServicioHorarioDia(i, hi, d.num)}
+                                    className={`h-7 px-2 rounded-md text-[11px] font-medium border transition-colors ${
+                                      diasSeleccionados.includes(d.num)
+                                        ? "bg-emerald-600 text-white border-emerald-600"
+                                        : "bg-background text-muted-foreground border-input hover:bg-muted"
+                                    }`}
+                                  >
+                                    {d.nombre.slice(0, 3)}
+                                  </button>
+                                ))}
+                                <Button variant="ghost" size="icon" type="button" className="h-7 w-7 ml-auto text-muted-foreground hover:text-destructive" onClick={() => removeServicioHorario(i, hi)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Input value={h.apertura} onChange={e => updateServicioHorarioField(i, hi, "apertura", e.target.value)} placeholder="10:00" className="h-8 w-20 text-sm font-mono" />
+                                <span className="text-xs text-muted-foreground">a</span>
+                                <Input value={h.cierre} onChange={e => updateServicioHorarioField(i, hi, "cierre", e.target.value)} placeholder="12:00" className="h-8 w-20 text-sm font-mono" />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
