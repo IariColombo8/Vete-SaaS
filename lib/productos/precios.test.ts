@@ -173,8 +173,15 @@ describe("margenPct", () => {
 })
 
 describe("estadoStock", () => {
-  it("marca los servicios aparte", () => {
-    expect(estadoStock({ stock: 0, stockMinimo: 0, controlaStock: false })).toBe("servicio")
+  it("marca los servicios aparte solo si el rubro es Servicio", () => {
+    expect(estadoStock({ stock: 0, stockMinimo: 0, controlaStock: false, categoria: "Servicio" })).toBe("servicio")
+    expect(estadoStock({ stock: 0, stockMinimo: 0, controlaStock: false, categoria: "servicio" })).toBe("servicio")
+  })
+
+  it("sin control de stock pero en otro rubro, no es servicio: se ve como stock real", () => {
+    expect(estadoStock({ stock: 0, stockMinimo: 0, controlaStock: false, categoria: "Medicamentos" })).toBe("agotado")
+    expect(estadoStock({ stock: 3, stockMinimo: 0, controlaStock: false, categoria: "Medicamentos" })).toBe("ok")
+    expect(estadoStock({ stock: 0, stockMinimo: 0, controlaStock: false })).toBe("agotado")
   })
 
   it("detecta agotado, bajo y ok", () => {

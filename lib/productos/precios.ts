@@ -135,13 +135,20 @@ export function calcularPrecioConMargen(costo: number, porcentaje: number): numb
 
 export type EstadoStock = "servicio" | "agotado" | "bajo" | "ok"
 
-/** Clasifica el stock de un producto para pintarlo en la tabla. */
+/**
+ * Clasifica el stock de un producto para pintarlo en la tabla. "Servicio"
+ * solo aplica si además está en el rubro Servicio: un medicamento cargado
+ * sin control de stock por error no tiene que aparecer como servicio, tiene
+ * que verse como lo que es — sin stock cargado.
+ */
 export function estadoStock(p: {
   stock: number
   stockMinimo: number
   controlaStock: boolean
+  categoria?: string
 }): EstadoStock {
-  if (!p.controlaStock) return "servicio"
+  if (!p.controlaStock && p.categoria?.trim().toLowerCase() === "servicio") return "servicio"
+  if (!p.controlaStock) return p.stock <= 0 ? "agotado" : "ok"
   if (p.stock <= 0) return "agotado"
   if (p.stock <= p.stockMinimo) return "bajo"
   return "ok"

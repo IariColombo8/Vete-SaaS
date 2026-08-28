@@ -209,7 +209,9 @@ export async function getProductos(
     .eq("tenant_id", tenantId)
 
   if (!filtro.incluirInactivos) q = q.eq("activo", true)
-  if (filtro.categoria) q = q.eq("categoria", filtro.categoria)
+  // `!== undefined` y no un simple truthy: "" es un filtro válido ("sin
+  // rubro"), no "sin filtro" — con truthy quedaba indistinguible de "Todos".
+  if (filtro.categoria !== undefined) q = q.eq("categoria", filtro.categoria)
   if (filtro.categoriaPrefijo) q = q.ilike("categoria", `${filtro.categoriaPrefijo}%`)
   if (filtro.marca) q = q.eq("marca", filtro.marca)
   if (filtro.soloRevisar) q = q.eq("revisar", true)
@@ -298,7 +300,7 @@ export async function getTodosLosProductosParaExportar(
       .eq("tenant_id", tenantId)
 
     if (!filtro.incluirInactivos) q = q.eq("activo", true)
-    if (filtro.categoria) q = q.eq("categoria", filtro.categoria)
+    if (filtro.categoria !== undefined) q = q.eq("categoria", filtro.categoria)
 
     const { data, error } = await q
       .order("categoria").order("nombre")
@@ -340,6 +342,24 @@ export async function getProductoPorCodigo(
     .or(`codigo_barras.eq.${c},codigo.eq.${c}`)
     .limit(1).maybeSingle()
   return data ? aProducto(data) : null
+}
+
+/**
+ * Registra el código de barras escaneado en un producto ya cargado — el
+ * caso del mostrador cuando ninguno de los productos existentes todavía
+ * tiene código asignado: en vez de dar de alta uno nuevo, se lo pega al que
+ * ya está en el catálogo.
+ */
+export async function asignarCodigoBarras(
+  tenantId: string,
+  productoId: string,
+  codigoBarras: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("productos").update({ codigo_barras: codigoBarras.trim() })
+    .eq("tenant_id", tenantId).eq("id", productoId)
+
+  if (error) throw mensajeError(error, "No se pudo asignar el código de barras")
 }
 
 export async function getCategorias(tenantId: string): Promise<string[]> {
@@ -511,7 +531,7 @@ export async function actualizarFormatoVenta(
     ),
   )
 
-  const actualizados = resultados.filter((r) => r.status === "fulfilled").length
+  const actualizados = resultados.filter((r) => r.status === "fulfilled" && !r.value.error).length
   return { actualizados, sinPrecioRecalculado }
 }
 
@@ -614,6 +634,53 @@ export async function setPublicadoEnLanding(
   if (error) throw mensajeError(error, "No se pudo actualizar la publicación")
 }
 
+/**
+ * Prende el control de stock de un producto que estaba cargado como
+ * servicio por error (rubro real ≠ Servicio). Se usa desde el botón
+ * "Agregar" de la tabla: antes de abrir el diálogo en la pestaña Stock hay
+ * que persistir el flag, si no la pestaña ni el bloque de movimientos
+ * aparecen (dependen de `controlaStock` en la base, no de un estado local).
+ */
+export async function setControlaStock(
+  tenantId: string,
+  id: string,
+  controlaStock: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("productos").update({ controla_stock: controlaStock })
+    .eq("tenant_id", tenantId).eq("id", id)
+
+  if (error) throw mensajeError(error, "No se pudo activar el control de stock")
+}
+
+/** Cambia solo la foto del producto — usado por el atajo "Agregar imagen". */
+export async function actualizarImagenProducto(
+  tenantId: string,
+  id: string,
+  imagenUrl: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("productos").update({ imagen_url: imagenUrl.trim() || null })
+    .eq("tenant_id", tenantId).eq("id", id)
+
+  if (error) throw mensajeError(error, "No se pudo actualizar la imagen")
+}
+
+/** Publica o despublica en la vidriera pública varios productos de una. */
+export async function setPublicadoEnLandingMasivo(
+  tenantId: string,
+  productos: Producto[],
+  publicado: boolean,
+): Promise<number> {
+  const resultados = await Promise.allSettled(
+    productos.map((p) =>
+      supabase.from("productos").update({ publicado_en_landing: publicado })
+        .eq("tenant_id", tenantId).eq("id", p.id),
+    ),
+  )
+  return resultados.filter((r) => r.status === "fulfilled" && !r.value.error).length
+}
+
 // ── Stock ──
 
 export interface ResultadoAjuste {
@@ -626,6 +693,29 @@ export interface ResultadoAjuste {
  * `cantidad` es el nuevo total cuando el tipo es "ajuste"; en el resto es
  * cuánto entra o sale.
  */
+/**
+ * Cambia el rubro de uno o varios productos de una sola vez — pensado para
+ * la selección múltiple del listado. Update directo porque el rubro no es
+ * stock: no necesita quedar registrado quién lo tocó.
+ */
+export async function actualizarCategoriaMasivo(
+  tenantId: string,
+  productos: Producto[],
+  categoria: string,
+): Promise<number> {
+  const resultados = await Promise.allSettled(
+    productos.map((p) =>
+      supabase.from("productos").update({ categoria }).eq("tenant_id", tenantId).eq("id", p.id),
+    ),
+  )
+  // Un update rechazado por Postgres (RLS, constraint) no rechaza la
+  // promesa de supabase-js — devuelve `{ error }` normalmente, así que
+  // Promise.allSettled lo cuenta como "fulfilled" aunque no haya escrito
+  // nada. Sin este chequeo, el usuario veía "actualizado" con la base
+  // intacta.
+  return resultados.filter((r) => r.status === "fulfilled" && !r.value.error).length
+}
+
 export async function ajustarStock(
   productoId: string,
   tipo: AjusteStockTipo,
@@ -643,6 +733,23 @@ export async function ajustarStock(
 
   const r = data as { stock_anterior: number; stock_nuevo: number }
   return { stockAnterior: num(r.stock_anterior), stockNuevo: num(r.stock_nuevo) }
+}
+
+/**
+ * Mismo movimiento (tipo, cantidad, nota) aplicado a varios productos de
+ * una — cada uno pasa por la RPC `ajustar_stock` por separado, así que cada
+ * uno genera su propio registro en `stock_movimientos`.
+ */
+export async function ajustarStockMasivo(
+  productos: Producto[],
+  tipo: AjusteStockTipo,
+  cantidad: number,
+  referencia?: string,
+): Promise<number> {
+  const resultados = await Promise.allSettled(
+    productos.map((p) => ajustarStock(p.id, tipo, cantidad, referencia)),
+  )
+  return resultados.filter((r) => r.status === "fulfilled").length
 }
 
 export async function getMovimientos(

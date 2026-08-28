@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, PawPrint, Search, Stethoscope } from "lucide-react"
+import { Loader2, PawPrint, ScanBarcode, Search, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import { BarcodeScannerDialog } from "@/components/shared/barcode-scanner-dialog"
+import { AsignarCodigoDialog } from "@/components/admin/pos/asignar-codigo-dialog"
 import { getMarcas, getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
 import { presentacionDe } from "@/lib/ventas/carrito"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
@@ -48,6 +50,8 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
   const [resultados, setResultados] = useState<Producto[]>([])
   const [cargando, setCargando] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [codigoSinAsignar, setCodigoSinAsignar] = useState<string | null>(null)
 
   // Las marcas dependen de la categoría elegida: filtrar por "Alimentos" no
   // tiene sentido si el desplegable sigue ofreciendo marcas de medicamentos.
@@ -116,6 +120,18 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
     }
   }
 
+  /** Código leído por cámara: no hay "búsqueda a medias" como con el texto,
+   *  así que sin match exacto va derecho a pedir a qué producto asignarlo. */
+  const manejarCodigoEscaneado = async (codigo: string) => {
+    setScannerOpen(false)
+    const producto = await getProductoPorCodigo(tenantId, codigo)
+    if (producto) {
+      elegir(producto)
+      return
+    }
+    setCodigoSinAsignar(codigo)
+  }
+
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex gap-2">
@@ -136,6 +152,14 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
             className="h-12 pl-9 text-base"
           />
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setScannerOpen(true)}
+          className="h-12 shrink-0"
+        >
+          <ScanBarcode className="mr-2 h-4 w-4" /> Escanear
+        </Button>
         <Button
           type="button"
           variant="outline"
@@ -194,6 +218,20 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
           </div>
         )}
       </div>
+
+      <BarcodeScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDetected={manejarCodigoEscaneado}
+      />
+
+      <AsignarCodigoDialog
+        tenantId={tenantId}
+        codigo={codigoSinAsignar}
+        open={codigoSinAsignar !== null}
+        onOpenChange={(o) => !o && setCodigoSinAsignar(null)}
+        onAsignado={(p) => { setCodigoSinAsignar(null); elegir(p) }}
+      />
     </div>
   )
 }
