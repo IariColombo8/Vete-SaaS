@@ -638,7 +638,9 @@ export function ProductosManagement({ tenantId }: Props) {
                   <TableHead className="hidden text-right lg:table-cell">Margen</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="text-right">
+                    <span className="hidden sm:inline">Acciones</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -794,10 +796,10 @@ export function ProductosManagement({ tenantId }: Props) {
                       </TableCell>
 
                       <TableCell className="text-right py-3">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex flex-nowrap items-center justify-end gap-0.5">
                           <Button
                             size="sm" variant="ghost"
-                            className={cn("h-8 px-2", p.publicadoEnLanding && "text-emerald-600")}
+                            className={cn("h-7 w-7 shrink-0 px-0", p.publicadoEnLanding && "text-emerald-600")}
                             onClick={() => togglePublicado(p)}
                             disabled={publicando === p.id || readOnly}
                             title={p.publicadoEnLanding ? "Publicado en tu página" : "No publicado"}
@@ -807,7 +809,7 @@ export function ProductosManagement({ tenantId }: Props) {
                               : <EyeOff className="h-3.5 w-3.5" />}
                           </Button>
                           <Button
-                            size="sm" variant="ghost" className="h-8 px-2"
+                            size="sm" variant="ghost" className="h-7 w-7 shrink-0 px-0"
                             onClick={() => abrirEdicion(p)}
                             title="Editar"
                           >
@@ -816,7 +818,7 @@ export function ProductosManagement({ tenantId }: Props) {
                           {p.activo && (
                             <Button
                               size="sm" variant="ghost"
-                              className="h-8 px-2 text-muted-foreground hover:text-red-600"
+                              className="h-7 w-7 shrink-0 px-0 text-muted-foreground hover:text-red-600"
                               onClick={() => setADarDeBaja(p)}
                               title="Dar de baja"
                             >
