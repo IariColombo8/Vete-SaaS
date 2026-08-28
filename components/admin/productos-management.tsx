@@ -74,7 +74,7 @@ function categoriaParaFiltro(categoria: string): string | undefined {
   return categoria
 }
 
-type FiltroRapido = "todos" | "stockBajo" | "agotados" | "revisar" | "oferta"
+type FiltroRapido = "todos" | "stockBajo" | "agotados" | "revisar" | "oferta" | "sinImagen" | "sinCodigo"
 
 interface Props {
   tenantId: string
@@ -139,6 +139,8 @@ export function ProductosManagement({ tenantId }: Props) {
         soloAgotados: filtro === "agotados",
         soloRevisar: filtro === "revisar",
         soloOferta: filtro === "oferta",
+        soloSinImagen: filtro === "sinImagen",
+        soloSinCodigoBarras: filtro === "sinCodigo",
         publicado: publicadoFiltro === "todos" ? undefined : publicadoFiltro === "publicados",
         incluirInactivos,
         pagina,
@@ -218,6 +220,8 @@ export function ProductosManagement({ tenantId }: Props) {
         soloAgotados: filtro === "agotados",
         soloRevisar: filtro === "revisar",
         soloOferta: filtro === "oferta",
+        soloSinImagen: filtro === "sinImagen",
+        soloSinCodigoBarras: filtro === "sinCodigo",
         publicado: publicadoFiltro === "todos" ? undefined : publicadoFiltro === "publicados",
         incluirInactivos,
       }
@@ -420,8 +424,11 @@ export function ProductosManagement({ tenantId }: Props) {
             Mercadería, medicamentos y servicios de la veterinaria.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportarStockPDF} disabled={exportando}>
+        {/* En celular, 2 columnas x 3 filas, todos los botones del mismo
+            tamaño — en fila y flex-wrap quedaban de ancho dispar y se
+            amontonaban. Desde sm vuelven a ser una fila normal. */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <Button variant="outline" onClick={exportarStockPDF} disabled={exportando} className="w-full sm:w-auto">
             {exportando ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -429,13 +436,13 @@ export function ProductosManagement({ tenantId }: Props) {
             )}
             Stock en PDF
           </Button>
-          <Button variant="outline" onClick={() => setMargenOpen(true)}>
+          <Button variant="outline" onClick={() => setMargenOpen(true)} className="w-full sm:w-auto">
             <Percent className="mr-2 h-4 w-4" /> Aplicar ganancia
           </Button>
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="w-full sm:w-auto">
             <Upload className="mr-2 h-4 w-4" /> Importar
           </Button>
-          <Button variant="outline" onClick={() => setEscanearOpen(true)} disabled={readOnly}>
+          <Button variant="outline" onClick={() => setEscanearOpen(true)} disabled={readOnly} className="w-full sm:w-auto">
             <ScanBarcode className="mr-2 h-4 w-4" /> Escanear
           </Button>
           <Button
@@ -444,11 +451,12 @@ export function ProductosManagement({ tenantId }: Props) {
               setModoSeleccion((v) => !v)
               setSeleccionadosMap(new Map())
             }}
+            className="w-full sm:w-auto"
           >
             <ListChecks className="mr-2 h-4 w-4" /> {modoSeleccion ? "Ocultar selección" : "Seleccionar"}
           </Button>
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
             onClick={abrirNuevo}
             disabled={readOnly}
             title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
@@ -626,9 +634,9 @@ export function ProductosManagement({ tenantId }: Props) {
                   )}
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden md:table-cell">Rubro</TableHead>
-                  <TableHead className="text-right">Precio original</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Precio original</TableHead>
                   <TableHead className="hidden text-right lg:table-cell">Margen</TableHead>
-                  <TableHead className="hidden text-right lg:table-cell">Precio con %</TableHead>
+                  <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -660,24 +668,24 @@ export function ProductosManagement({ tenantId }: Props) {
                           />
                         </TableCell>
                       )}
-                      <TableCell>
+                      <TableCell className="whitespace-normal py-3">
                         <div className="flex items-center gap-2.5">
                           {/* Las miniaturas quedan ocultas a propósito por ahora,
                               aunque el producto tenga imagenUrl cargada. */}
-                          <div className="min-w-0">
-                        <p className="line-clamp-1 font-medium">{p.nombre}</p>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                          {(p.codigoBarras || p.codigo) && (
-                            <span className="text-xs text-muted-foreground">
-                              {p.codigoBarras || p.codigo}
-                            </span>
-                          )}
-                          {!p.activo && <Badge variant="outline">Dado de baja</Badge>}
-                          {p.revisar && (
-                            <Badge variant="outline" className="border-amber-500 text-amber-600">
-                              <AlertTriangle className="mr-1 h-3 w-3" /> A revisar
-                            </Badge>
-                          )}
+                          <div className="min-w-0 max-w-[46vw] sm:max-w-xs">
+                            <p className="truncate font-medium">{p.nombre}</p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                              {(p.codigoBarras || p.codigo) && (
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {p.codigoBarras || p.codigo}
+                                </span>
+                              )}
+                              {!p.activo && <Badge variant="outline">Dado de baja</Badge>}
+                              {p.revisar && (
+                                <Badge variant="outline" className="border-amber-500 text-amber-600">
+                                  <AlertTriangle className="mr-1 h-3 w-3" /> A revisar
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -693,7 +701,7 @@ export function ProductosManagement({ tenantId }: Props) {
                         />
                       </TableCell>
 
-                      <TableCell className="text-right">
+                      <TableCell className="hidden text-right sm:table-cell">
                         {formatCurrency(p.precioLista)}
                       </TableCell>
 
@@ -717,7 +725,7 @@ export function ProductosManagement({ tenantId }: Props) {
                         )}
                       </TableCell>
 
-                      <TableCell className="hidden text-right lg:table-cell">
+                      <TableCell className="text-right py-3">
                         {combo ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
                             <Tag className="h-3 w-3" /> {combo}
@@ -736,7 +744,7 @@ export function ProductosManagement({ tenantId }: Props) {
                         )}
                       </TableCell>
 
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-3">
                         {estado === "servicio" ? (
                           <span className="text-xs text-muted-foreground">Servicio</span>
                         ) : (
@@ -782,7 +790,7 @@ export function ProductosManagement({ tenantId }: Props) {
                         )}
                       </TableCell>
 
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-3">
                         <div className="flex justify-end gap-1">
                           <Button
                             size="sm" variant="ghost"
@@ -981,12 +989,15 @@ function FiltrosProductos({
       </select>
 
       <select
-        value={filtro === "oferta" ? "oferta" : "todos"}
-        onChange={(e) => setFiltro(e.target.value === "oferta" ? "oferta" : "todos")}
+        value={["oferta", "sinImagen", "sinCodigo", "revisar"].includes(filtro) ? filtro : "todos"}
+        onChange={(e) => setFiltro(e.target.value as FiltroRapido)}
         className={claseSelect}
       >
-        <option value="todos">Todas las ofertas</option>
+        <option value="todos">Todos</option>
         <option value="oferta">En oferta</option>
+        <option value="sinImagen">Sin imagen</option>
+        <option value="sinCodigo">Sin código de barras</option>
+        <option value="revisar">A revisar</option>
       </select>
 
       <select
