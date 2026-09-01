@@ -47,6 +47,34 @@ export async function getClienteByEmail(tenantId: string, email: string): Promis
   return fila ? aCliente(fila) : null
 }
 
+export interface ClienteGlobal {
+  nombre: string
+  telefono: string
+  email: string
+  domicilio: string
+  mascotas: { nombre: string; tipo: string; raza?: string }[]
+}
+
+/**
+ * Busca al cliente por DNI en CUALQUIER tenant (no solo el actual), para
+ * autocompletar el alta cuando alguien ya es cliente de otra veterinaria en
+ * VetPanel. Nunca crea nada ni trae historia clínica: solo contacto +
+ * mascotas básicas, y solo se usa cuando la persona escribe su DNI a mano en
+ * el formulario de registro (no hay lookup automático de fondo).
+ */
+export async function getClienteGlobalPorDNI(dni: string): Promise<ClienteGlobal | null> {
+  if (!dni?.trim()) return null
+  const { data } = await supabase.rpc("buscar_cliente_global_publico", { p_dni: dni.trim() })
+  if (!data) return null
+  return {
+    nombre: data.nombre ?? "",
+    telefono: data.telefono ?? "",
+    email: data.email ?? "",
+    domicilio: data.domicilio ?? "",
+    mascotas: Array.isArray(data.mascotas) ? data.mascotas : [],
+  }
+}
+
 /**
  * Crea el cliente, o actualiza el existente si ya hay uno con ese DNI
  * (registrando los cambios en `historialDatos`). Corre vía RPC

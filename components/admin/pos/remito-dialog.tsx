@@ -67,19 +67,21 @@ export function RemitoDialog({ venta, emisor, onCerrar }: Props) {
         </DialogHeader>
 
         <div className="space-y-1.5 rounded-lg border bg-muted/40 p-3 text-sm">
-          {(venta.items ?? []).map((item, i) => (
-            <div key={item.id ?? i} className="flex justify-between gap-3">
-              <span className="min-w-0 truncate">
-                {[item.marca, item.nombre].filter(Boolean).join(" ")}
-                <span className="text-muted-foreground">
-                  {" "}
-                  ×{formatCantidad(item.cantidad)}
-                  {item.unidad === "kg" ? " kg" : ""}
+          <div className="max-h-40 space-y-1.5 overflow-y-auto overflow-x-hidden pr-1">
+            {(venta.items ?? []).map((item, i) => (
+              <div key={item.id ?? i} className="flex justify-between gap-3">
+                <span className="min-w-0 truncate">
+                  {[item.marca, item.nombre].filter(Boolean).join(" ")}
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ×{formatCantidad(item.cantidad)}
+                    {item.unidad === "kg" ? " kg" : ""}
+                  </span>
                 </span>
-              </span>
-              <span className="shrink-0 tabular-nums">{formatCurrency(item.subtotal)}</span>
-            </div>
-          ))}
+                <span className="shrink-0 tabular-nums">{formatCurrency(item.subtotal)}</span>
+              </div>
+            ))}
+          </div>
 
           {venta.descuento > 0 && (
             <div className="flex justify-between border-t pt-1.5 text-muted-foreground">

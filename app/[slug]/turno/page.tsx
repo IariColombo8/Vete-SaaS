@@ -1,15 +1,24 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { TurnoForm } from "@/components/turnos/TurnoForm"
 import { Toaster } from "@/components/ui/toaster"
 import { useSlug } from "@/context/slug-context"
+import { getSorteoActivo } from "@/lib/supabase/sorteos"
+import { SorteoTeaser } from "@/components/public/sorteo-banner"
+import type { Sorteo } from "@/lib/supabase/types"
 
 export default function VetTurnoPage() {
   const slug = useSlug()
   const searchParams = useSearchParams()
   const dni = searchParams.get("dni") ?? undefined
   const mascotaId = searchParams.get("mascotaId") ?? undefined
+  const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
+
+  useEffect(() => {
+    getSorteoActivo(slug).then(setSorteoActivo)
+  }, [slug])
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30 py-8 md:py-16 overflow-hidden">
@@ -26,6 +35,7 @@ export default function VetTurnoPage() {
       </div>
 
       <Toaster />
+      {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
     </main>
   )
 }

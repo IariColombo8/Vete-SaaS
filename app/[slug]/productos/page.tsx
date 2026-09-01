@@ -2,15 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Search, SlidersHorizontal, Sparkles } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Search, SlidersHorizontal, Sparkles } from "lucide-react"
 import { getTenant, getTenantConfig } from "@/lib/supabase/queries"
 import { getProductosPublicados, getProductosPublicadosPorIds } from "@/lib/supabase/productos"
 import { getPromocionesPublicadas } from "@/lib/supabase/promociones"
+import { getSorteoActivo } from "@/lib/supabase/sorteos"
+import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
 import { normalizePlan, PLANS } from "@/lib/plans"
 import type { TenantConfig } from "@/lib/supabase/queries"
-import type { Producto, Promocion } from "@/lib/supabase/types"
+import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from "@/components/ui/sheet"
@@ -23,6 +26,8 @@ const FILTROS_VACIOS: FiltrosState = {
   categorias: [], marcas: [], soloOfertas: false, orden: "relevancia", precioDesde: "", precioHasta: "",
 }
 
+const PRODUCTOS_POR_PAGINA = 16
+
 export default function ProductosPublicosPage() {
   const params = useParams()
   const slug = params.slug as string
@@ -32,16 +37,20 @@ export default function ProductosPublicosPage() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [promociones, setPromociones] = useState<Promocion[]>([])
   const [productosDePromos, setProductosDePromos] = useState<Record<string, Producto>>({})
+  const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
 
   const [busqueda, setBusqueda] = useState("")
   const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_VACIOS)
+  const [pagina, setPagina] = useState(1)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null)
   const [promocionSeleccionada, setPromocionSeleccionada] = useState<Promocion | null>(null)
 
   useEffect(() => {
-    Promise.all([getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug)]).then(
-      async ([t, cfg, prods, promos]) => {
+    Promise.all([
+      getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug), getSorteoActivo(slug),
+    ]).then(
+      async ([t, cfg, prods, promos, sorteo]) => {
         const tieneProductos = PLANS[normalizePlan(cfg?.plan)].features.productos && prods.length > 0
         const tienePromos = PLANS[normalizePlan(cfg?.plan)].features.promosSorteos && promos.length > 0
         if (!t || (!tieneProductos && !tienePromos)) {
@@ -51,6 +60,7 @@ export default function ProductosPublicosPage() {
         setConfig(cfg)
         setProductos(prods)
         setPromociones(promos)
+        setSorteoActivo(sorteo)
         setLoading(false)
 
         const ids = Array.from(new Set(promos.flatMap((p) => p.items.map((i) => i.productoId))))
@@ -82,6 +92,16 @@ export default function ProductosPublicosPage() {
     if (filtros.orden === "precioDesc") return filtrados.sort((a, b) => precioFinal(b) - precioFinal(a))
     return filtrados
   }, [productos, busqueda, filtros])
+
+  // Al cambiar filtros/búsqueda, siempre se vuelve a la primera página —
+  // si no, se puede quedar en una página vacía con la lista ya filtrada.
+  useEffect(() => { setPagina(1) }, [busqueda, filtros])
+
+  const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / PRODUCTOS_POR_PAGINA))
+  const productosPagina = productosFiltrados.slice(
+    (pagina - 1) * PRODUCTOS_POR_PAGINA,
+    pagina * PRODUCTOS_POR_PAGINA,
+  )
 
   const promocionesFiltradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase()
@@ -209,14 +229,54 @@ export default function ProductosPublicosPage() {
 
               <div className="flex-1 min-w-0">
                 {productosFiltrados.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
-                    {productosFiltrados.map((p) => (
-                      <ProductoTarjeta
-                        key={p.id} producto={p} logo={config?.logo}
-                        onClick={() => setProductoSeleccionado(p)}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
+                      {productosPagina.map((p) => (
+                        <ProductoTarjeta
+                          key={p.id} producto={p} logo={config?.logo}
+                          onClick={() => setProductoSeleccionado(p)}
+                        />
+                      ))}
+                    </div>
+
+                    {totalPaginas > 1 && (
+                      <div className="mt-8 flex items-center justify-center gap-3">
+                        <Button
+                          variant="outline" size="icon" className="rounded-full"
+                          disabled={pagina === 1}
+                          onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                          aria-label="Página anterior"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        <span className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                          Página
+                          <Input
+                            type="number"
+                            min={1}
+                            max={totalPaginas}
+                            value={pagina}
+                            onChange={(e) => {
+                              const n = Number(e.target.value)
+                              if (Number.isFinite(n)) setPagina(Math.min(totalPaginas, Math.max(1, n)))
+                            }}
+                            className="h-9 w-16 text-center"
+                          />
+                          de {totalPaginas}
+                        </span>
+
+                        <Button
+                          variant="outline" size="icon" className="rounded-full"
+                          disabled={pagina === totalPaginas}
+                          onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                          aria-label="Página siguiente"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <EstadoVacio
                     texto="No hay productos que coincidan con la búsqueda."
@@ -242,6 +302,8 @@ export default function ProductosPublicosPage() {
           if (!open) { setProductoSeleccionado(null); setPromocionSeleccionada(null) }
         }}
       />
+
+      {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
     </main>
   )
 }

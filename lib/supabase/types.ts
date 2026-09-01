@@ -389,15 +389,30 @@ export interface SorteoPremio {
   nombre: string
   descripcion?: string
   fotoUrl?: string
+  /** Si el premio es un producto real del catálogo (opcional). */
+  productoId?: string
 }
 
 export interface SorteoGanador {
   premioId: string
   clienteId: string
   clienteNombre: string
-  ventaId: string
-  ventaNumero: number
+  /** Sin venta asociada cuando la chance ganadora vino de "registro" o "foto". */
+  ventaId?: string
+  ventaNumero?: number
   sorteadoEn: string
+}
+
+export type SorteoCompraModo = "venta" | "monto"
+
+/** Mecánicas de chance habilitadas para el sorteo, configurables al crearlo. */
+export interface SorteoMecanicas {
+  registro: boolean
+  compra: boolean
+  compraModo: SorteoCompraModo
+  /** Monto para 1 chance cuando compraModo = "monto". */
+  compraMontoUmbral?: number
+  foto: boolean
 }
 
 export interface Sorteo {
@@ -410,16 +425,17 @@ export interface Sorteo {
   estado: SorteoEstado
   premios: SorteoPremio[]
   ganadores: SorteoGanador[]
+  mecanicas: SorteoMecanicas
   createdAt?: string
   updatedAt?: string
 }
 
-/** Un cliente y cuántas ventas (= chances) hizo dentro del rango del sorteo. */
+/** Un cliente y cuántas chances tiene acumuladas (registro + compra + foto). */
 export interface ParticipanteSorteo {
   clienteId: string
   clienteNombre: string
   chances: number
-  /** IDs de las ventas que dieron esas chances, para sortear una al azar como "ganadora". */
+  /** IDs de las ventas que dieron chances, para sortear una al azar como "ganadora" cuando aplica. */
   ventaIds: string[]
 }
 

@@ -71,7 +71,7 @@ export function DetalleClienteDialog({ tenantId, cliente, onCerrar, onCambio }: 
         <DialogHeader>
           <DialogTitle>{cliente?.nombre}</DialogTitle>
           <DialogDescription>
-            Saldo pendiente: {cliente ? formatCurrency(cliente.saldo) : "—"}
+            {cliente ? (cliente.saldo > 0 ? `Saldo pendiente: ${formatCurrency(cliente.saldo)}` : "Al día — sin saldo pendiente") : "—"}
           </DialogDescription>
         </DialogHeader>
 

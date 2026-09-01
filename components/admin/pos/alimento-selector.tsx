@@ -213,12 +213,21 @@ function Presentacion({ producto, onElegir }: { producto: Producto; onElegir: ()
   // filas de la misma marca y no alcanza para distinguirlas.
   const presentacion = presentacionDe(producto)
 
+  const tocar = () => {
+    if (agotado) {
+      toast.error(`No hay stock de "${producto.nombre}"`)
+      return
+    }
+    onElegir()
+  }
+
   return (
     <button
       type="button"
-      onClick={onElegir}
-      disabled={agotado}
-      className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
+      onClick={tocar}
+      className={`flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 ${
+        agotado ? "opacity-50 hover:border-border hover:bg-card" : ""
+      }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <span className="truncate font-semibold">{producto.nombre}</span>

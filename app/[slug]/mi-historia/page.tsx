@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { Card, CardContent } from "@/components/ui/card"
@@ -10,9 +10,13 @@ import { Label } from "@/components/ui/label"
 import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog"
 import { getClienteByDNI } from "@/lib/supabase/clientes"
 import { getMascotas } from "@/lib/supabase/mascotas"
+import { getSorteoActivo } from "@/lib/supabase/sorteos"
+import { getComprasClientePublico, type CompraClientePublico } from "@/lib/supabase/ventas"
+import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
-import type { Cliente, Mascota } from "@/lib/supabase/types"
-import { Search, Loader2, PawPrint, CalendarPlus } from "lucide-react"
+import { formatCurrency } from "@/lib/format"
+import type { Cliente, Mascota, Sorteo } from "@/lib/supabase/types"
+import { Search, Loader2, PawPrint, CalendarPlus, ShoppingBag } from "lucide-react"
 
 function emojiPorTipo(tipo: string): string {
   return MASCOTAS_DEFAULT.find((m) => m.id === tipo)?.emoji ?? "🐾"
@@ -26,6 +30,12 @@ export default function MiHistoriaPage() {
   const [buscado, setBuscado] = useState(false)
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [mascotas, setMascotas] = useState<Mascota[]>([])
+  const [compras, setCompras] = useState<CompraClientePublico[]>([])
+  const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
+
+  useEffect(() => {
+    getSorteoActivo(slug).then(setSorteoActivo)
+  }, [slug])
 
   const buscar = async () => {
     if (!dni.trim()) return
@@ -35,10 +45,15 @@ export default function MiHistoriaPage() {
       const encontrado = await getClienteByDNI(slug, dni.trim())
       setCliente(encontrado)
       if (encontrado?.id) {
-        const misMascotas = await getMascotas(slug, encontrado.id)
+        const [misMascotas, misCompras] = await Promise.all([
+          getMascotas(slug, encontrado.id),
+          getComprasClientePublico(slug, encontrado.id),
+        ])
         setMascotas(misMascotas)
+        setCompras(misCompras)
       } else {
         setMascotas([])
+        setCompras([])
       }
     } finally {
       setLoading(false)
@@ -138,7 +153,42 @@ export default function MiHistoriaPage() {
             </div>
           </div>
         )}
+
+        {buscado && cliente && compras.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-emerald-600" />
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                Historial de compras
+              </p>
+            </div>
+            <div className="space-y-2">
+              {compras.map((c) => (
+                <Card key={c.id} className={c.anulada ? "opacity-60" : undefined}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Compra #{c.numero}{c.anulada && " (anulada)"}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {new Date(c.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {c.items.map((i) => `${i.cantidad}${i.unidad === "kg" ? "kg" : "x"} ${i.nombre}`).join(", ")}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(c.total)}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
     </main>
   )
 }

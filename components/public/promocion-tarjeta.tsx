@@ -1,4 +1,4 @@
-import { Gift, Tag, Clock } from "lucide-react"
+import { Tag, Clock } from "lucide-react"
 import { precioFinal, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
 import type { Producto, Promocion } from "@/lib/supabase/types"
@@ -15,7 +15,8 @@ interface Props {
  * `ProductoTarjeta`: sin acciones de compra, solo catálogo informativo.
  */
 export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Props) {
-  const imagen = p.imagenUrl || logo
+  // Promo sin foto propia -> logo del tenant -> logo de VetPanel, en ese orden.
+  const imagen = p.imagenUrl || logo || "/logo.png"
   const items = p.items.map((i) => ({ item: i, producto: productos[i.productoId] }))
   // "Sin la promo" usa el precio con oferta individual ya aplicada (precioFinal),
   // no el de lista: si un producto además tiene su propia oferta activa, ese es
@@ -53,18 +54,12 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
       {/* Media: mismo aspect-square que ProductoTarjeta, para que ambas
           queden del mismo tamaño una al lado de la otra en la grilla. */}
       <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
-        {imagen ? (
-          <img
-            src={imagen || "/placeholder.svg"}
-            alt={p.nombre}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Gift className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-          </div>
-        )}
+        <img
+          src={imagen}
+          alt={p.nombre}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+        />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       </div>
 

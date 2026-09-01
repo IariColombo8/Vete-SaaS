@@ -19,9 +19,11 @@ import {
 } from "@/lib/supabase/mascotas"
 import { getHistoriasPublico } from "@/lib/supabase/historias"
 import { getTurnosPorMascotaPublico } from "@/lib/supabase/turnos"
+import { getSorteoActivo } from "@/lib/supabase/sorteos"
+import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { useToast } from "@/hooks/use-toast"
-import type { Mascota, Historia, Turno } from "@/lib/supabase/types"
+import type { Mascota, Historia, Turno, Sorteo } from "@/lib/supabase/types"
 import { ArrowLeft, Loader2, Calendar, Clock, Stethoscope, Search, Paperclip, UserPlus } from "lucide-react"
 import {
   Dialog,
@@ -76,7 +78,12 @@ export default function PerfilMascotaPage() {
   const [dniNuevoDueno, setDniNuevoDueno] = useState("")
   const [nombreNuevoDueno, setNombreNuevoDueno] = useState("")
   const [agregandoDueno, setAgregandoDueno] = useState(false)
+  const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    getSorteoActivo(slug).then(setSorteoActivo)
+  }, [slug])
 
   /**
    * El mascotaId de la URL es un uuid, no un secreto: cualquiera con el link
@@ -189,6 +196,7 @@ export default function PerfilMascotaPage() {
             </Button>
           </CardContent>
         </Card>
+        {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
       </main>
     )
   }
@@ -430,6 +438,8 @@ export default function PerfilMascotaPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
     </main>
   )
 }

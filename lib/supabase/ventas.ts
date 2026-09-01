@@ -113,6 +113,8 @@ export interface RegistrarVentaInput {
   cuotas?: number
   /** Obligatorio cuando medioPago === "mixto". */
   pagos?: { medioPago: MedioPago; monto: number }[]
+  /** Deuda vieja del cliente que se cobra junto con esta venta (se suma al total). */
+  saldarDeuda?: number
 }
 
 export interface ResultadoVenta {
@@ -144,6 +146,7 @@ export async function registrarVenta(
     p_recargo: input.recargo ?? 0,
     p_cuotas: input.cuotas ?? null,
     p_pagos: input.pagos?.map((p) => ({ medio_pago: p.medioPago, monto: p.monto })) ?? null,
+    p_saldar_deuda: input.saldarDeuda ?? 0,
   })
 
   if (error) throw new Error(error.message)
@@ -175,6 +178,39 @@ export async function getVenta(tenantId: string, id: string): Promise<Venta | nu
     .eq("tenant_id", tenantId).eq("id", id)
     .maybeSingle()
   return data ? aVenta(data) : null
+}
+
+export interface CompraClientePublico {
+  id: string
+  numero: number
+  createdAt: string
+  total: number
+  anulada: boolean
+  items: { nombre: string; cantidad: number; unidad: ProductoUnidad }[]
+}
+
+/**
+ * Historial de compras para la página pública "Historia clínica de mi
+ * mascota" (ya verificó la identidad del cliente por DNI antes de llamar
+ * acá). Vía RPC porque `ventas` es staff-only.
+ */
+export async function getComprasClientePublico(tenantId: string, clienteId: string): Promise<CompraClientePublico[]> {
+  const { data, error } = await supabase.rpc("obtener_compras_cliente_publico", {
+    p_tenant: tenantId,
+    p_cliente_id: clienteId,
+  })
+  if (error) throw new Error(`No se pudieron cargar las compras: ${error.message}`)
+
+  return (data ?? []).map((f: Fila) => ({
+    id: f.id as string,
+    numero: num(f.numero),
+    createdAt: f.created_at as string,
+    total: num(f.total),
+    anulada: f.estado === "anulada",
+    items: ((f.items as Fila[]) ?? []).map((i) => ({
+      nombre: (i.nombre as string) ?? "", cantidad: num(i.cantidad), unidad: (i.unidad as ProductoUnidad) ?? "un",
+    })),
+  }))
 }
 
 export interface VentasFiltro {

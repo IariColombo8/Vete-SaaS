@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { ArrowLeft, Dices } from "lucide-react"
+import { ArrowLeft, Dices, Pencil, Ban, Download, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getParticipantes, sortear } from "@/lib/supabase/sorteos"
+import {
+  getFotosParticipacion, getParticipantes, rechazarFotoParticipacion, sortear, type FotoParticipacion,
+} from "@/lib/supabase/sorteos"
 import type { ParticipanteSorteo, Sorteo } from "@/lib/supabase/types"
 
 interface Props {
@@ -17,18 +19,43 @@ interface Props {
   sorteo: Sorteo
   onVolver: () => void
   onSorteado: () => void
+  onEditar: () => void
+  onCancelar: () => void
 }
 
-export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado }: Props) {
+export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado, onEditar, onCancelar }: Props) {
   const [participantes, setParticipantes] = useState<ParticipanteSorteo[]>([])
+  const [fotos, setFotos] = useState<FotoParticipacion[]>([])
   const [cargando, setCargando] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
   const [sorteando, setSorteando] = useState(false)
+  const [cancelando, setCancelando] = useState(false)
+  const [rechazando, setRechazando] = useState<FotoParticipacion | null>(null)
 
-  useEffect(() => {
+  const cargar = () => {
     setCargando(true)
-    getParticipantes(tenantId, sorteo).then(setParticipantes).finally(() => setCargando(false))
-  }, [tenantId, sorteo])
+    Promise.all([
+      getParticipantes(tenantId, sorteo),
+      sorteo.mecanicas.foto ? getFotosParticipacion(sorteo.id) : Promise.resolve([]),
+    ])
+      .then(([p, f]) => { setParticipantes(p); setFotos(f) })
+      .finally(() => setCargando(false))
+  }
+
+  useEffect(cargar, [tenantId, sorteo])
+
+  const confirmarRechazo = async () => {
+    if (!rechazando) return
+    try {
+      await rechazarFotoParticipacion(rechazando.id)
+      toast.success("Imagen rechazada")
+      cargar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo rechazar la imagen")
+    } finally {
+      setRechazando(null)
+    }
+  }
 
   const puedeSortear = sorteo.estado !== "finalizado" && new Date() >= new Date(`${sorteo.hasta}T00:00:00`)
 
@@ -60,14 +87,22 @@ export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado }: Props)
         {sorteo.estado === "finalizado" ? (
           <span className="text-sm font-medium text-emerald-600">Sorteado</span>
         ) : (
-          <Button
-            disabled={!puedeSortear || sorteando}
-            title={!puedeSortear ? "Se puede sortear cuando termine el rango de fechas" : undefined}
-            onClick={() => setConfirmando(true)}
-            className="bg-emerald-600 hover:bg-emerald-700"
-          >
-            <Dices className="mr-2 h-4 w-4" /> Sortear
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onEditar}>
+              <Pencil className="mr-2 h-4 w-4" /> Editar
+            </Button>
+            <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setCancelando(true)}>
+              <Ban className="mr-2 h-4 w-4" /> Cancelar sorteo
+            </Button>
+            <Button
+              disabled={!puedeSortear || sorteando}
+              title={!puedeSortear ? "Se puede sortear cuando termine el rango de fechas" : undefined}
+              onClick={() => setConfirmando(true)}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Dices className="mr-2 h-4 w-4" /> Sortear
+            </Button>
+          </div>
         )}
       </div>
 
@@ -93,7 +128,7 @@ export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado }: Props)
         {cargando ? (
           <p className="text-sm text-muted-foreground">Cargando…</p>
         ) : participantes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Todavía no hay ventas con cliente en el rango del sorteo.</p>
+          <p className="text-sm text-muted-foreground">Todavía no hay participantes para este sorteo.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -114,6 +149,45 @@ export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado }: Props)
         )}
       </div>
 
+      {sorteo.mecanicas.foto && fotos.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
+            Fotos de mascotas ({fotos.length})
+          </h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {fotos.map((f) => (
+              <div key={f.id} className="group relative overflow-hidden rounded-lg border">
+                <button
+                  type="button"
+                  aria-label="Rechazar imagen"
+                  onClick={() => setRechazando(f)}
+                  className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+                <a href={f.fotoUrl} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={f.fotoUrl} alt={f.clienteNombre} className="aspect-square w-full object-cover" />
+                </a>
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/60 px-2 py-1">
+                  <span className="truncate text-xs text-white">{f.clienteNombre}</span>
+                  <a
+                    href={f.fotoUrl}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Descargar foto de ${f.clienteNombre}`}
+                    className="shrink-0 rounded p-1 text-white hover:bg-white/20"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <AlertDialog open={confirmando} onOpenChange={setConfirmando}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -125,6 +199,39 @@ export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado }: Props)
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmarSorteo}>Sortear</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelando} onOpenChange={setCancelando}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar "{sorteo.nombre}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borra el sorteo y sus premios. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onCancelar}>
+              Cancelar sorteo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!rechazando} onOpenChange={(o) => !o && setRechazando(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Rechazar la imagen de {rechazando?.clienteNombre}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borra la participación y la chance que había sumado con esta foto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={confirmarRechazo}>
+              Rechazar imagen
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

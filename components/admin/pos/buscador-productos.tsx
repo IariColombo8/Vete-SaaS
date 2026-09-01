@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, PawPrint, ScanBarcode, Search, Stethoscope } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Minus, PawPrint, Plus, ScanBarcode, Search, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import {
 import { BarcodeScannerDialog } from "@/components/shared/barcode-scanner-dialog"
 import { AsignarCodigoDialog } from "@/components/admin/pos/asignar-codigo-dialog"
 import { getMarcas, getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
-import { presentacionDe } from "@/lib/ventas/carrito"
+import { presentacionDe, type LineaCarrito } from "@/lib/ventas/carrito"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -20,7 +20,9 @@ import type { Producto } from "@/lib/supabase/types"
 
 interface Props {
   tenantId: string
-  onElegir: (producto: Producto) => void
+  carrito: LineaCarrito[]
+  onElegir: (producto: Producto, cantidad?: number) => void
+  onQuitarUno: (producto: Producto) => void
   onAbrirAlimentos: () => void
   onAbrirAtencion: () => void
 }
@@ -42,12 +44,14 @@ const CATEGORIAS = ["Alimentos", "Medicamentos", "Accesorios"] as const
  * El foco vuelve al input después de cada agregado: si se pierde, el lector
  * escribe en el vacío y parece que el escáner está roto.
  */
-export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbrirAtencion }: Props) {
+export function BuscadorProductos({ tenantId, carrito, onElegir, onQuitarUno, onAbrirAlimentos, onAbrirAtencion }: Props) {
   const [busqueda, setBusqueda] = useState("")
   const [categoria, setCategoria] = useState<string | null>(null)
   const [marca, setMarca] = useState<string | null>(null)
   const [marcasDisponibles, setMarcasDisponibles] = useState<string[]>([])
   const [resultados, setResultados] = useState<Producto[]>([])
+  const [total, setTotal] = useState(0)
+  const [pagina, setPagina] = useState(0)
   const [cargando, setCargando] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
@@ -60,6 +64,19 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
     getMarcas(tenantId, categoria ?? undefined).then(setMarcasDisponibles)
   }, [tenantId, categoria])
 
+  const cambiarBusqueda = (v: string) => {
+    setBusqueda(v)
+    setPagina(0)
+  }
+  const cambiarCategoria = (c: string) => {
+    setCategoria((actual) => (actual === c ? null : c))
+    setPagina(0)
+  }
+  const cambiarMarca = (m: string | null) => {
+    setMarca(m)
+    setPagina(0)
+  }
+
   useEffect(() => {
     const termino = busqueda.trim()
     // Sin texto y sin ningún filtro activo no hay nada que mostrar todavía:
@@ -67,6 +84,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
     // apenas se abre el POS.
     if (termino.length < 2 && !categoria && !marca) {
       setResultados([])
+      setTotal(0)
       return
     }
 
@@ -78,10 +96,11 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
         busqueda: termino.length >= 2 ? termino : undefined,
         categoriaPrefijo: categoria ?? undefined,
         marca: marca ?? undefined,
+        pagina,
         porPagina: 10,
       })
-        .then(({ productos }) => {
-          if (vigente) setResultados(productos)
+        .then(({ productos, total }) => {
+          if (vigente) { setResultados(productos); setTotal(total) }
         })
         .finally(() => {
           if (vigente) setCargando(false)
@@ -92,12 +111,17 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
       vigente = false
       clearTimeout(timer)
     }
-  }, [busqueda, categoria, marca, tenantId])
+  }, [busqueda, categoria, marca, pagina, tenantId])
 
-  const elegir = (producto: Producto) => {
-    onElegir(producto)
+  const totalPaginas = Math.max(1, Math.ceil(total / 10))
+
+  const elegir = (producto: Producto, cantidad?: number) => {
+    onElegir(producto, cantidad)
     setBusqueda("")
-    setResultados([])
+    // Con un filtro de categoría/marca activo, la lista se deja tal cual:
+    // el vendedor suele agregar varios productos seguidos del mismo rubro y
+    // que la lista se vacíe de golpe lo obligaba a elegir el filtro de nuevo.
+    if (!categoria && !marca) setResultados([])
     inputRef.current?.focus()
   }
 
@@ -141,7 +165,7 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
           value={busqueda}
           autoFocus
           placeholder="Escaneá un código o buscá por nombre / marca"
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={(e) => cambiarBusqueda(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault()
@@ -185,11 +209,11 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
       <div className="flex flex-wrap items-center gap-2">
         <FiltroCategoria
           value={categoria}
-          onClick={(c) => setCategoria((actual) => (actual === c ? null : c))}
+          onClick={cambiarCategoria}
         />
         <Select
           value={marca ?? "_todas"}
-          onValueChange={(v) => setMarca(v === "_todas" ? null : v)}
+          onValueChange={(v) => cambiarMarca(v === "_todas" ? null : v)}
         >
           <SelectTrigger className="h-8 w-[160px] text-xs">
             <SelectValue placeholder="Marca" />
@@ -217,11 +241,41 @@ export function BuscadorProductos({ tenantId, onElegir, onAbrirAlimentos, onAbri
         ) : (
           <div className="flex flex-col gap-2">
             {resultados.map((p) => (
-              <ResultadoProducto key={p.id} producto={p} onElegir={() => elegir(p)} />
+              <ResultadoProducto
+                key={p.id}
+                producto={p}
+                cantidadEnCarrito={carrito.find((l) => l.id === p.id)?.cantidad ?? 0}
+                onSumar={() => elegir(p, 1)}
+                onRestar={() => onQuitarUno(p)}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-center gap-2 border-t pt-2">
+          <Button
+            type="button" variant="ghost" size="icon" className="h-7 w-7"
+            disabled={pagina === 0}
+            onClick={() => setPagina((p) => Math.max(0, p - 1))}
+            aria-label="Página anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Página {pagina + 1} de {totalPaginas}
+          </span>
+          <Button
+            type="button" variant="ghost" size="icon" className="h-7 w-7"
+            disabled={pagina + 1 >= totalPaginas}
+            onClick={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
+            aria-label="Página siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       <BarcodeScannerDialog
         open={scannerOpen}
@@ -269,39 +323,78 @@ function FiltroCategoria({
   )
 }
 
-function ResultadoProducto({
+export function ResultadoProducto({
   producto,
-  onElegir,
+  cantidadEnCarrito,
+  onSumar,
+  onRestar,
 }: {
   producto: Producto
-  onElegir: () => void
+  cantidadEnCarrito: number
+  onSumar: () => void
+  onRestar: () => void
 }) {
   const agotado = producto.controlaStock && producto.stock <= 0
   const porKg = producto.unidad === "kg"
+  // Los fraccionados (por kg, bolsa con peso, paquete divisible) tienen su
+  // propio diálogo con atajos y monto — acá alcanza con sumar de a 1 y que se
+  // abra ese diálogo, sin duplicar un stepper que ahí no tiene sentido.
+  const fraccionable =
+    producto.unidad === "kg" ||
+    (producto.unidad === "un" && ((producto.pesoKg ?? 0) > 0 || (producto.unidadesPorBulto ?? 0) > 0))
+
+  const sumar = () => {
+    if (agotado) {
+      toast.error(`No hay stock de "${producto.nombre}"`)
+      return
+    }
+    onSumar()
+  }
 
   return (
-    <button
-      type="button"
-      onClick={onElegir}
-      disabled={agotado}
-      className="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border bg-card p-3 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card dark:hover:bg-emerald-950/40"
+    <div
+      className={cn(
+        "flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border bg-card p-3 transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40",
+        agotado && "opacity-50 hover:border-border hover:bg-card",
+      )}
     >
-      <div className="flex min-w-0 flex-1 basis-full items-start gap-2 sm:basis-0">
+      <button type="button" onClick={sumar} className="flex min-w-0 flex-1 basis-full items-start gap-2 text-left sm:basis-0">
         <span className="text-sm font-medium leading-snug">{descripcionBuscador(producto)}</span>
         {tieneOferta(producto) && (
           <Badge className="mt-0.5 shrink-0 bg-amber-500 hover:bg-amber-500">Oferta</Badge>
         )}
-      </div>
+      </button>
       {producto.controlaStock && (
         <span className="shrink-0 text-xs text-muted-foreground">
           {agotado ? "Sin stock" : `${formatCantidad(producto.stock)} ${porKg ? "kg" : "u."}`}
         </span>
       )}
+      {!fraccionable && (
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button" variant="outline" size="icon" className="h-7 w-7"
+            aria-label="Sacar una unidad del carrito"
+            disabled={cantidadEnCarrito === 0}
+            onClick={onRestar}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
+          <span className="w-6 text-center text-sm font-semibold tabular-nums">{cantidadEnCarrito}</span>
+          <Button
+            type="button" variant="outline" size="icon" className="h-7 w-7"
+            aria-label="Agregar una unidad al carrito"
+            disabled={agotado}
+            onClick={sumar}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
       <span className="ml-auto shrink-0 font-bold text-emerald-600 dark:text-emerald-400 sm:ml-0">
         {formatCurrency(precioFinal(producto))}
         {porKg && <span className="text-xs font-normal"> / kg</span>}
       </span>
-    </button>
+    </div>
   )
 }
 

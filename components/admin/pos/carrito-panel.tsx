@@ -15,7 +15,7 @@ import {
   descripcionLinea, pctRecargoDe, subtotalLinea, totalesCarrito,
   type Descuento, type LineaCarrito,
 } from "@/lib/ventas/carrito"
-import { formatCurrency } from "@/lib/format"
+import { formatCantidad, formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO, type Cliente, type MedioPago, type Promocion } from "@/lib/supabase/types"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
@@ -33,6 +33,10 @@ interface Props {
   pagosMixto: LineaPagoMixto[]
   cobrando: boolean
   promociones: Promocion[]
+  /** Deuda pendiente del cliente elegido (cuenta corriente), si tiene. */
+  saldoCliente: number
+  saldarDeuda: boolean
+  onSaldarDeuda: (v: boolean) => void
   onCliente: (c: Cliente | null) => void
   onMedioPago: (m: MedioPago) => void
   onDescuento: (d: Descuento) => void
@@ -59,6 +63,9 @@ export function CarritoPanel({
   pagosMixto,
   cobrando,
   promociones,
+  saldoCliente,
+  saldarDeuda,
+  onSaldarDeuda,
   onCliente,
   onMedioPago,
   onDescuento,
@@ -78,11 +85,17 @@ export function CarritoPanel({
   const pctAplicado = pctRecargoDe(medioPago, recargoPct, cuotas, recargoPorCuotas)
 
   const totales = totalesCarrito(carrito, descuento, pctAplicado, promociones)
+  // El badge del carrito muestra unidades totales, no líneas distintas: 3
+  // unidades de un producto tienen que decir "3", y 3+3 de dos productos
+  // distintos, "6" — `totales.items` cuenta líneas, que es otra cosa.
+  const totalUnidades = carrito.reduce((acc, l) => acc + l.cantidad, 0)
   const vacio = carrito.length === 0
   const esEfectivo = medioPago === "efectivo"
+  const montoDeuda = saldarDeuda ? saldoCliente : 0
+  const totalACobrar = totales.total + montoDeuda
 
   const sumaMixto = pagosMixto.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
-  const mixtoValido = !esMixto || Math.abs(sumaMixto - totales.total) < 0.01
+  const mixtoValido = !esMixto || Math.abs(sumaMixto - totalACobrar) < 0.01
   const ctaCteValida = !esCtaCte || cliente !== null
 
   // Se corrige acá, en el momento en que el vendedor nota que agregó el
@@ -100,10 +113,10 @@ export function CarritoPanel({
   const readOnly = useReadOnly()
   useEffect(() => {
     setPagaCon("")
-  }, [esEfectivo, totales.total])
+  }, [esEfectivo, totalACobrar])
 
   const montoRecibido = Number(pagaCon) || 0
-  const vuelto = montoRecibido - totales.total
+  const vuelto = montoRecibido - totalACobrar
 
   // Desplegable en vez de un panel flex-1 fijo: dentro del modal, el bloque de
   // pago (medios, cliente, descuento, cobrar) ya ocupa bastante alto, y forzar
@@ -126,7 +139,7 @@ export function CarritoPanel({
               Carrito
               {!vacio && (
                 <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">
-                  {totales.items}
+                  {formatCantidad(totalUnidades)}
                 </span>
               )}
             </h2>
@@ -254,10 +267,25 @@ export function CarritoPanel({
         )}
 
         {esMixto && (
-          <MixtoPagos total={totales.total} pagos={pagosMixto} onCambiar={onPagosMixto} />
+          <MixtoPagos total={totalACobrar} pagos={pagosMixto} onCambiar={onPagosMixto} />
         )}
 
         {!esCtaCte && <ClienteSelector tenantId={tenantId} seleccionado={cliente} onCambiar={onCliente} />}
+
+        {cliente && saldoCliente > 0 && (
+          <label className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={saldarDeuda}
+              onChange={(e) => onSaldarDeuda(e.target.checked)}
+            />
+            <span>
+              {cliente.nombre} debe <strong>{formatCurrency(saldoCliente)}</strong> de cuenta corriente.
+              Sumarla a esta venta y cobrar todo junto.
+            </span>
+          </label>
+        )}
 
         <div>
           <Label htmlFor="descuento" className="mb-1.5 block text-xs text-muted-foreground">
@@ -329,10 +357,16 @@ export function CarritoPanel({
               <span className="tabular-nums">+ {formatCurrency(totales.recargo)}</span>
             </div>
           )}
+          {montoDeuda > 0 && (
+            <div className="flex justify-between text-amber-600 dark:text-amber-500">
+              <span>Deuda saldada</span>
+              <span className="tabular-nums">+ {formatCurrency(montoDeuda)}</span>
+            </div>
+          )}
           <div className="flex items-baseline justify-between pt-1">
             <span className="font-semibold">Total</span>
             <span className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(totales.total)}
+              {formatCurrency(totalACobrar)}
             </span>
           </div>
         </div>
@@ -348,7 +382,7 @@ export function CarritoPanel({
               min={0}
               step={50}
               value={pagaCon}
-              placeholder={formatCurrency(totales.total)}
+              placeholder={formatCurrency(totalACobrar)}
               onChange={(e) => setPagaCon(e.target.value)}
             />
             {pagaCon !== "" && (

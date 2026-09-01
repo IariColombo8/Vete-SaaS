@@ -27,7 +27,7 @@ export function TablaSaldos({ clientes, cargando, onVerDetalle }: Props) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
         <Wallet className="mx-auto mb-3 h-8 w-8 opacity-40" />
-        Ningún cliente tiene saldo pendiente
+        Todavía no hay movimientos de cuenta corriente
       </div>
     )
   }
@@ -47,8 +47,16 @@ export function TablaSaldos({ clientes, cargando, onVerDetalle }: Props) {
           <TableRow key={c.clienteId}>
             <TableCell className="font-medium">{c.nombre}</TableCell>
             <TableCell className="text-sm text-muted-foreground">{c.telefono || "—"}</TableCell>
-            <TableCell className="text-right font-semibold tabular-nums text-rose-600 dark:text-rose-400">
-              {formatCurrency(c.saldo)}
+            <TableCell className="text-right">
+              {c.saldo > 0 ? (
+                <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                  {formatCurrency(c.saldo)}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  Al día
+                </span>
+              )}
             </TableCell>
             <TableCell className="text-right">
               <Button variant="outline" size="sm" onClick={() => onVerDetalle(c)}>

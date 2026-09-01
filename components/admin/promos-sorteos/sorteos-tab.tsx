@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SorteoDialog } from "@/components/admin/promos-sorteos/sorteo-dialog"
 import { SorteoDetalle } from "@/components/admin/promos-sorteos/sorteo-detalle"
-import { getSorteos, createSorteo, type SorteoInput } from "@/lib/supabase/sorteos"
+import { getSorteos, createSorteo, updateSorteo, cancelarSorteo, type SorteoInput } from "@/lib/supabase/sorteos"
 import type { Sorteo, SorteoEstado } from "@/lib/supabase/types"
 
 interface Props {
@@ -23,6 +23,7 @@ export function SorteosTab({ tenantId }: Props) {
   const [sorteos, setSorteos] = useState<Sorteo[]>([])
   const [cargando, setCargando] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editando, setEditando] = useState<Sorteo | null>(null)
   const [seleccionado, setSeleccionado] = useState<Sorteo | null>(null)
 
   const cargar = () => {
@@ -32,34 +33,66 @@ export function SorteosTab({ tenantId }: Props) {
 
   useEffect(cargar, [tenantId])
 
-  const crear = async (input: SorteoInput) => {
+  const abrirNuevo = () => {
+    setEditando(null)
+    setDialogOpen(true)
+  }
+
+  const abrirEdicion = (sorteo: Sorteo) => {
+    setEditando(sorteo)
+    setDialogOpen(true)
+  }
+
+  const guardar = async (input: SorteoInput) => {
     try {
-      await createSorteo(tenantId, input)
-      toast.success("Sorteo creado")
+      if (editando) {
+        await updateSorteo(tenantId, editando.id, input)
+        toast.success("Sorteo actualizado")
+      } else {
+        await createSorteo(tenantId, input)
+        toast.success("Sorteo creado")
+      }
       cargar()
+      setSeleccionado(null)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo crear el sorteo")
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar el sorteo")
+    }
+  }
+
+  const cancelar = async (sorteo: Sorteo) => {
+    try {
+      await cancelarSorteo(tenantId, sorteo.id)
+      toast.success("Sorteo cancelado")
+      cargar()
+      setSeleccionado(null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo cancelar el sorteo")
     }
   }
 
   if (seleccionado) {
     return (
-      <SorteoDetalle
-        tenantId={tenantId}
-        sorteo={seleccionado}
-        onVolver={() => setSeleccionado(null)}
-        onSorteado={() => {
-          cargar()
-          setSeleccionado(null)
-        }}
-      />
+      <>
+        <SorteoDetalle
+          tenantId={tenantId}
+          sorteo={seleccionado}
+          onVolver={() => setSeleccionado(null)}
+          onSorteado={() => {
+            cargar()
+            setSeleccionado(null)
+          }}
+          onEditar={() => abrirEdicion(seleccionado)}
+          onCancelar={() => cancelar(seleccionado)}
+        />
+        <SorteoDialog tenantId={tenantId} sorteo={editando} open={dialogOpen} onOpenChange={setDialogOpen} onGuardar={guardar} />
+      </>
     )
   }
 
   return (
     <div className="space-y-4 pt-4">
       <div className="flex justify-end">
-        <Button onClick={() => setDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button onClick={abrirNuevo} className="bg-emerald-600 hover:bg-emerald-700">
           <Plus className="mr-2 h-4 w-4" /> Nuevo sorteo
         </Button>
       </div>
@@ -95,7 +128,7 @@ export function SorteosTab({ tenantId }: Props) {
         </Table>
       )}
 
-      <SorteoDialog tenantId={tenantId} open={dialogOpen} onOpenChange={setDialogOpen} onGuardar={crear} />
+      <SorteoDialog tenantId={tenantId} sorteo={editando} open={dialogOpen} onOpenChange={setDialogOpen} onGuardar={guardar} />
     </div>
   )
 }

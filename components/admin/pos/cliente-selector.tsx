@@ -37,6 +37,7 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
   const [abierto, setAbierto] = useState(false)
   const [creando, setCreando] = useState(false)
   const [nombreNuevo, setNombreNuevo] = useState("")
+  const [dniNuevo, setDniNuevo] = useState("")
   const [telefonoNuevo, setTelefonoNuevo] = useState("")
   const [guardando, setGuardando] = useState(false)
 
@@ -66,6 +67,7 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
     try {
       const creado = await createCliente(tenantId, {
         nombre: nombreNuevo.trim(),
+        dni: dniNuevo.trim(),
         telefono: telefonoNuevo.trim(),
         email: "",
       })
@@ -74,6 +76,7 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
       setCreando(false)
       setAbierto(false)
       setNombreNuevo("")
+      setDniNuevo("")
       setTelefonoNuevo("")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo crear el cliente")
@@ -141,7 +144,16 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
               />
             </div>
             <div>
-              <Label htmlFor="nuevo-cliente-telefono" className="text-xs">Teléfono (opcional)</Label>
+              <Label htmlFor="nuevo-cliente-dni" className="text-xs">DNI (opcional)</Label>
+              <Input
+                id="nuevo-cliente-dni"
+                value={dniNuevo}
+                onChange={(e) => setDniNuevo(e.target.value)}
+                placeholder="30123456"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nuevo-cliente-telefono" className="text-xs">Celular (opcional)</Label>
               <Input
                 id="nuevo-cliente-telefono"
                 value={telefonoNuevo}

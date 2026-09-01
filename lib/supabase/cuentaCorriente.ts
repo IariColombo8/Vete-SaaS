@@ -49,9 +49,15 @@ function aMovimiento(f: Fila): MovimientoCtaCte {
 }
 
 /**
- * Saldo por cliente, solo los que tienen deuda (> 0). Trae todos los
- * movimientos del tenant y agrupa en el navegador: mismo patrón que
- * `getMetricasVentas`, apropiado para el volumen de una veterinaria.
+ * Saldo por cliente. Trae todos los movimientos del tenant y agrupa en el
+ * navegador: mismo patrón que `getMetricasVentas`, apropiado para el volumen
+ * de una veterinaria.
+ *
+ * Devuelve a TODO cliente que alguna vez tuvo un movimiento, no solo a los
+ * que deben plata hoy: un cliente que ya saldó su deuda tiene que seguir
+ * apareciendo (en $0, "al día") para no perder el historial de un vistazo —
+ * desaparecer de la lista apenas paga daba la falsa impresión de que se
+ * había borrado el registro. Se ordena con los que deben primero.
  */
 export async function getSaldosClientes(tenantId: string): Promise<ClienteConSaldo[]> {
   const { data, error } = await supabase
@@ -80,8 +86,7 @@ export async function getSaldosClientes(tenantId: string): Promise<ClienteConSal
   }
 
   return [...saldos.entries()]
-    .map(([clienteId, v]) => ({ clienteId, ...v, saldo: Math.round(v.saldo * 100) / 100 }))
-    .filter((c) => c.saldo > 0.009)
+    .map(([clienteId, v]) => ({ clienteId, ...v, saldo: Math.max(0, Math.round(v.saldo * 100) / 100) }))
     .sort((a, b) => b.saldo - a.saldo)
 }
 
@@ -102,6 +107,33 @@ export async function getMovimientosCliente(
   }
 
   return (data ?? []).map(aMovimiento)
+}
+
+/** Saldo actual de un cliente puntual (para el POS: cuánto le queda debiendo). */
+export async function getSaldoCliente(tenantId: string, clienteId: string): Promise<number> {
+  const movimientos = await getMovimientosCliente(tenantId, clienteId)
+  const saldo = movimientos.reduce((acc, m) => acc + (m.tipo === "venta" ? m.monto : -m.monto), 0)
+  return Math.round(saldo * 100) / 100
+}
+
+/**
+ * Carga una deuda a mano, sin pasar por una venta del POS (ej: seña de un
+ * turno, o un cobro pendiente que se sabe pero todavía no se facturó). El
+ * cliente puede ser recién creado con solo el nombre — se completa después.
+ */
+export async function registrarCargoManualCtaCte(
+  tenantId: string,
+  clienteId: string,
+  monto: number,
+  observaciones?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("registrar_cargo_manual_cta_cte", {
+    p_tenant_id: tenantId,
+    p_cliente_id: clienteId,
+    p_monto: monto,
+    p_observaciones: observaciones ?? null,
+  })
+  if (error) throw new Error(error.message)
 }
 
 export async function registrarPagoCtaCte(

@@ -1,4 +1,4 @@
-import { Package, Sparkles, Clock } from "lucide-react"
+import { Sparkles, Clock } from "lucide-react"
 import { precioFinal, tieneOferta, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
 import type { Producto } from "@/lib/supabase/types"
@@ -16,7 +16,8 @@ interface Props {
  */
 export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
   const enOferta = tieneOferta(p)
-  const imagen = p.imagenUrl || logo
+  // Producto sin foto propia -> logo del tenant -> logo de VetPanel, en ese orden.
+  const imagen = p.imagenUrl || logo || "/logo.png"
   const final = precioFinal(p)
   const descuento = enOferta && p.precio > 0 ? Math.round((1 - final / p.precio) * 100) : 0
   const ahorro = enOferta ? p.precio - final : 0
@@ -36,18 +37,12 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
     >
       {/* Media */}
       <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
-        {imagen ? (
-          <img
-            src={imagen || "/placeholder.svg"}
-            alt={p.nombre}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Package className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-          </div>
-        )}
+        <img
+          src={imagen}
+          alt={p.nombre}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+        />
 
         {/* Brillo sutil al pasar el mouse */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -66,7 +61,7 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
 
       {/* Cuerpo */}
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="mb-3 line-clamp-2 text-[15px] font-semibold leading-snug text-slate-900 transition-colors duration-200 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
+        <h3 className="mb-3 line-clamp-3 text-xs font-semibold leading-snug text-slate-900 transition-colors duration-200 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
           {p.nombre}
         </h3>
 

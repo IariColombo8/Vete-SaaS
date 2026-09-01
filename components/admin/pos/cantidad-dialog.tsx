@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Minus, Plus } from "lucide-react"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -179,41 +180,93 @@ export function CantidadDialog({ producto, onCerrar, onConfirmar }: Props) {
             {!fraccionable ? (
               <div className="space-y-2">
                 <Label htmlFor="cantidad">Unidades</Label>
-                <Input
-                  id="cantidad"
-                  type="number"
-                  inputMode="decimal"
-                  min={1}
-                  step={1}
-                  value={valorUnidades}
-                  autoFocus
-                  placeholder="1"
-                  onChange={(e) => setValorUnidades(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") confirmar()
-                  }}
-                  className="h-12 text-lg"
-                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-12 w-12 shrink-0"
+                    aria-label="Restar una unidad"
+                    onClick={() => setValorUnidades(String(Math.max(1, (Number(valorUnidades) || 1) - 1)))}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    id="cantidad"
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    step={1}
+                    value={valorUnidades}
+                    autoFocus
+                    placeholder="1"
+                    onChange={(e) => setValorUnidades(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") confirmar()
+                    }}
+                    className="h-12 text-center text-lg"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-12 w-12 shrink-0"
+                    aria-label="Sumar una unidad"
+                    onClick={() => setValorUnidades(String((Number(valorUnidades) || 0) + 1))}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="natural">{modoNatural === "u" ? "Unidades sueltas" : "Kilos"}</Label>
-                  <Input
-                    id="natural"
-                    type="number"
-                    inputMode="decimal"
-                    min={modoNatural === "u" ? 1 : 0.001}
-                    step={modoNatural === "u" ? 1 : 0.1}
-                    value={valorNatural}
-                    autoFocus
-                    placeholder={modoNatural === "u" ? "Ej: 3" : "Ej: 0,1 para 100 g"}
-                    onChange={(e) => escribirNatural(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") confirmar()
-                    }}
-                    className="h-12 text-lg"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12 shrink-0"
+                      aria-label={modoNatural === "u" ? "Restar una unidad" : "Restar 100 g"}
+                      onClick={() => {
+                        const paso = modoNatural === "u" ? 1 : 0.1
+                        const actual = Number(valorNatural.replace(",", ".")) || 0
+                        escribirNatural(numeroLimpio(Math.max(0, actual - paso)) || "0")
+                      }}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      id="natural"
+                      type="number"
+                      inputMode="decimal"
+                      min={modoNatural === "u" ? 1 : 0.001}
+                      step={modoNatural === "u" ? 1 : 0.1}
+                      value={valorNatural}
+                      autoFocus
+                      placeholder={modoNatural === "u" ? "Ej: 3" : "Ej: 0,1 para 100 g"}
+                      onChange={(e) => escribirNatural(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") confirmar()
+                      }}
+                      className="h-12 text-center text-lg"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12 shrink-0"
+                      aria-label={modoNatural === "u" ? "Sumar una unidad" : "Sumar 100 g"}
+                      onClick={() => {
+                        const paso = modoNatural === "u" ? 1 : 0.1
+                        const actual = Number(valorNatural.replace(",", ".")) || 0
+                        escribirNatural(numeroLimpio(actual + paso))
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {atajosNaturales.map((n) => (
                       <Button

@@ -15,13 +15,16 @@ import {
 import Link from "next/link"
 import { getProductosPublicados, getProductosPublicadosPorIds } from "@/lib/supabase/productos"
 import { getPromocionesPublicadas } from "@/lib/supabase/promociones"
+import { getSorteoActivo, getSorteosFinalizadosPublicados } from "@/lib/supabase/sorteos"
 import { tieneOferta } from "@/lib/productos/precios"
 import { normalizePlan, PLANS } from "@/lib/plans"
 import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
 import { PromocionTarjeta } from "@/components/public/promocion-tarjeta"
 import { DetalleDialog } from "@/components/public/detalle-dialog"
+import { SorteoBanner, SorteoTeaser } from "@/components/public/sorteo-banner"
+import { SorteosHistorial } from "@/components/public/sorteos-historial"
 import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog"
-import type { Producto, Promocion } from "@/lib/supabase/types"
+import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
 
@@ -358,14 +361,21 @@ export default function VetPublicPage() {
   const [productosDePromos, setProductosDePromos] = useState<Record<string, Producto>>({})
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null)
   const [promocionSeleccionada, setPromocionSeleccionada] = useState<Promocion | null>(null)
+  const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
+  const [sorteosFinalizados, setSorteosFinalizados] = useState<Sorteo[]>([])
 
   useEffect(() => {
-    Promise.all([getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug)]).then(
-      async ([t, cfg, prods, promos]) => {
+    Promise.all([
+      getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug),
+      getSorteoActivo(slug), getSorteosFinalizadosPublicados(slug),
+    ]).then(
+      async ([t, cfg, prods, promos, sorteo, historial]) => {
         setExists(!!t)
         setConfig(cfg)
         setProductos(prods)
         setPromociones(promos)
+        setSorteoActivo(sorteo)
+        setSorteosFinalizados(historial)
         setLoading(false)
         requestAnimationFrame(() => setTimeout(() => setHeroVisible(true), 100))
 
@@ -557,6 +567,11 @@ export default function VetPublicPage() {
       </section>
 
       {/* ╔══════════════════════════════════════════════════╗
+          ║          SORTEO: cartelito que lleva abajo        ║
+          ╚══════════════════════════════════════════════════╝ */}
+      {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
+
+      {/* ╔══════════════════════════════════════════════════╗
           ║               FEATURES STRIP                     ║
           ╚══════════════════════════════════════════════════╝ */}
       <section className="py-16 bg-slate-50 dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800">
@@ -664,6 +679,12 @@ export default function VetPublicPage() {
           </div>
         </section>
       )}
+
+      {/* ╔══════════════════════════════════════════════════╗
+          ║                    SORTEOS                       ║
+          ╚══════════════════════════════════════════════════╝ */}
+      {sorteoActivo && <SorteoBanner tenantId={slug} sorteo={sorteoActivo} />}
+      <SorteosHistorial sorteos={sorteosFinalizados} />
 
       {/* ╔══════════════════════════════════════════════════╗
           ║              HORARIOS + CONTACTO                 ║
@@ -878,13 +899,14 @@ export default function VetPublicPage() {
                     Productos
                   </Link>
                 </li>
-                <li>
-                  <span className="flex items-center gap-2.5 text-slate-600 cursor-default">
-                    <Gift className="h-4 w-4 shrink-0" />
-                    Sorteos
-                    <span className="text-[10px] font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-400 rounded-full px-2 py-0.5">Pronto</span>
-                  </span>
-                </li>
+                {sorteoActivo && (
+                  <li>
+                    <a href="#top" className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                      <Gift className="h-4 w-4 shrink-0" />
+                      Sorteo activo: {sorteoActivo.nombre}
+                    </a>
+                  </li>
+                )}
               </ul>
             </div>
 

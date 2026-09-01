@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { BuscadorProductos } from "./pos/buscador-productos"
 import { CajaBar } from "./pos/caja-bar"
 import { CantidadDialog } from "./pos/cantidad-dialog"
-import { CarritoPanel, CUOTAS_DEFAULT } from "./pos/carrito-panel"
+import { CarritoPanel } from "./pos/carrito-panel"
+import { useCarritoCompartido } from "@/hooks/pos/useCarritoCompartido"
 import type { LineaPagoMixto } from "./pos/mixto-pagos"
 import { AlimentoSelector } from "./pos/alimento-selector"
 import { AtencionDialog } from "./pos/atencion-dialog"
@@ -22,17 +23,17 @@ import {
   quitarDelCarrito,
   subtotalLinea,
   totalesCarrito,
-  SIN_DESCUENTO,
   type Descuento,
   type LineaCarrito,
   type VinculoAtencion,
 } from "@/lib/ventas/carrito"
 import { getCajaAbierta, getVenta, registrarVenta } from "@/lib/supabase/ventas"
+import { getSaldoCliente } from "@/lib/supabase/cuentaCorriente"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { getOrCrearServicioAtencion, getProductoPorId, getProductos } from "@/lib/supabase/productos"
 import { getPromocionesVigentes } from "@/lib/supabase/promociones"
 import { createHistoria } from "@/lib/supabase/historias"
-import { formatCurrency } from "@/lib/format"
+import { formatCantidad, formatCurrency } from "@/lib/format"
 import { OfertasPromosPanel } from "./pos/ofertas-promos-panel"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import type { Caja, Cliente, MedioPago, Producto, Promocion, Venta } from "@/lib/supabase/types"
@@ -52,14 +53,25 @@ interface Props {
  * El flujo completo: buscar o escanear → elegir cantidad → cobrar → remito.
  */
 export function PosManagement({ tenantId }: Props) {
-  const [carrito, setCarrito] = useState<LineaCarrito[]>([])
-  const [cliente, setCliente] = useState<Cliente | null>(null)
-  const [medioPago, setMedioPago] = useState<MedioPago>("efectivo")
-  const [descuento, setDescuento] = useState<Descuento>(SIN_DESCUENTO)
-  const [recargoPct, setRecargoPct] = useState(5)
-  const [cuotas, setCuotas] = useState(1)
-  const [recargoPorCuotas, setRecargoPorCuotas] = useState<Record<number, number>>(CUOTAS_DEFAULT)
-  const [pagosMixto, setPagosMixto] = useState<LineaPagoMixto[]>([])
+  // Todo el armado (carrito, cliente, medio de pago, descuento) vive acá:
+  // persiste en localStorage y en Supabase, y se sincroniza en vivo con
+  // cualquier otra pantalla que tenga "Vender" abierto en el mismo tenant.
+  const { draft, setDraft, limpiar: limpiarCompartido } = useCarritoCompartido(tenantId)
+  const { carrito, cliente, medioPago, descuento, recargoPct, cuotas, recargoPorCuotas, pagosMixto } = draft
+
+  const setCarrito = (actualizar: LineaCarrito[] | ((actual: LineaCarrito[]) => LineaCarrito[])) =>
+    setDraft((d) => ({
+      ...d,
+      carrito: typeof actualizar === "function" ? actualizar(d.carrito) : actualizar,
+    }))
+  const setCliente = (cliente: Cliente | null) => setDraft((d) => ({ ...d, cliente }))
+  const setMedioPago = (medioPago: MedioPago) => setDraft((d) => ({ ...d, medioPago }))
+  const setDescuento = (descuento: Descuento) => setDraft((d) => ({ ...d, descuento }))
+  const setRecargoPct = (recargoPct: number) => setDraft((d) => ({ ...d, recargoPct }))
+  const setCuotas = (cuotas: number) => setDraft((d) => ({ ...d, cuotas }))
+  const setRecargoPorCuotas = (recargoPorCuotas: Record<number, number>) =>
+    setDraft((d) => ({ ...d, recargoPorCuotas }))
+  const setPagosMixto = (pagosMixto: LineaPagoMixto[]) => setDraft((d) => ({ ...d, pagosMixto }))
 
   const [caja, setCaja] = useState<Caja | null>(null)
   const [emisor, setEmisor] = useState<EmisorRemito>({ nombre: "" })
@@ -69,6 +81,25 @@ export function PosManagement({ tenantId }: Props) {
   const [atencionAbierto, setAtencionAbierto] = useState(false)
   const [cobrando, setCobrando] = useState(false)
   const [ventaHecha, setVentaHecha] = useState<Venta | null>(null)
+  const [saldoCliente, setSaldoCliente] = useState(0)
+  const [saldarDeuda, setSaldarDeuda] = useState(false)
+
+  // Deuda de cuenta corriente del cliente elegido, para ofrecer saldarla
+  // junto con esta venta (una sola transacción de caja).
+  useEffect(() => {
+    setSaldarDeuda(false)
+    if (!cliente?.id) {
+      setSaldoCliente(0)
+      return
+    }
+    let vigente = true
+    getSaldoCliente(tenantId, cliente.id).then((saldo) => {
+      if (vigente) setSaldoCliente(saldo)
+    })
+    return () => {
+      vigente = false
+    }
+  }, [tenantId, cliente?.id])
 
   const [promociones, setPromociones] = useState<Promocion[]>([])
   const [productosEnOferta, setProductosEnOferta] = useState<Producto[]>([])
@@ -116,7 +147,7 @@ export function PosManagement({ tenantId }: Props) {
    * vende de a una) abren el diálogo de cantidad; el resto entra de a uno,
    * que es lo que hace que escanear sea instantáneo.
    */
-  const elegirProducto = (producto: Producto) => {
+  const elegirProducto = (producto: Producto, cantidad = 1) => {
     const fraccionable =
       producto.unidad === "kg" ||
       (producto.unidad === "un" && ((producto.pesoKg ?? 0) > 0 || (producto.unidadesPorBulto ?? 0) > 0))
@@ -124,7 +155,7 @@ export function PosManagement({ tenantId }: Props) {
       setPendiente(producto)
       return
     }
-    agregar(producto, 1)
+    agregar(producto, cantidad)
   }
 
   const agregar = (producto: Producto, cantidad: number) => {
@@ -205,16 +236,7 @@ export function PosManagement({ tenantId }: Props) {
     }
   }
 
-  const limpiar = () => {
-    setCarrito([])
-    setCliente(null)
-    setDescuento(SIN_DESCUENTO)
-    setMedioPago("efectivo")
-    setRecargoPct(5)
-    setCuotas(1)
-    setRecargoPorCuotas(CUOTAS_DEFAULT)
-    setPagosMixto([])
-  }
+  const limpiar = limpiarCompartido
 
   const cobrar = async () => {
     if (carrito.length === 0) return
@@ -230,10 +252,12 @@ export function PosManagement({ tenantId }: Props) {
     // recargo después, así que el monto que se manda nunca deja el total en
     // negativo ni desincroniza lo que se ve en pantalla de lo que se cobra.
     const totales = totalesCarrito(carrito, descuento, pctRecargo, promociones)
+    const montoDeuda = saldarDeuda ? saldoCliente : 0
+    const totalACobrar = totales.total + montoDeuda
 
     if (medioPago === "mixto") {
       const suma = pagosMixto.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
-      if (Math.abs(suma - totales.total) >= 0.01) {
+      if (Math.abs(suma - totalACobrar) >= 0.01) {
         toast.error("El desglose de pagos tiene que coincidir con el total")
         return
       }
@@ -249,6 +273,7 @@ export function PosManagement({ tenantId }: Props) {
         recargo: totales.recargo,
         cuotas: medioPago === "credito" ? cuotas : undefined,
         pagos: medioPago === "mixto" ? pagosMixto : undefined,
+        saldarDeuda: montoDeuda,
       })
 
       // Se relee la venta ya guardada en vez de armarla con lo que había en
@@ -266,6 +291,7 @@ export function PosManagement({ tenantId }: Props) {
       await anotarHistoriasClinicas(carrito)
 
       limpiar()
+      setSaldarDeuda(false)
       setCarritoAbierto(false)
       // El stock cambió, así que el resumen de la caja también.
       recargarCaja()
@@ -294,6 +320,9 @@ export function PosManagement({ tenantId }: Props) {
       pagosMixto={pagosMixto}
       cobrando={cobrando}
       promociones={promociones}
+      saldoCliente={saldoCliente}
+      saldarDeuda={saldarDeuda}
+      onSaldarDeuda={setSaldarDeuda}
       onCliente={setCliente}
       onMedioPago={setMedioPago}
       onDescuento={setDescuento}
@@ -328,7 +357,12 @@ export function PosManagement({ tenantId }: Props) {
         <div className="min-h-0 flex-1">
           <BuscadorProductos
             tenantId={tenantId}
+            carrito={carrito}
             onElegir={elegirProducto}
+            onQuitarUno={(producto) => {
+              const linea = carrito.find((l) => l.id === producto.id)
+              if (linea) actualizarCantidad(producto.id, linea.cantidad - 1)
+            }}
             onAbrirAlimentos={() => setAlimentosAbierto(true)}
             onAbrirAtencion={() => setAtencionAbierto(true)}
           />
@@ -345,7 +379,7 @@ export function PosManagement({ tenantId }: Props) {
         {carrito.length > 0 ? (
           <span className="flex items-center gap-1.5">
             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">
-              {totales.items}
+              {formatCantidad(carrito.reduce((acc, l) => acc + l.cantidad, 0))}
             </span>
             {formatCurrency(totales.total)}
           </span>

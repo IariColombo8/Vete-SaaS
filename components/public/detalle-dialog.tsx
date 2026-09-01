@@ -1,6 +1,6 @@
 "use client"
 
-import { Gift, Package, Sparkles, Tag, Clock } from "lucide-react"
+import { Sparkles, Tag, Clock } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -65,7 +65,7 @@ function BotonCerrar({ onClose }: { onClose: () => void }) {
 
 function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; logo?: string; onClose: () => void }) {
   const enOferta = tieneOferta(p)
-  const imagen = p.imagenUrl || logo
+  const imagen = p.imagenUrl || logo || "/logo.png"
   const final = precioFinal(p)
   const descuento = enOferta && p.precio > 0 ? Math.round((1 - final / p.precio) * 100) : 0
   const ahorro = enOferta ? p.precio - final : 0
@@ -84,13 +84,7 @@ function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; l
             {descuento}% OFF
           </span>
         )}
-        {imagen ? (
-          <img src={imagen} alt={p.nombre} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Package className="h-20 w-20 text-slate-300 dark:text-slate-600" />
-          </div>
-        )}
+        <img src={imagen} alt={p.nombre} className="h-full w-full object-cover" />
       </div>
 
       {/* Info */}
@@ -149,7 +143,7 @@ function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; l
 function DetallePromocion({
   promocion: p, productosDePromos, logo, onClose,
 }: { promocion: Promocion; productosDePromos: Record<string, Producto>; logo?: string; onClose: () => void }) {
-  const imagen = p.imagenUrl || logo
+  const imagen = p.imagenUrl || logo || "/logo.png"
   const items = p.items.map((i) => ({ item: i, producto: productosDePromos[i.productoId] }))
   // "Sin la promo" usa el precio con oferta individual ya aplicada (precioFinal
   // de cada producto), no el de lista: si un producto además tiene su propia
@@ -175,13 +169,7 @@ function DetallePromocion({
           <span className="text-xs font-bold uppercase tracking-wide">Promoción</span>
           {descuento > 0 && <span className="ml-1 text-xs font-extrabold">-{descuento}%</span>}
         </div>
-        {imagen ? (
-          <img src={imagen} alt={p.nombre} className="h-full w-full object-contain" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Gift className="h-20 w-20 text-emerald-300 dark:text-emerald-800" />
-          </div>
-        )}
+        <img src={imagen} alt={p.nombre} className="h-full w-full object-contain" />
       </div>
 
       {/* Info: abajo, con los productos incluidos */}
