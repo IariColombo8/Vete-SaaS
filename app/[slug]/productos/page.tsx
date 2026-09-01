@@ -90,7 +90,12 @@ export default function ProductosPublicosPage() {
 
     if (filtros.orden === "precioAsc") return filtrados.sort((a, b) => precioFinal(a) - precioFinal(b))
     if (filtros.orden === "precioDesc") return filtrados.sort((a, b) => precioFinal(b) - precioFinal(a))
-    return filtrados
+    // Relevancia: ofertas primero, después los que tienen foto, el resto al final.
+    return filtrados.sort((a, b) => {
+      const oferta = Number(tieneOferta(b)) - Number(tieneOferta(a))
+      if (oferta !== 0) return oferta
+      return Number(!!b.imagenUrl) - Number(!!a.imagenUrl)
+    })
   }, [productos, busqueda, filtros])
 
   // Al cambiar filtros/búsqueda, siempre se vuelve a la primera página —
@@ -105,8 +110,9 @@ export default function ProductosPublicosPage() {
 
   const promocionesFiltradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase()
-    if (!termino) return promociones
-    return promociones.filter((p) => p.nombre.toLowerCase().includes(termino))
+    const filtradas = termino ? promociones.filter((p) => p.nombre.toLowerCase().includes(termino)) : promociones
+    // Las que tienen foto primero: se ven mejor en la grilla.
+    return [...filtradas].sort((a, b) => Number(!!b.imagenUrl) - Number(!!a.imagenUrl))
   }, [promociones, busqueda])
 
   if (loading) {

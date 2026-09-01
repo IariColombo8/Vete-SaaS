@@ -439,8 +439,17 @@ export default function VetPublicPage() {
   const muestraProductos = tieneFeatureProductos && productos.length > 0
   const tieneFeaturePromos = PLANS[normalizePlan(config?.plan)].features.promosSorteos
   const muestraPromociones = tieneFeaturePromos && promociones.length > 0
-  // Prioridad en la vidriera: promo primero, después ofertas, después el resto.
-  const productosOrdenados = [...productos].sort((a, b) => Number(tieneOferta(b)) - Number(tieneOferta(a)))
+  // Prioridad en la vidriera: ofertas primero, después los que tienen foto,
+  // el resto al final.
+  const productosOrdenados = [...productos].sort((a, b) => {
+    const oferta = Number(tieneOferta(b)) - Number(tieneOferta(a))
+    if (oferta !== 0) return oferta
+    return Number(!!b.imagenUrl) - Number(!!a.imagenUrl)
+  })
+  // La promo destacada del home: si hay varias, se prioriza la que tiene foto.
+  const promocionDestacada = [...promociones].sort(
+    (a, b) => Number(!!b.imagenUrl) - Number(!!a.imagenUrl),
+  )[0]
 
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
@@ -654,10 +663,10 @@ export default function VetPublicPage() {
             </Reveal>
 
             <VidrieraCarrusel>
-              {muestraPromociones && promociones[0] && (
+              {muestraPromociones && promocionDestacada && (
                 <PromocionTarjeta
-                  promocion={promociones[0]} productos={productosDePromos} logo={logo}
-                  onClick={() => setPromocionSeleccionada(promociones[0])}
+                  promocion={promocionDestacada} productos={productosDePromos} logo={logo}
+                  onClick={() => setPromocionSeleccionada(promocionDestacada)}
                 />
               )}
               {muestraProductos && productosOrdenados.slice(0, 11).map((p) => (
