@@ -1,6 +1,7 @@
 "use client"
 
-import { Search } from "lucide-react"
+import { useState } from "react"
+import { ChevronDown, Search } from "lucide-react"
 import type { Producto } from "@/lib/supabase/types"
 
 export type OrdenPrecio = "relevancia" | "precioAsc" | "precioDesc"
@@ -43,6 +44,17 @@ export function FiltrosSidebar({ productos, filtros, onChange, busqueda, onBusqu
   const categorias = agruparCategorias(productos)
   const hayFiltros = filtros.categorias.length > 0 || filtros.marcas.length > 0 || filtros.soloOfertas
     || filtros.orden !== "relevancia" || filtros.precioDesde !== "" || filtros.precioHasta !== ""
+
+  // Comprimidas por defecto: un catálogo grande (cientos de marcas) satura la
+  // pantalla si se muestran todas abiertas de entrada.
+  const [abiertas, setAbiertas] = useState<Set<string>>(new Set())
+  const toggleAbierta = (cat: string) =>
+    setAbiertas((prev) => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
 
   const toggle = (lista: string[], valor: string) =>
     lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor]
@@ -103,38 +115,55 @@ export function FiltrosSidebar({ productos, filtros, onChange, busqueda, onBusqu
         <div className="space-y-5">
           {Array.from(categorias.entries()).map(([categoria, marcas]) => {
             const catActiva = filtros.categorias.includes(categoria)
+            const abierta = abiertas.has(categoria)
             return (
               <div key={categoria}>
-                <button
-                  type="button"
-                  onClick={() => toggleCategoria(categoria)}
-                  className={`mb-2 flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm font-bold transition-colors ${
+                <div
+                  className={`mb-2 flex w-full items-center gap-1 rounded-lg text-sm font-bold transition-colors ${
                     catActiva
                       ? "bg-emerald-600 text-white"
                       : "text-slate-900 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800"
                   }`}
                 >
-                  <span>{categoria}</span>
-                  <span className={`text-xs font-medium ${catActiva ? "text-emerald-100" : "text-slate-400"}`}>
-                    {Array.from(marcas.values()).reduce((a, b) => a + b, 0)}
-                  </span>
-                </button>
-                <ul className="ml-2 space-y-1 border-l border-slate-200 pl-3 dark:border-slate-800">
-                  {Array.from(marcas.entries()).map(([marca, cantidad]) => (
-                    <li key={marca}>
-                      <label className="flex cursor-pointer items-center gap-2.5 py-1 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-                        <input
-                          type="checkbox"
-                          checked={filtros.marcas.includes(marca)}
-                          onChange={() => toggleMarca(marca)}
-                          className="h-4 w-4 rounded border-slate-300 text-emerald-600 accent-emerald-600"
-                        />
-                        <span className="flex-1">{marca}</span>
-                        <span className="text-xs text-slate-400">{cantidad}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+                  <button
+                    type="button"
+                    onClick={() => toggleCategoria(categoria)}
+                    className="flex flex-1 items-center justify-between px-2 py-1.5 text-left"
+                  >
+                    <span>{categoria}</span>
+                    <span className={`text-xs font-medium ${catActiva ? "text-emerald-100" : "text-slate-400"}`}>
+                      {Array.from(marcas.values()).reduce((a, b) => a + b, 0)}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleAbierta(categoria)}
+                    aria-label={abierta ? `Ocultar marcas de ${categoria}` : `Ver marcas de ${categoria}`}
+                    className="shrink-0 px-2 py-1.5"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${abierta ? "rotate-180" : ""} ${catActiva ? "text-white" : "text-slate-400"}`}
+                    />
+                  </button>
+                </div>
+                {abierta && (
+                  <ul className="ml-2 space-y-1 border-l border-slate-200 pl-3 dark:border-slate-800">
+                    {Array.from(marcas.entries()).map(([marca, cantidad]) => (
+                      <li key={marca}>
+                        <label className="flex cursor-pointer items-center gap-2.5 py-1 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                          <input
+                            type="checkbox"
+                            checked={filtros.marcas.includes(marca)}
+                            onChange={() => toggleMarca(marca)}
+                            className="h-4 w-4 rounded border-slate-300 text-emerald-600 accent-emerald-600"
+                          />
+                          <span className="flex-1">{marca}</span>
+                          <span className="text-xs text-slate-400">{cantidad}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )
           })}
