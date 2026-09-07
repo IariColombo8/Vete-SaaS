@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import { planAllows, type Feature } from "../plans"
 import type { Tenant, TenantConfig, TenantFull, TurnoConfig } from "./types"
 
@@ -78,8 +79,9 @@ function aFila(data: Partial<TenantConfig>): Record<string, unknown> {
 }
 
 export async function getTenant(tenantId: string): Promise<Tenant | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("tenants").select("slug").eq("slug", tenantId).maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar tenant")
   return data ? { slug: data.slug } : null
 }
 
@@ -155,7 +157,8 @@ export async function getTenantFull(tenantId: string): Promise<TenantFull | null
 }
 
 export async function getTenants(): Promise<Tenant[]> {
-  const { data } = await supabase.from("tenants").select("slug")
+  const { data, error } = await supabase.from("tenants").select("slug")
+  throwIfSupabaseError(error, "Error al listar tenants")
   return (data ?? []).map((d) => ({ slug: d.slug }))
 }
 

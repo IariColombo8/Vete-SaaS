@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import type { Mascota } from "./types"
 import { calcularEdadActual, formatearEdad } from "@/lib/mascotas/edad"
 
@@ -67,8 +68,9 @@ export async function createMascota(
 }
 
 export async function getMascotas(tenantId: string, clienteId: string): Promise<Mascota[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("obtener_mascotas_publico", { p_tenant: tenantId, p_cliente_id: clienteId })
+  throwIfSupabaseError(error, "Error al cargar mascotas")
   return (data ?? []).map(aMascota)
 }
 
@@ -110,8 +112,9 @@ export async function getMascotaPublico(
   tenantId: string,
   mascotaId: string,
 ): Promise<Mascota | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("obtener_mascota_publico", { p_tenant: tenantId, p_mascota_id: mascotaId })
+  throwIfSupabaseError(error, "Error al cargar mascota")
   const fila = Array.isArray(data) ? data[0] : data
   return fila ? aMascota(fila) : null
 }
@@ -127,11 +130,12 @@ export async function esDuenoMascotaPublico(
   mascotaId: string,
   clienteId: string,
 ): Promise<boolean> {
-  const { data } = await supabase.rpc("es_dueno_mascota_publico", {
+  const { data, error } = await supabase.rpc("es_dueno_mascota_publico", {
     p_tenant: tenantId,
     p_mascota_id: mascotaId,
     p_cliente_id: clienteId,
   })
+  throwIfSupabaseError(error, "Error al verificar dueño de mascota")
   return data === true
 }
 
@@ -147,10 +151,11 @@ export async function getDuenosMascotaPublico(
   tenantId: string,
   mascotaId: string,
 ): Promise<DuenoMascota[]> {
-  const { data } = await supabase.rpc("obtener_duenos_mascota_publico", {
+  const { data, error } = await supabase.rpc("obtener_duenos_mascota_publico", {
     p_tenant: tenantId,
     p_mascota_id: mascotaId,
   })
+  throwIfSupabaseError(error, "Error al cargar dueños de mascota")
   return (data ?? []).map((f: Fila) => ({
     clienteId: f.cliente_id as string,
     nombre: (f.nombre as string) ?? "",

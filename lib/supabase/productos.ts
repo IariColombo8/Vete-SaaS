@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import { calcularPrecioConMargen } from "@/lib/productos/precios"
 import type {
   AjusteStockTipo,
@@ -35,6 +36,7 @@ function aProducto(f: Fila): Producto {
     nombre: (f.nombre as string) ?? "",
     descripcion: (f.descripcion as string) ?? "",
     categoria: (f.categoria as string) ?? "",
+    categoriaManual: (f.categoria_manual as boolean) ?? false,
     imagenUrl: (f.imagen_url as string) ?? undefined,
     precio: num(f.precio),
     precioLista: f.precio_lista != null ? num(f.precio_lista) : num(f.precio),
@@ -100,21 +102,37 @@ function nulificar(v: string | undefined): string | null {
   return s === "" ? null : s
 }
 
-function aFila(input: ProductoInput): Record<string, unknown> {
+/**
+ * @param precioAnterior Precio que tenía el producto antes de este guardado.
+ * `undefined` en el alta (no hay anterior). Solo se pisa `precio_lista` si el
+ * precio de venta realmente cambió — si no, un guardado del formulario que
+ * tocó otro campo (rubro, stock mínimo, etc.) reenvía el mismo `precio` y
+ * pisaría el precio de lista importado del Excel sin que nadie lo haya tocado.
+ * @param categoriaAnterior Rubro que tenía el producto antes de este guardado.
+ * `undefined` en el alta: como recién se está eligiendo, ya queda marcado
+ * manual. En la edición, solo se marca `categoria_manual` si el rubro
+ * realmente cambió — mismo motivo que `precioAnterior`.
+ */
+function aFila(input: ProductoInput, precioAnterior?: number, categoriaAnterior?: string): Record<string, unknown> {
   const fila: Record<string, unknown> = {
     nombre: input.nombre.trim(),
     precio: input.precio,
-    // El alta y la edición manual son la fuente del precio de lista: solo
-    // "Aplicar ganancia" (aplicarMargen) no pasa por acá y por eso nunca lo toca.
-    precio_lista: input.precio,
     // Un precio tipeado a mano deja de ser "costo + %": se borra el margen
     // guardado para que la próxima importación no lo recalcule por su cuenta.
     margen_aplicado: null,
   }
+  if (precioAnterior === undefined || input.precio !== precioAnterior) {
+    fila.precio_lista = input.precio
+  }
   if (input.codigo !== undefined) fila.codigo = nulificar(input.codigo)
   if (input.codigoBarras !== undefined) fila.codigo_barras = nulificar(input.codigoBarras)
   if (input.descripcion !== undefined) fila.descripcion = input.descripcion.trim()
-  if (input.categoria !== undefined) fila.categoria = input.categoria.trim()
+  if (input.categoria !== undefined) {
+    fila.categoria = input.categoria.trim()
+    if (categoriaAnterior === undefined || input.categoria.trim() !== categoriaAnterior) {
+      fila.categoria_manual = true
+    }
+  }
   if (input.imagenUrl !== undefined) fila.imagen_url = nulificar(input.imagenUrl)
   if (input.costo !== undefined) fila.costo = input.costo ?? null
   if (input.stockMinimo !== undefined) fila.stock_minimo = input.stockMinimo
@@ -177,10 +195,11 @@ export interface ProductosPagina {
 }
 
 export async function getProductoPorId(tenantId: string, id: string): Promise<Producto | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId).eq("id", id)
     .maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar producto")
   return data ? aProducto(data) : null
 }
 
@@ -326,10 +345,11 @@ export async function getTodosLosProductosParaExportar(
 }
 
 export async function getProducto(tenantId: string, id: string): Promise<Producto | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId).eq("id", id)
     .maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar producto")
   return data ? aProducto(data) : null
 }
 
@@ -340,11 +360,12 @@ export async function getProductoPorCodigo(
 ): Promise<Producto | null> {
   const c = codigo.trim()
   if (!c) return null
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId)
     .or(`codigo_barras.eq.${c},codigo.eq.${c}`)
     .limit(1).maybeSingle()
+  throwIfSupabaseError(error, "Error al buscar producto por código")
   return data ? aProducto(data) : null
 }
 
@@ -367,10 +388,15 @@ export async function asignarCodigoBarras(
 }
 
 export async function getCategorias(tenantId: string): Promise<string[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("productos").select("categoria")
     .eq("tenant_id", tenantId).eq("activo", true)
     .not("categoria", "eq", "")
+
+  if (error) {
+    console.error("Error listando categorías:", error.message)
+    return []
+  }
 
   const unicas = new Set((data ?? []).map((f) => (f as Fila).categoria as string))
   return [...unicas].filter(Boolean).sort((a, b) => a.localeCompare(b, "es"))
@@ -428,13 +454,18 @@ export async function getVencimientosProximos(
   const fechaLimite = new Date()
   fechaLimite.setDate(fechaLimite.getDate() + dias)
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId).eq("activo", true)
     .not("fecha_vencimiento", "is", null)
     .lte("fecha_vencimiento", fechaLimite.toISOString().slice(0, 10))
     .order("fecha_vencimiento")
     .limit(limite)
+
+  if (error) {
+    console.error("Error listando vencimientos próximos:", error.message)
+    return []
+  }
 
   return (data ?? []).map(aProducto)
 }
@@ -463,9 +494,11 @@ export async function updateProducto(
   tenantId: string,
   id: string,
   input: ProductoInput,
+  precioAnterior?: number,
+  categoriaAnterior?: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("productos").update(aFila(input))
+    .from("productos").update(aFila(input, precioAnterior, categoriaAnterior))
     .eq("tenant_id", tenantId).eq("id", id)
 
   if (error) throw mensajeError(error, "No se pudo actualizar el producto")
@@ -548,10 +581,11 @@ const CODIGO_SERVICIO_ATENCION = "SERVICIO-ATENCION"
  * un servicio sin stock que existe una vez por tenant y se reusa siempre.
  */
 export async function getOrCrearServicioAtencion(tenantId: string): Promise<Producto> {
-  const { data: existente } = await supabase
+  const { data: existente, error: errorExistente } = await supabase
     .from("productos").select(COLS)
     .eq("tenant_id", tenantId).eq("codigo", CODIGO_SERVICIO_ATENCION)
     .maybeSingle()
+  if (errorExistente) throw mensajeError(errorExistente, "No se pudo buscar el servicio de atención")
   if (existente) return aProducto(existente)
 
   const { data: creado, error } = await supabase
@@ -709,7 +743,7 @@ export async function actualizarCategoriaMasivo(
 ): Promise<number> {
   const resultados = await Promise.allSettled(
     productos.map((p) =>
-      supabase.from("productos").update({ categoria }).eq("tenant_id", tenantId).eq("id", p.id),
+      supabase.from("productos").update({ categoria, categoria_manual: true }).eq("tenant_id", tenantId).eq("id", p.id),
     ),
   )
   // Un update rechazado por Postgres (RLS, constraint) no rechaza la
@@ -761,12 +795,17 @@ export async function getMovimientos(
   productoId: string,
   limite = 20,
 ): Promise<MovimientoStock[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("stock_movimientos")
     .select("id, producto_id, tipo, cantidad, stock_anterior, stock_nuevo, referencia, usuario_nombre, fecha")
     .eq("tenant_id", tenantId).eq("producto_id", productoId)
     .order("fecha", { ascending: false })
     .limit(limite)
+
+  if (error) {
+    console.error("Error listando movimientos de stock:", error.message)
+    return []
+  }
 
   return (data ?? []).map((f: Fila) => ({
     id: f.id as string,
@@ -806,12 +845,17 @@ export async function getHistorialPrecio(
   productoId: string,
   limite = 10,
 ): Promise<CambioPrecio[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("producto_auditoria")
     .select("id, campo, valor_anterior, valor_nuevo, usuario_nombre, fecha")
     .eq("tenant_id", tenantId).eq("producto_id", productoId)
     .order("fecha", { ascending: false })
     .limit(limite)
+
+  if (error) {
+    console.error("Error listando historial de precio:", error.message)
+    return []
+  }
 
   return (data ?? []).map((f: Fila) => ({
     id: f.id as string,
@@ -843,6 +887,42 @@ export interface FilaImportacion {
   stock: number
   bulto?: number
   revisar: boolean
+}
+
+/** Lo mínimo del catálogo actual para armar la vista previa de una importación. */
+export interface ProductoParaComparar {
+  codigo?: string
+  codigoBarras?: string
+  nombre: string
+  categoria: string
+  categoriaManual: boolean
+  precio: number
+  costo?: number
+}
+
+/**
+ * Trae el catálogo completo del tenant con los campos mínimos para comparar
+ * contra un Excel antes de importarlo (ver `compararFilas` en
+ * `lib/productos/importar.ts`). Se pide aparte de `getProductos` porque acá no
+ * hace falta paginar ni el resto de las columnas.
+ */
+export async function getProductosParaComparar(tenantId: string): Promise<ProductoParaComparar[]> {
+  const { data, error } = await supabase
+    .from("productos")
+    .select("codigo, codigo_barras, nombre, categoria, categoria_manual, precio, costo")
+    .eq("tenant_id", tenantId)
+
+  if (error) throw mensajeError(error, "No se pudieron cargar los productos para comparar")
+
+  return (data ?? []).map((f: Fila) => ({
+    codigo: (f.codigo as string) ?? undefined,
+    codigoBarras: (f.codigo_barras as string) ?? undefined,
+    nombre: (f.nombre as string) ?? "",
+    categoria: (f.categoria as string) ?? "",
+    categoriaManual: (f.categoria_manual as boolean) ?? false,
+    precio: num(f.precio),
+    costo: f.costo != null ? num(f.costo) : undefined,
+  }))
 }
 
 export type EstrategiaStock = "no_tocar" | "reemplazar" | "sumar" | "solo_nuevos"

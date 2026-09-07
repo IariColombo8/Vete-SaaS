@@ -377,6 +377,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             turnos,
           });
           if (mascotas.length > 0) setSelectedMascotaId(mascotas[0].id ?? null);
+        } else {
+          toast({ title: "Error", description: "No se encontró el cliente", variant: "destructive" });
+          setExpandedClienteId(null);
         }
       } catch (e) {
         console.error(e);

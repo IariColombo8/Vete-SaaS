@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import type { Cliente, ClientesCursor, ClientesPage, ClientesStats, HistorialDato } from "./types"
 
 export type { ClientesStats } from "./types"
@@ -33,16 +34,18 @@ const COLS_BASIC = "id, nombre, telefono, email, dni, domicilio, created_at, upd
 
 export async function getClienteByDNI(tenantId: string, dni: string): Promise<Cliente | null> {
   if (!dni?.trim()) return null
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("buscar_cliente_publico", { p_tenant: tenantId, p_dni: dni.trim() })
+  throwIfSupabaseError(error, "Error al buscar cliente por DNI")
   const fila = Array.isArray(data) ? data[0] : data
   return fila ? aCliente(fila) : null
 }
 
 export async function getClienteByEmail(tenantId: string, email: string): Promise<Cliente | null> {
   if (!email) return null
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("buscar_cliente_publico", { p_tenant: tenantId, p_email: email })
+  throwIfSupabaseError(error, "Error al buscar cliente por email")
   const fila = Array.isArray(data) ? data[0] : data
   return fila ? aCliente(fila) : null
 }
@@ -64,7 +67,8 @@ export interface ClienteGlobal {
  */
 export async function getClienteGlobalPorDNI(dni: string): Promise<ClienteGlobal | null> {
   if (!dni?.trim()) return null
-  const { data } = await supabase.rpc("buscar_cliente_global_publico", { p_dni: dni.trim() })
+  const { data, error } = await supabase.rpc("buscar_cliente_global_publico", { p_dni: dni.trim() })
+  throwIfSupabaseError(error, "Error al buscar cliente global por DNI")
   if (!data) return null
   return {
     nombre: data.nombre ?? "",
@@ -101,14 +105,16 @@ export async function createCliente(
 }
 
 export async function getClientes(tenantId: string): Promise<Cliente[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("clientes").select("*").eq("tenant_id", tenantId).order("nombre")
+  throwIfSupabaseError(error, "Error al cargar clientes")
   return (data ?? []).map(aCliente)
 }
 
 export async function getClientesBasic(tenantId: string): Promise<Cliente[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("clientes").select(COLS_BASIC).eq("tenant_id", tenantId).order("nombre")
+  throwIfSupabaseError(error, "Error al cargar clientes (básico)")
   return (data ?? []).map(aCliente)
 }
 
@@ -175,12 +181,13 @@ export async function getClientesStats(tenantId: string): Promise<ClientesStats>
 }
 
 export async function getClienteCompleto(tenantId: string, clienteId: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("clientes")
-    .select("*, mascotas(*)")
+    .select("*, mascotas!mascotas_cliente_id_fkey(*)")
     .eq("tenant_id", tenantId).eq("id", clienteId)
     .maybeSingle()
 
+  throwIfSupabaseError(error, "Error al cargar cliente completo")
   if (!data) return null
 
   const { mascotas: filasMascotas, ...filaCliente } = data as Fila & { mascotas: Fila[] }

@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import { getMascotas, updateMascota } from "./mascotas"
 import { getHistorias } from "./historias"
 import type { LibretaPublica } from "./types"
@@ -76,11 +77,12 @@ export async function getLibretaPublica(
   tenantId: string,
   token: string,
 ): Promise<LibretaPublica | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("libretas_publicas").select("*")
     .eq("tenant_id", tenantId).eq("token", token)
     .maybeSingle()
 
+  throwIfSupabaseError(error, "Error al cargar libreta pública")
   if (!data) return null
   return {
     token: data.token,

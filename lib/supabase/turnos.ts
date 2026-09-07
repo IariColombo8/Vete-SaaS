@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import { getPlanLimits } from "../plans"
 import { getTenantConfig } from "./tenants"
 import { createHistoria } from "./historias"
@@ -205,7 +206,7 @@ export async function getTurnosByClienteId(
   const { data, error } = await supabase
     .from("turnos").select("*")
     .eq("tenant_id", tenantId).eq("cliente_id", clienteId)
-  if (error) return []
+  throwIfSupabaseError(error, "Error al cargar turnos del cliente")
   return (data ?? []).map(aTurno)
 }
 
@@ -218,7 +219,7 @@ export async function getTurnosByClienteEmail(
   const { data, error } = await supabase
     .from("turnos").select("*")
     .eq("tenant_id", tenantId).ilike("cliente_email", email)
-  if (error) return []
+  throwIfSupabaseError(error, "Error al cargar turnos por email")
   return (data ?? []).map(aTurno)
 }
 
@@ -228,8 +229,9 @@ export async function getTurnosPublico(
   clienteId: string,
 ): Promise<Turno[]> {
   if (!clienteId) return []
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("obtener_turnos_publico", { p_tenant: tenantId, p_cliente_id: clienteId })
+  throwIfSupabaseError(error, "Error al cargar turnos públicos")
   return (data ?? []).map(aTurno)
 }
 
@@ -244,8 +246,9 @@ export async function getTurnosPorMascotaPublico(
   mascotaId: string,
 ): Promise<Turno[]> {
   if (!mascotaId) return []
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("obtener_turnos_mascota_publico", { p_tenant: tenantId, p_mascota_id: mascotaId })
+  throwIfSupabaseError(error, "Error al cargar turnos de la mascota")
   return (data ?? []).map(aTurno)
 }
 
@@ -281,8 +284,9 @@ export async function updateTurno(
   }
   // Si cambió fecha u hora, recalcular el instante que ordena la lista
   if (data.fecha !== undefined || data.hora !== undefined) {
-    const { data: actual } = await supabase
+    const { data: actual, error: errorActual } = await supabase
       .from("turnos").select("fecha, hora").eq("id", turnoId).maybeSingle()
+    if (errorActual) console.error("Error al leer turno actual:", errorActual.message)
     if (actual) {
       const f = (data.fecha ?? actual.fecha) as string
       const h = (data.hora ?? actual.hora) as string

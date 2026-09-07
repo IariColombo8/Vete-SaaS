@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import type {
   Caja,
   CajaEstado,
@@ -173,10 +174,11 @@ export async function anularVenta(ventaId: string, motivo?: string): Promise<voi
 // ── Consultas ──
 
 export async function getVenta(tenantId: string, id: string): Promise<Venta | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("ventas").select(VENTA_COLS)
     .eq("tenant_id", tenantId).eq("id", id)
     .maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar venta")
   return data ? aVenta(data) : null
 }
 
@@ -290,19 +292,21 @@ export async function getVentasDeCaja(tenantId: string, cajaId: string): Promise
 // ── Caja ──
 
 export async function getCajaAbierta(tenantId: string): Promise<Caja | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("cajas").select("*")
     .eq("tenant_id", tenantId).eq("estado", "abierta")
     .maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar caja abierta")
   return data ? aCaja(data) : null
 }
 
 export async function getCajas(tenantId: string, limite = 20): Promise<Caja[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("cajas").select("*")
     .eq("tenant_id", tenantId)
     .order("apertura_at", { ascending: false })
     .limit(limite)
+  throwIfSupabaseError(error, "Error al listar cajas")
   return (data ?? []).map(aCaja)
 }
 
@@ -364,9 +368,10 @@ export interface ResumenCaja {
 }
 
 export async function getResumenCaja(caja: Caja): Promise<ResumenCaja> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("ventas").select("id, medio_pago, total")
     .eq("caja_id", caja.id).eq("estado", "completada")
+  throwIfSupabaseError(error, "Error al calcular resumen de caja")
 
   const ventas = (data ?? []) as Fila[]
   const idsMixtos = ventas.filter((f) => f.medio_pago === "mixto").map((f) => f.id as string)
@@ -375,10 +380,11 @@ export async function getResumenCaja(caja: Caja): Promise<ResumenCaja> {
   // un cobro de $500 efectivo + $500 tarjeta quedaba entero afuera del cajón.
   const efectivoPorMixto = new Map<string, number>()
   if (idsMixtos.length > 0) {
-    const { data: pagos } = await supabase
+    const { data: pagos, error: errorPagos } = await supabase
       .from("venta_pagos")
       .select("venta_id, medio_pago, monto")
       .in("venta_id", idsMixtos)
+    throwIfSupabaseError(errorPagos, "Error al calcular pagos mixtos de caja")
     for (const p of (pagos ?? []) as Fila[]) {
       const ventaId = p.venta_id as string
       const monto = num(p.monto)
@@ -510,10 +516,11 @@ async function getTopProductos(
 ): Promise<MetricasVentas["topProductos"]> {
   if (ventaIds.length === 0) return []
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("venta_items")
     .select("nombre, marca, cantidad, subtotal")
     .in("venta_id", ventaIds)
+  throwIfSupabaseError(error, "Error al calcular top de productos")
 
   const acumulado = new Map<string, { cantidad: number; total: number }>()
 

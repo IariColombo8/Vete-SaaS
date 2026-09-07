@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import { getClientesBasic } from "./clientes"
 import type { Historia, HistoriaClinicaRegistro } from "./types"
 
@@ -48,8 +49,9 @@ export async function getHistoriaClinicaRegistro(
   _clienteId: string,
   mascotaId: string,
 ): Promise<HistoriaClinicaRegistro | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("historia_clinica").select("*").eq("mascota_id", mascotaId).maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar historia clínica")
   if (!data) return null
   return {
     consultas: data.consultas ?? [],
@@ -127,10 +129,11 @@ export async function getHistorias(
   _clienteId: string,
   mascotaId: string,
 ): Promise<Historia[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("historias").select("*")
     .eq("mascota_id", mascotaId)
     .order("fecha_atencion", { ascending: false })
+  throwIfSupabaseError(error, "Error al cargar historias")
   return (data ?? []).map(aHistoria)
 }
 
@@ -139,8 +142,9 @@ export async function getHistoriasPublico(
   tenantId: string,
   mascotaId: string,
 ): Promise<Historia[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc("obtener_historias_publico", { p_tenant: tenantId, p_mascota_id: mascotaId })
+  throwIfSupabaseError(error, "Error al cargar historias públicas")
   return (data ?? []).map(aHistoria)
 }
 
@@ -213,16 +217,18 @@ export async function getClientesConMascotasYContadores(
     return { clientes: [], total: clientesConDNI.length, hasMore: false }
   }
 
-  const { data: filasMascotas } = await supabase
+  const { data: filasMascotas, error: errorMascotas } = await supabase
     .from("mascotas").select("*").in("cliente_id", ids)
+  throwIfSupabaseError(errorMascotas, "Error al cargar mascotas para el listado")
 
   const mascotaIds = (filasMascotas ?? []).map((m) => m.id as string)
-  const { data: filasHistorias } = mascotaIds.length
+  const { data: filasHistorias, error: errorHistorias } = mascotaIds.length
     ? await supabase
         .from("historias").select("*")
         .in("mascota_id", mascotaIds)
         .order("fecha_atencion", { ascending: false })
-    : { data: [] as Fila[] }
+    : { data: [] as Fila[], error: null }
+  throwIfSupabaseError(errorHistorias, "Error al cargar historias para el listado")
 
   // Agrupa historias por mascota, conservando el orden desc
   const historiasPorMascota = new Map<string, Historia[]>()

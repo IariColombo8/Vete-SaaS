@@ -1,4 +1,5 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 
 /**
  * Carrito de mostrador compartido (ver `supabase/025_carrito_pos.sql`).
@@ -12,11 +13,12 @@ export interface CarritoPosFila {
 }
 
 export async function getCarritoPos(tenantId: string): Promise<CarritoPosFila | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("carrito_pos")
     .select("data, client_id, updated_at")
     .eq("tenant_id", tenantId)
     .maybeSingle()
+  throwIfSupabaseError(error, "Error al cargar carrito compartido")
   if (!data) return null
   return {
     data: (data.data as Record<string, unknown>) ?? {},
