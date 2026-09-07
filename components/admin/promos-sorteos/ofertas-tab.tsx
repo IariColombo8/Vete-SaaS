@@ -87,7 +87,7 @@ export function OfertasTab({ tenantId }: Props) {
   const guardarProducto = async (input: ProductoInput) => {
     if (!editandoProducto) return
     try {
-      await updateProducto(tenantId, editandoProducto.id, input)
+      await updateProducto(tenantId, editandoProducto.id, input, editandoProducto.precio, editandoProducto.categoria)
       toast.success("Producto actualizado")
       cargarConOferta()
     } catch (e) {

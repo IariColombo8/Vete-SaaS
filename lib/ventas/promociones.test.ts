@@ -6,7 +6,7 @@ import type { Promocion } from "@/lib/supabase/types"
 
 function producto(id: string, precio: number): Producto {
   return {
-    id, nombre: id, descripcion: "", categoria: "Accesorios", precio, precioLista: precio,
+    id, nombre: id, descripcion: "", categoria: "Accesorios", categoriaManual: false, precio, precioLista: precio,
     stock: 100, stockMinimo: 0, controlaStock: true, unidad: "un",
     ofertaActiva: false, ofertaValor: 0, activo: true, revisar: false, publicadoEnLanding: false,
   }

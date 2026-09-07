@@ -23,11 +23,13 @@ npx tsc --noEmit   # verificar tipos sin compilar
 |------|-----------|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19 + shadcn/ui + Tailwind v4 |
-| Backend | Firebase (Firestore, Auth, Storage) |
-| Auth | Google OAuth 2.0 |
+| Backend | Supabase (Postgres + Auth + Storage + RLS) |
+| Auth | Supabase Auth (Google OAuth 2.0) |
 | Forms | react-hook-form + zod |
-| Email | EmailJS (cliente) |
-| Calendario | Google Calendar API (servidor, JWT) |
+| Email | Resend, server-side (`/api/email/send`) |
+| WhatsApp | WhatsApp Cloud API (Meta) |
+| Calendario / Gmail | Google Calendar API + Gmail API, por tenant (OAuth propio) |
+| Billing | Mercado Pago (suscripciones/preapproval) |
 | Deploy | Vercel |
 
 ---
@@ -44,21 +46,22 @@ components/turnos/         → flujo de reserva público
 context/slug-context.tsx   → SlugProvider + useSlug() hook
 hooks/turnos/              → lógica de dominio separada por responsabilidad
 hooks/useCurrentTenantId.ts → resuelve tenantId del usuario autenticado
-lib/firebase/              → capa de datos (config, auth, firestore, storage)
-app/api/                   → server routes (solo Google Calendar hoy)
+lib/supabase/               → capa de datos (config, auth, queries por dominio)
+app/api/                   → server routes (email, whatsapp, billing, google, crons)
 ```
 
-**Patrón de slug/tenant:** `app/[slug]/layout.tsx` lee `params.slug` y lo provee via `SlugProvider`. Los componentes hijo llaman `useSlug()` para obtenerlo. `VetAdminLayout` valida que el usuario autenticado tenga `tenantId === slug` (o sea `superadmin`) antes de renderizar.
+**Patrón de slug/tenant:** `app/[slug]/layout.tsx` lee `params.slug` y lo provee via `SlugProvider`. Los componentes hijo llaman `useSlug()` para obtenerlo. `VetAdminLayout` valida que el usuario autenticado tenga `tenantId === slug` (o sea `superadmin`) antes de renderizar. Ver `SaaS.md` para el detalle completo de cómo se garantiza el aislamiento entre tenants.
 
-**Patrón de datos en Firestore:**
-- `veterinarias/{slug}` — doc raíz de cada tenant
-- `veterinarias/{slug}/config/datos` — `TenantConfig` (nombre, plan, horarios, servicios, fotos…)
-- `veterinarias/{slug}/config/turno` — `TurnoConfig` (mascotas, servicios, vacunas disponibles)
-- `clientes/{id}/mascotas/{id}/historias` — historial clínico cronológico
-- `clientes/{id}/mascotas/{id}/historiaClinica/registro` — resumen consolidado
-- `turnos` — colección raíz (datos denormalizados para lectura rápida en admin)
-- `diasBloqueados` — disponibilidad
-- `usuarios` — auth + roles (`role`, `tenantId`, `isAdmin` deprecado)
+**Patrón de datos en Supabase (Postgres, ver `supabase/schema.sql`):**
+- `tenants` (PK `slug`) — datos del tenant (nombre, plan, horarios, servicios, fotos…)
+- `turno_config` (PK `tenant_id`) — mascotas, servicios, vacunas disponibles para el booking
+- `clientes` / `mascotas` / `historias` / `historia_clinica` — historial clínico, todas con `tenant_id`
+- `turnos` — tabla raíz con datos denormalizados (snapshot de cliente/mascota) para lectura rápida en admin
+- `dias_bloqueados` — disponibilidad
+- `usuarios` — espejo de `auth.users`, con `role` y `tenant_id`
+- `productos` / `ventas` / `venta_items` / `cajas` — catálogo, stock y POS (ver sección "Productos y stock")
+
+**Aislamiento entre tenants:** todas las tablas de negocio tienen `tenant_id` y RLS habilitada. Las policies usan `es_staff(tenant_id)` (función `security definer` en Postgres) para que el filtrado ocurra en la base, no en el cliente. Nunca se accede a Supabase con la `service_role` key desde código que sirve datos al usuario — solo en webhooks/crons, y ahí el filtro por tenant se hace a mano en el propio route.
 
 ---
 
@@ -66,15 +69,34 @@ app/api/                   → server routes (solo Google Calendar hoy)
 
 ### Seguridad
 
-**`isAdmin: false` por defecto** (`lib/firebase/auth.ts`)
-- Antes: todos los usuarios nuevos recibían `isAdmin: true` automáticamente.
-- Ahora: `isAdmin: false`. El acceso admin se asigna manualmente en Firestore.
-- Para dar acceso admin a un usuario: editar su documento en `usuarios/{uid}` → `isAdmin: true`.
+**`role: "usuario"` por defecto, sin auto-admin** (`supabase/schema.sql`, trigger `handle_new_user`)
+- Todo usuario nuevo se crea en `public.usuarios` con `role: "usuario"` (cliente común).
+- El acceso admin (`veterinario`/`empleado`/`superadmin`) se asigna manualmente en Supabase o vía invitación (ver "Sistema de roles").
 
 **`calendarId` obligatorio por env var** (`app/api/calendar/create-event/route.ts`)
 - Eliminado el fallback hardcodeado `"veterinariapriscilas@gmail.com"`.
 - Requiere `GOOGLE_CALENDAR_CALENDAR_ID` o `CALENDAR_ID` en `.env.local`.
 - Si falta, el endpoint responde 503 con mensaje claro.
+
+### Manejo de errores en `lib/supabase/`
+
+**Nunca descartar el `error` de una respuesta de Supabase.** `lib/supabase/assert.ts`
+expone `throwIfSupabaseError(error, contexto)`: loguea `message`/`details`/`hint`/`code`
+y relanza. Se usa en vez de `const { data } = await supabase...`, que dejaba `data` en
+`null`/`[]` cuando la query fallaba (RLS, FK ambiguo, columna renombrada) sin que el
+componente que llama tuviera forma de distinguir "sin resultados" de "la query explotó".
+
+Se detectó porque la libreta sanitaria dejaba de mostrar el detalle de un cliente sin
+ningún error visible: la migración de co-dueños de mascotas (`022_mascota_coduenos.sql`)
+agregó una segunda relación entre `clientes` y `mascotas` (vía `mascota_duenos`), así que
+el embed `mascotas(*)` en `getClienteCompleto` quedó ambiguo para PostgREST (`PGRST201`)
+y el error se perdía en silencio. Ahora ese `select` usa `mascotas!mascotas_cliente_id_fkey(*)`
+para forzar el FK correcto (solo el dueño principal, mismo comportamiento que antes de
+que existiera co-dueños).
+
+Al agregar un `select` con relación embebida (`tabla(...)`) entre `clientes` y `mascotas`,
+especificar siempre el FK (`mascotas!mascotas_cliente_id_fkey(*)`) para evitar que
+PostgREST la vuelva a marcar ambigua.
 
 ### Calidad de código
 
@@ -255,10 +277,10 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 ## Convenciones del proyecto
 
 - Español en UI, nombres de variables y comentarios.
-- Interfaces de Firestore en `lib/firebase/firestore.ts` (fuente de verdad de tipos).
+- Interfaces de datos en `lib/supabase/types.ts` (fuente de verdad de tipos) + `lib/supabase/queries.ts`. Columnas en Postgres van en snake_case; esa capa las mapea a camelCase para los componentes.
 - Hooks de dominio en `hooks/turnos/` — no mezclar lógica de fetch con componentes.
-- Evitar `any` en interfaces nuevas. Usar `import { Timestamp } from "firebase/firestore"` para timestamps.
-- `images: { unoptimized: true }` se mantiene intencionalmente (compatibilidad con Vercel + Firebase Storage).
+- Evitar `any` en interfaces nuevas. Los timestamps son `timestamptz` de Postgres, mapeados a `string`/`Date` en la capa de queries.
+- `images: { unoptimized: true }` se mantiene intencionalmente (compatibilidad con Vercel + Supabase Storage).
 
 ---
 
@@ -269,19 +291,27 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 | `/` | SaaS landing — VetPanel | Público |
 | `/[slug]` | Página pública de cada veterinaria | Público |
 | `/[slug]/turno` | Reserva de turno para ese tenant | Público |
+| `/[slug]/productos` | Catálogo público de productos | Público |
+| `/[slug]/libreta/[token]` | Libreta sanitaria pública (QR de la mascota) | Público (el token es el secreto) |
+| `/[slug]/cliente` | Área del cliente (sus turnos, sus mascotas) | Autenticado, dueño del email |
+| `/[slug]/mi-historia`, `/[slug]/mi-historia/[mascotaId]` | Historia clínica vista por el cliente | ídem |
+| `/[slug]/onboarding` | Wizard post-registro (templates de servicios/horarios) | `tenantId === slug` o `superadmin` |
 | `/[slug]/admin` | Dashboard del veterinario | `tenantId === slug` o `superadmin` |
-| `/[slug]/turnoadmin` | Gestión de turnos | ídem |
-| `/[slug]/libretasanitaria` | Libreta sanitaria / historial | ídem |
-| `/[slug]/clientes` | Listado de clientes | ídem |
-| `/[slug]/productos` | Productos y stock | ídem + plan Plus |
-| `/[slug]/pos` | Punto de venta (mostrador) | ídem + plan Pro |
-| `/[slug]/ventas` | Dashboard de ventas y remitos | ídem + plan Pro |
-| `/[slug]/caja` | Apertura, arqueo y cierre de caja | ídem + plan Pro |
-| `/[slug]/configuracion` | Config del tenant | ídem |
-| `/v/[slug]` | Alias público alternativo | Público |
+| `/[slug]/admin/Turnos` | Gestión de turnos | ídem |
+| `/[slug]/admin/Libreta` | Libreta sanitaria / historial | ídem |
+| `/[slug]/admin/Clientes` | Listado de clientes | ídem |
+| `/[slug]/admin/Productos` | Productos y stock | ídem + plan Plus |
+| `/[slug]/admin/Vender` | Punto de venta (mostrador/POS) | ídem + plan Pro |
+| `/[slug]/admin/Ventas` | Dashboard de ventas y remitos | ídem + plan Pro |
+| `/[slug]/admin/Caja` | Apertura, arqueo y cierre de caja | ídem + plan Pro |
+| `/[slug]/admin/CuentaCorriente` | Cuentas corrientes de clientes | ídem + plan Pro |
+| `/[slug]/admin/PromosSorteos` | Ofertas, promos y sorteos | ídem |
+| `/[slug]/admin/Configuracion` | Config del tenant | ídem |
 | `/mis-turnos` | Turnos del cliente | Autenticado |
-| `/login` | Google OAuth | Público |
+| `/login` | Google OAuth (Supabase Auth) | Público |
 | `/registro` | Registro | Público |
+| `/pricing` | Planes y precios | Público |
+| `/blog`, `/blog/[slug]` | Blog SEO (file-based, `content/blog/*.md`) | Público |
 | `/superadmin` | Panel global | solo `superadmin` |
 
 **Navbar:** componente inteligente en `components/navbar.tsx`:
@@ -293,28 +323,29 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 
 ## Sistema de roles
 
-Definido en `lib/firebase/firestore.ts`:
+Definido en `lib/supabase/types.ts` / `lib/supabase/queries.ts` (enum `user_role` en Postgres):
 ```typescript
-type UserRole = "superadmin" | "veterinario" | "usuario"
+type UserRole = "superadmin" | "veterinario" | "empleado" | "usuario"
 ```
 
 | Rol | Acceso | Cómo asignar |
 |-----|--------|--------------|
-| `superadmin` | `/superadmin` + todo | Firestore manual: `role: "superadmin"` |
-| `veterinario` | `/admin` | Firestore manual: `role: "veterinario"` |
-| `usuario` | Reservar turnos | Default en registro |
+| `superadmin` | `/superadmin` + todo | Manual en Supabase: `usuarios.role = 'superadmin'` |
+| `veterinario` | Panel completo del tenant, incluida configuración y facturación | Manual en Supabase, o invitación desde el panel |
+| `empleado` | Panel operativo (turnos, libreta, clientes, mostrador/POS, ventas, caja, cuenta corriente, promos) — sin configuración ni equipo | Invitación desde `/[slug]/admin/Configuracion` → Equipo |
+| `usuario` | Reservar turnos, ver su libreta/turnos | Default al registrarse (trigger `handle_new_user`) |
 
-**Backward compat:** si el campo `role` no existe pero `isAdmin: true`, se trata como `veterinario`.
+Los permisos por sección están centralizados en `lib/auth/permissions.ts` (`canAccessSection`, `canManageTeam`) — no repetir ese chequeo ad hoc en componentes.
 
-**`tenantId` en `usuarios/{uid}`:** indica a qué veterinaria pertenece el veterinario. `VetAdminLayout` verifica `userData.tenantId === slug` antes de dar acceso. El `tenantId` siempre se resuelve desde la URL (`useSlug()`) — no hay fallback hardcodeado.
+**`tenant_id` en `usuarios`:** indica a qué veterinaria pertenece el staff. `VetAdminLayout` verifica `usuarios.tenant_id === slug` (vía `es_staff`, ver `SaaS.md`) antes de dar acceso. El `tenantId` siempre se resuelve desde la URL (`useSlug()`) — no hay fallback hardcodeado. RLS en Postgres es la garantía real; la verificación en el layout es una segunda capa de UX, no la única defensa.
 
-**Para dar acceso a un veterinario:**
-1. El usuario debe iniciar sesión una vez (se crea su doc en `usuarios/{uid}`)
-2. En Firestore → `usuarios/{uid}` → editar `role: "veterinario"` y `tenantId: "<slug>"`
+**Para dar acceso a un veterinario/empleado:**
+1. El usuario debe iniciar sesión una vez (el trigger `handle_new_user` crea su fila en `usuarios`).
+2. Se invita desde `/[slug]/admin/Configuracion` → Equipo (tabla `invitaciones`, auto-aceptación al loguear), o se edita manualmente `usuarios.role` y `usuarios.tenant_id` en Supabase.
 
 **Para dar acceso superadmin:**
-1. El usuario debe iniciar sesión una vez
-2. En Firestore → `usuarios/{uid}` → editar `role: "superadmin"`
+1. El usuario debe iniciar sesión una vez.
+2. En Supabase → tabla `usuarios` → editar `role = 'superadmin'`.
 
 **`ProtectedRoute`** acepta `requiredRole`:
 ```tsx
@@ -323,31 +354,15 @@ type UserRole = "superadmin" | "veterinario" | "usuario"
 
 ---
 
-## Preparación para SaaS multi-tenant
+## Multi-tenant y aislamiento de datos
 
-El proyecto está hoy en modo **single-tenant** (una veterinaria). Las siguientes decisiones de diseño lo preparan para escalar sin reescritura total:
+El proyecto **ya es multi-tenant en producción** sobre Supabase/Postgres: cada
+tenant (veterinaria) es una fila en `tenants` (PK `slug`), toda tabla de
+negocio lleva `tenant_id`, y Row Level Security filtra en la base de datos —
+no en el cliente. Ver **`SaaS.md`** para el detalle completo de cómo funciona
+el aislamiento, qué garantías da RLS, y qué checklist seguir al agregar una
+tabla o un tenant nuevo (incluye el caso de sumar un negocio de otro rubro,
+como una distribuidora, al mismo sistema).
 
-### Qué ya está bien encaminado
-
-- **Datos aislables por `clienteId`/`mascotaId`**: la estructura de subcolecciones de Firestore es compatible con aislamiento por tenant. Agregar un campo `tenantId` a nivel raíz es suficiente.
-- **Auth desacoplada del rol**: `isAdmin` vive en Firestore, no en Firebase Auth Custom Claims. Migrar a claims o agregar `tenantId` + `role` en el documento `usuarios` es un cambio localizado en `lib/firebase/auth.ts`.
-- **API Routes en servidor**: `app/api/` ya corre server-side. Agregar middleware de autenticación multi-tenant es directo con Next.js middleware.
-- **EmailJS y Google Calendar configurados por env vars**: reemplazable por configuración por tenant sin tocar lógica.
-
-### Camino hacia multi-tenant (cuando se necesite)
-
-1. **Modelo de datos**: agregar `tenantId: string` a documentos `turnos`, `clientes`, `diasBloqueados`. Las subcolecciones de mascotas e historias heredan el aislamiento por su path.
-
-2. **Firestore Security Rules**: cambiar reglas de `request.auth != null` a `request.auth.token.tenantId == resource.data.tenantId`. Requiere Firebase Custom Claims.
-
-3. **Colección `tenants`**: crear colección raíz con configuración por veterinaria (nombre, logo, calendarId, emailjs keys, horarios, timezone). Reemplaza las env vars hardcodeadas por tenant.
-
-4. **Middleware de Next.js**: `middleware.ts` resuelve el tenant desde el subdominio (`clinica-a.app.com`) o path (`/app/clinica-a/`) y lo inyecta en el contexto de cada request.
-
-5. **Admin por tenant**: el campo `isAdmin` pasa a ser `role: "owner" | "staff" | "client"` con `tenantId` asociado.
-
-### Lo que NO cambiar para facilitar la migración
-
-- No romper la estructura de subcolecciones de Firestore (ya es correcta para multi-tenant).
-- No mezclar datos de configuración dentro de los documentos de turnos/clientes.
-- No hardcodear IDs de calendario, emails ni keys (ya corregido).
+No se usan subdominios por tenant — el aislamiento es por fila (`tenant_id` +
+RLS) y por ruta (`/[slug]/...`), no por infraestructura separada.

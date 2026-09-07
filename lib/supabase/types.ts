@@ -309,6 +309,12 @@ export interface Producto {
   nombre: string
   descripcion: string
   categoria: string
+  /**
+   * true = el rubro lo fijó una persona (alta, edición o cambio masivo), no
+   * un Excel. Con la marca puesta, reimportar una lista de precios no toca
+   * `categoria`.
+   */
+  categoriaManual: boolean
   imagenUrl?: string
   precio: number
   /**

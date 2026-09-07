@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx-js-style"
-import type { FilaImportacion } from "@/lib/supabase/productos"
+import type { FilaImportacion, ProductoParaComparar } from "@/lib/supabase/productos"
 
 /**
  * Lectura y mapeo de una lista de precios en Excel.
@@ -199,4 +199,73 @@ export function parsearFilas(
   })
 
   return resultado
+}
+
+// ── Vista previa: qué va a cambiar antes de confirmar ──
+
+export type TipoCambio = "nuevo" | "costo" | "categoria"
+
+export interface FilaComparada {
+  numeroFila: number
+  tipos: TipoCambio[]
+  /** true = el rubro de la fila es distinto al que ya tiene el producto, pero no se va a tocar porque quedó fijado a mano. */
+  categoriaProtegida: boolean
+}
+
+function normalizado(texto: string): string {
+  return texto.trim().toLowerCase()
+}
+
+/**
+ * Compara las filas ya parseadas del Excel contra el catálogo actual para
+ * mostrar, antes de confirmar, qué productos son nuevos, a cuáles les cambia
+ * el costo del proveedor y a cuáles les cambiaría el rubro.
+ *
+ * Replica el mismo orden de matching que la RPC `importar_productos` en la
+ * base (código de barras → código interno → nombre + categoría), para que la
+ * vista previa diga lo mismo que después va a hacer la importación real.
+ *
+ * El costo (no `precio`) es la columna que trae el Excel — `precio` en la
+ * fila parseada vale lo mismo que `costo` porque el precio de venta se
+ * define aparte con "Aplicar ganancia", así que comparar contra el `precio`
+ * de venta actual (que ya tiene margen) marcaría como "cambia" casi todo el
+ * catálogo sin que sea cierto.
+ */
+export function compararFilas(
+  filas: FilaParseada[],
+  existentes: ProductoParaComparar[],
+): FilaComparada[] {
+  const porBarra = new Map<string, ProductoParaComparar>()
+  const porCodigo = new Map<string, ProductoParaComparar>()
+  const porNombreCategoria = new Map<string, ProductoParaComparar>()
+  for (const p of existentes) {
+    if (p.codigoBarras) porBarra.set(p.codigoBarras, p)
+    if (p.codigo) porCodigo.set(p.codigo, p)
+    if (!p.codigo && !p.codigoBarras) {
+      porNombreCategoria.set(`${normalizado(p.nombre)} ${normalizado(p.categoria)}`, p)
+    }
+  }
+
+  return filas.map((f) => {
+    let existente: ProductoParaComparar | undefined
+    if (f.barra) existente = porBarra.get(f.barra)
+    if (!existente && f.codigo) existente = porCodigo.get(f.codigo)
+    if (!existente && !f.codigo && !f.barra && f.descripcion) {
+      existente = porNombreCategoria.get(`${normalizado(f.descripcion)} ${normalizado(f.categoria)}`)
+    }
+
+    if (!existente) {
+      return { numeroFila: f.numeroFila, tipos: ["nuevo"], categoriaProtegida: false }
+    }
+
+    const tipos: TipoCambio[] = []
+    const costoAnterior = existente.costo ?? existente.precio
+    if (Math.round((f.costo ?? 0) * 100) !== Math.round(costoAnterior * 100)) tipos.push("costo")
+
+    const categoriaDistinta = normalizado(f.categoria) !== normalizado(existente.categoria)
+    const categoriaProtegida = categoriaDistinta && existente.categoriaManual
+    if (categoriaDistinta && !existente.categoriaManual) tipos.push("categoria")
+
+    return { numeroFila: f.numeroFila, tipos, categoriaProtegida }
+  })
 }

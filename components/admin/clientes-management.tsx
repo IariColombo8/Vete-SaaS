@@ -149,18 +149,21 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   }, [searchTerm, clientes]);
 
   // Precarga las mascotas de una lista de clientes (para el resumen en la tabla).
+  // En paralelo: son requests independientes, esperarlos en cadena multiplica
+  // la demora de carga inicial por la cantidad de clientes de la página.
   const precargarMascotas = async (lista: Cliente[]) => {
-    const map: Record<string, Mascota[]> = {};
-    for (const c of lista) {
-      if (c.id) {
-        try {
-          map[c.id] = await getMascotas(tenantId, c.id);
-        } catch {
-          map[c.id] = [];
-        }
-      }
-    }
-    setMascotasByClienteId((prev) => ({ ...prev, ...map }));
+    const entries = await Promise.all(
+      lista
+        .filter((c): c is Cliente & { id: string } => !!c.id)
+        .map(async (c) => {
+          try {
+            return [c.id, await getMascotas(tenantId, c.id)] as const;
+          } catch {
+            return [c.id, []] as const;
+          }
+        })
+    );
+    setMascotasByClienteId((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
   };
 
   // Carga inicial: primera página cursor-based.

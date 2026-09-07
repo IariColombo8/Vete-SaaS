@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import * as XLSX from "xlsx-js-style"
-import { parsearFilas, limpiarMarca, detectarPesoKg } from "./importar"
+import { parsearFilas, limpiarMarca, detectarPesoKg, compararFilas, type FilaParseada } from "./importar"
+import type { ProductoParaComparar } from "@/lib/supabase/productos"
 
 function workbookDeFilas(filas: (string | number)[][]): XLSX.WorkBook {
   const hoja = XLSX.utils.aoa_to_sheet(filas)
@@ -237,5 +238,110 @@ describe("detectarPesoKg", () => {
 
   it("no confunde la cantidad de unidades por caja (x 12 u) con un peso", () => {
     expect(detectarPesoKg("SOBRES SURTIDOS (x 12 u)")).toBeUndefined()
+  })
+})
+
+function fila(overrides: Partial<FilaParseada>): FilaParseada {
+  return {
+    numeroFila: 2,
+    barra: "",
+    codigo: "",
+    descripcion: "Amoxidal 500mg",
+    marca: "Bagó",
+    unidad: "un",
+    categoria: "Medicamentos",
+    precio: 1000,
+    costo: 1000,
+    rubro: "",
+    subrubro: "",
+    stock: 0,
+    revisar: false,
+    advertencias: [],
+    ...overrides,
+  }
+}
+
+function existente(overrides: Partial<ProductoParaComparar>): ProductoParaComparar {
+  return {
+    nombre: "Amoxidal 500mg",
+    categoria: "Medicamentos",
+    categoriaManual: false,
+    precio: 1500,
+    costo: 1000,
+    ...overrides,
+  }
+}
+
+describe("compararFilas", () => {
+  it("marca como nuevo un producto que no matchea por código, barra ni nombre+categoría", () => {
+    const [c] = compararFilas([fila({ codigo: "A001" })], [])
+    expect(c.tipos).toEqual(["nuevo"])
+  })
+
+  it("matchea por código de barras primero, aunque el código interno no coincida", () => {
+    const [c] = compararFilas(
+      [fila({ barra: "7791234", codigo: "NUEVO", costo: 1000 })],
+      [existente({ codigoBarras: "7791234", codigo: "VIEJO", costo: 1000 })],
+    )
+    expect(c.tipos).toEqual([])
+  })
+
+  it("matchea por código interno cuando no hay barra", () => {
+    const [c] = compararFilas(
+      [fila({ codigo: "A001", costo: 1000 })],
+      [existente({ codigo: "A001", costo: 1000 })],
+    )
+    expect(c.tipos).toEqual([])
+  })
+
+  it("matchea por nombre + categoría cuando la fila no trae código ni barra", () => {
+    const [c] = compararFilas(
+      [fila({ descripcion: "Amoxidal 500mg", categoria: "Medicamentos", costo: 1000 })],
+      [existente({ nombre: "Amoxidal 500mg", categoria: "Medicamentos", costo: 1000 })],
+    )
+    expect(c.tipos).toEqual([])
+  })
+
+  it("detecta que cambió el costo del proveedor, no el precio de venta con margen", () => {
+    // El existente vende a 1500 (con margen) pero el costo del proveedor no cambió.
+    const [c] = compararFilas(
+      [fila({ codigo: "A001", costo: 1000 })],
+      [existente({ codigo: "A001", precio: 1500, costo: 1000 })],
+    )
+    expect(c.tipos).toEqual([])
+  })
+
+  it("marca 'costo' cuando el costo del Excel es distinto al guardado", () => {
+    const [c] = compararFilas(
+      [fila({ codigo: "A001", costo: 1200 })],
+      [existente({ codigo: "A001", costo: 1000 })],
+    )
+    expect(c.tipos).toEqual(["costo"])
+  })
+
+  it("marca 'categoria' cuando el rubro del Excel difiere y no está protegido", () => {
+    const [c] = compararFilas(
+      [fila({ codigo: "A001", categoria: "Accesorios", costo: 1000 })],
+      [existente({ codigo: "A001", categoria: "Medicamentos", categoriaManual: false, costo: 1000 })],
+    )
+    expect(c.tipos).toEqual(["categoria"])
+    expect(c.categoriaProtegida).toBe(false)
+  })
+
+  it("no marca 'categoria' cuando el rubro quedó fijado a mano, pero avisa que está protegido", () => {
+    const [c] = compararFilas(
+      [fila({ codigo: "A001", categoria: "Accesorios", costo: 1000 })],
+      [existente({ codigo: "A001", categoria: "Medicamentos", categoriaManual: true, costo: 1000 })],
+    )
+    expect(c.tipos).toEqual([])
+    expect(c.categoriaProtegida).toBe(true)
+  })
+
+  it("puede marcar costo y categoría a la vez", () => {
+    const [c] = compararFilas(
+      [fila({ codigo: "A001", categoria: "Accesorios", costo: 1200 })],
+      [existente({ codigo: "A001", categoria: "Medicamentos", categoriaManual: false, costo: 1000 })],
+    )
+    expect(c.tipos.sort()).toEqual(["categoria", "costo"])
   })
 })

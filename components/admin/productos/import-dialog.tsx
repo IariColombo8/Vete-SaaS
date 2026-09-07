@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import {
   Upload, AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileSpreadsheet,
-  Pill, Bone, PawPrint, ClipboardList, ChevronDown, ChevronUp,
+  Pill, Bone, PawPrint, Tag, Plus, Sparkles, ShieldCheck, ClipboardList, ChevronDown, ChevronUp,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -13,28 +13,38 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
-  leerArchivo, parsearFilas,
-  type FilaParseada,
+  leerArchivo, parsearFilas, compararFilas,
+  type FilaParseada, type FilaComparada,
 } from "@/lib/productos/importar"
-import { importarProductos, type EstrategiaStock, type ResumenImportacion } from "@/lib/supabase/productos"
+import {
+  importarProductos, getProductosParaComparar,
+  type EstrategiaStock, type ResumenImportacion,
+} from "@/lib/supabase/productos"
+import { CATEGORIAS_FIJAS, ordenarCategorias } from "@/lib/productos/categorias"
 import { cn } from "@/lib/utils"
 import type * as XLSX from "xlsx-js-style"
 
 interface Props {
   tenantId: string
+  categoriasExistentes: string[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onImportado: () => void
 }
 
 type Paso = "categoria" | "archivo" | "revision" | "progreso" | "resultado"
-type Categoria = "Medicamentos" | "Alimentos" | "Accesorios"
 
-const CATEGORIAS: { value: Categoria; icon: typeof Pill; descripcion: string }[] = [
-  { value: "Medicamentos", icon: Pill, descripcion: "Fármacos y productos veterinarios" },
-  { value: "Alimentos", icon: Bone, descripcion: "Balanceados, snacks y suplementos" },
-  { value: "Accesorios", icon: PawPrint, descripcion: "Correas, juguetes, higiene y demás" },
-]
+const ICONO_CATEGORIA: Record<string, typeof Pill> = {
+  Medicamentos: Pill,
+  Alimentos: Bone,
+  Accesorios: PawPrint,
+}
+
+const DESCRIPCION_CATEGORIA: Record<string, string> = {
+  Medicamentos: "Fármacos y productos veterinarios",
+  Alimentos: "Balanceados, snacks y suplementos",
+  Accesorios: "Correas, juguetes, higiene y demás",
+}
 
 /**
  * Estas listas no traen stock, así que la única estrategia que tiene sentido
@@ -46,13 +56,17 @@ const ESTRATEGIA_FIJA: EstrategiaStock = "no_tocar"
 /** Las filas se mandan de a tandas: cada una es una transacción en la base. */
 const TAMANIO_LOTE = 200
 
-export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Props) {
+export function ImportDialog({ tenantId, categoriasExistentes, open, onOpenChange, onImportado }: Props) {
   const [paso, setPaso] = useState<Paso>("categoria")
-  const [categoria, setCategoria] = useState<Categoria | null>(null)
+  const [categoria, setCategoria] = useState("")
+  const [agregandoCategoria, setAgregandoCategoria] = useState(false)
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null)
   const [totalFilasArchivo, setTotalFilasArchivo] = useState(0)
   const [filaInicio, setFilaInicio] = useState(2)
   const [filas, setFilas] = useState<FilaParseada[]>([])
+  const [comparaciones, setComparaciones] = useState<FilaComparada[]>([])
+  const [comparando, setComparando] = useState(false)
+  const [cambiosAbierto, setCambiosAbierto] = useState(false)
   const [incluirConAdvertencias, setIncluirConAdvertencias] = useState(true)
   const [revisarAbierto, setRevisarAbierto] = useState(true)
   const [progreso, setProgreso] = useState({ hechas: 0, total: 0 })
@@ -60,9 +74,14 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
   const [error, setError] = useState("")
   const [leyendo, setLeyendo] = useState(false)
 
+  const opcionesCategoria = ordenarCategorias(
+    Array.from(new Set([...CATEGORIAS_FIJAS, ...categoriasExistentes])),
+  ).filter((c) => c !== "Servicio")
+
   const reiniciar = () => {
-    setPaso("categoria"); setCategoria(null); setWorkbook(null); setTotalFilasArchivo(0)
-    setFilaInicio(2); setFilas([])
+    setPaso("categoria"); setCategoria(""); setAgregandoCategoria(false)
+    setWorkbook(null); setTotalFilasArchivo(0)
+    setFilaInicio(2); setFilas([]); setComparaciones([]); setCambiosAbierto(false)
     setIncluirConAdvertencias(true); setRevisarAbierto(true); setProgreso({ hechas: 0, total: 0 })
     setResumen(null); setError("")
   }
@@ -86,10 +105,23 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
     }
   }
 
-  const irARevision = () => {
-    if (!workbook || !categoria) return
-    setFilas(parsearFilas(workbook, categoria, filaInicio))
+  const irARevision = async () => {
+    if (!workbook || !categoria.trim()) return
+    const parseadas = parsearFilas(workbook, categoria.trim(), filaInicio)
+    setFilas(parseadas)
     setPaso("revision")
+
+    // La comparación es informativa: si falla (sin conexión, etc.) la
+    // importación tiene que poder seguir igual, solo sin la vista previa.
+    setComparando(true)
+    try {
+      const existentes = await getProductosParaComparar(tenantId)
+      setComparaciones(compararFilas(parseadas, existentes))
+    } catch {
+      setComparaciones([])
+    } finally {
+      setComparando(false)
+    }
   }
 
   /**
@@ -132,6 +164,17 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
     const conAdvertencias = filas.filter((f) => f.advertencias.length > 0).length
     return { total: filas.length, conAdvertencias, ok: filas.length - conAdvertencias }
   }, [filas])
+
+  // `comparaciones[i]` corresponde a `filas[i]`: compararFilas conserva el orden.
+  const resumenCambios = useMemo(() => {
+    const detalle = filas.map((f, i) => ({ fila: f, comparacion: comparaciones[i] })).filter((d) => d.comparacion)
+    return {
+      nuevos: detalle.filter((d) => d.comparacion.tipos.includes("nuevo")),
+      cambianCosto: detalle.filter((d) => d.comparacion.tipos.includes("costo")),
+      cambianCategoria: detalle.filter((d) => d.comparacion.tipos.includes("categoria")),
+      protegidos: detalle.filter((d) => d.comparacion.categoriaProtegida),
+    }
+  }, [filas, comparaciones])
 
   const importar = async () => {
     const usables = incluirConAdvertencias
@@ -195,25 +238,64 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
             <p className="text-sm text-muted-foreground">
               ¿Qué lista de precios vas a importar?
             </p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {CATEGORIAS.map((c) => (
+
+            {agregandoCategoria ? (
+              <div className="rounded-xl border p-4">
+                <Label className="mb-1 block text-xs text-muted-foreground">Nombre de la categoría</Label>
+                <Input
+                  autoFocus
+                  value={categoria}
+                  onChange={(e) => setCategoria(e.target.value)}
+                  placeholder="Ej: Juguetes, Vacunas, Arneses…"
+                />
                 <button
-                  key={c.value}
                   type="button"
-                  onClick={() => setCategoria(c.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors",
-                    categoria === c.value
-                      ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40"
-                      : "hover:bg-muted",
-                  )}
+                  className="mt-2 text-xs text-muted-foreground underline underline-offset-2"
+                  onClick={() => { setAgregandoCategoria(false); setCategoria("") }}
                 >
-                  <c.icon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{c.value}</span>
-                  <span className="text-xs text-muted-foreground">{c.descripcion}</span>
+                  Elegir de la lista
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {opcionesCategoria.map((c) => {
+                  const Icono = ICONO_CATEGORIA[c] ?? Tag
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategoria(c)}
+                      className={cn(
+                        "flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors",
+                        categoria === c
+                          ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      <Icono className="h-5 w-5" />
+                      <span className="text-sm font-medium">{c}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {DESCRIPCION_CATEGORIA[c] ?? "Categoría propia de esta veterinaria"}
+                      </span>
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={() => { setAgregandoCategoria(true); setCategoria("") }}
+                  className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-center text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="text-sm font-medium">Agregar categoría</span>
+                </button>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Medicamentos, Alimentos y Accesorios siempre están disponibles. El resto son las que
+              ya usás en esta veterinaria — otras clínicas pueden tener rubros distintos (Juguetes,
+              Vacunas, Arneses…), cada una con los suyos.
+            </p>
           </div>
         )}
 
@@ -255,6 +337,81 @@ export function ImportDialog({ tenantId, open, onOpenChange, onImportado }: Prop
 
         {paso === "revision" && (
           <div className="space-y-4">
+            {comparando && (
+              <p className="text-center text-xs text-muted-foreground">Comparando contra el catálogo actual…</p>
+            )}
+
+            {!comparando && comparaciones.length > 0 && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{resumenCambios.nuevos.length}</p>
+                    <p className="text-xs text-muted-foreground">Productos nuevos</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
+                    <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{resumenCambios.cambianCosto.length}</p>
+                    <p className="text-xs text-muted-foreground">Cambia el costo</p>
+                  </div>
+                  <div className="rounded-lg bg-purple-50 p-3 dark:bg-purple-950/30">
+                    <p className="text-lg font-bold text-purple-700 dark:text-purple-400">{resumenCambios.cambianCategoria.length}</p>
+                    <p className="text-xs text-muted-foreground">Cambia de rubro</p>
+                  </div>
+                </div>
+
+                {resumenCambios.protegidos.length > 0 && (
+                  <p className="flex items-start gap-1.5 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                    <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    {resumenCambios.protegidos.length} producto{resumenCambios.protegidos.length === 1 ? "" : "s"} trae
+                    {resumenCambios.protegidos.length === 1 ? "" : "n"} otro rubro en el Excel, pero no se va a tocar
+                    porque {resumenCambios.protegidos.length === 1 ? "lo cambiaste" : "los cambiaste"} a mano antes.
+                  </p>
+                )}
+
+                {(resumenCambios.nuevos.length > 0 || resumenCambios.cambianCosto.length > 0 || resumenCambios.cambianCategoria.length > 0) && (
+                  <div className="rounded-lg border">
+                    <button
+                      type="button"
+                      onClick={() => setCambiosAbierto((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 shrink-0" /> Ver el detalle de los cambios
+                      </span>
+                      {cambiosAbierto ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+
+                    {cambiosAbierto && (
+                      <div className="max-h-64 overflow-y-auto border-t p-2 text-xs text-muted-foreground">
+                        {filas.map((f, i) => {
+                          const c = comparaciones[i]
+                          if (!c || (c.tipos.length === 0 && !c.categoriaProtegida)) return null
+                          return (
+                            <div key={f.numeroFila} className="flex items-center justify-between gap-2 border-b border-dashed py-1.5 last:border-0">
+                              <p className="min-w-0 flex-1 truncate">{f.descripcion || "(sin nombre)"}</p>
+                              <div className="flex shrink-0 gap-1">
+                                {c.tipos.includes("nuevo") && (
+                                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">Nuevo</span>
+                                )}
+                                {c.tipos.includes("costo") && (
+                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">Costo</span>
+                                )}
+                                {c.tipos.includes("categoria") && (
+                                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400">Rubro</span>
+                                )}
+                                {c.categoriaProtegida && (
+                                  <span className="rounded-full bg-muted px-2 py-0.5">Rubro protegido</span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {stats.conAdvertencias > 0 && (
               <div className="rounded-lg border border-amber-300 dark:border-amber-900">
                 <button

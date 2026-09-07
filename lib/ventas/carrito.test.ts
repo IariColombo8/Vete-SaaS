@@ -19,6 +19,7 @@ function producto(over: Partial<Producto> = {}): Producto {
     nombre: "Producto",
     descripcion: "",
     categoria: "",
+    categoriaManual: false,
     precio: 1000,
     precioLista: 1000,
     stock: 10,

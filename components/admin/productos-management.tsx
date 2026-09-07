@@ -306,7 +306,7 @@ export function ProductosManagement({ tenantId }: Props) {
   const guardarProducto = async (input: ProductoInput) => {
     try {
       if (editando) {
-        await updateProducto(tenantId, editando.id, input)
+        await updateProducto(tenantId, editando.id, input, editando.precio, editando.categoria)
         toast.success("Producto actualizado")
       } else {
         await createProducto(tenantId, input)
@@ -928,6 +928,7 @@ export function ProductosManagement({ tenantId }: Props) {
 
       <ImportDialog
         tenantId={tenantId}
+        categoriasExistentes={categorias}
         open={importOpen}
         onOpenChange={setImportOpen}
         onImportado={recargarTodo}
