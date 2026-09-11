@@ -1,6 +1,8 @@
 "use client"
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import {
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet"
 import { formatCurrency } from "@/lib/format"
 import { precioFinal, comboLabel } from "@/lib/productos/precios"
 import type { Producto, Promocion } from "@/lib/supabase/types"
@@ -27,6 +29,9 @@ export function OfertasPromosPanel({
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Ofertas y promociones vigentes</SheetTitle>
+          <SheetDescription>
+            Tocá una oferta o promoción para agregarla al carrito.
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-6 overflow-y-auto">

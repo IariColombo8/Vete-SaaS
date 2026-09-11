@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ShoppingCart, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { BuscadorProductos } from "./pos/buscador-productos"
 import { CajaBar } from "./pos/caja-bar"
 import { CantidadDialog } from "./pos/cantidad-dialog"
@@ -395,6 +395,9 @@ export function PosManagement({ tenantId }: Props) {
       <Dialog open={carritoAbierto} onOpenChange={setCarritoAbierto}>
         <DialogContent className="flex h-[95dvh] max-w-md flex-col gap-0 p-0 sm:h-[80vh]">
           <DialogTitle className="sr-only">Carrito</DialogTitle>
+          <DialogDescription className="sr-only">
+            Productos agregados a la venta, cliente y forma de pago.
+          </DialogDescription>
           {carritoPanel}
         </DialogContent>
       </Dialog>
