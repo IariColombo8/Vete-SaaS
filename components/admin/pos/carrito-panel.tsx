@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ClienteSelector } from "./cliente-selector"
+import { esConsumidorFinal } from "@/lib/clientes/consumidor-final"
 import { MixtoPagos, type LineaPagoMixto } from "./mixto-pagos"
 import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-dialog"
 import {
@@ -96,7 +97,9 @@ export function CarritoPanel({
 
   const sumaMixto = pagosMixto.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
   const mixtoValido = !esMixto || Math.abs(sumaMixto - totalACobrar) < 0.01
-  const ctaCteValida = !esCtaCte || cliente !== null
+  // La fila "Consumidor final" es un cliente real, así que `!== null` ya no
+  // alcanza: fiarle al público dejaría deuda a nombre de nadie.
+  const ctaCteValida = !esCtaCte || (cliente !== null && !esConsumidorFinal(cliente))
 
   // Se corrige acá, en el momento en que el vendedor nota que agregó el
   // producto mal (ej. lo vendió entero cuando en realidad es suelto por
@@ -209,8 +212,16 @@ export function CarritoPanel({
           </div>
         </div>
 
+        {/* En cuenta corriente la fila "Consumidor final" no cuenta como
+            cliente elegido: se muestra el pedido en rojo hasta que se elija a
+            una persona real, que es lo mismo que valida `cobrar`. */}
         {esCtaCte && (
-          <ClienteSelector tenantId={tenantId} seleccionado={cliente} onCambiar={onCliente} obligatorio />
+          <ClienteSelector
+            tenantId={tenantId}
+            seleccionado={esConsumidorFinal(cliente) ? null : cliente}
+            onCambiar={onCliente}
+            obligatorio
+          />
         )}
 
         {esDebito && (

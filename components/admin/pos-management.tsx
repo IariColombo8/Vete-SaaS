@@ -29,6 +29,7 @@ import {
 } from "@/lib/ventas/carrito"
 import { getCajaAbierta, getVenta, registrarVenta } from "@/lib/supabase/ventas"
 import { getSaldoCliente } from "@/lib/supabase/cuentaCorriente"
+import { esConsumidorFinal } from "@/lib/clientes/consumidor-final"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { getOrCrearServicioAtencion, getProductoPorId, getProductos } from "@/lib/supabase/productos"
 import { getPromocionesVigentes } from "@/lib/supabase/promociones"
@@ -241,8 +242,11 @@ export function PosManagement({ tenantId }: Props) {
   const cobrar = async () => {
     if (carrito.length === 0) return
 
-    if (medioPago === "cuenta_corriente" && !cliente) {
-      toast.error("Elegí un cliente para vender a cuenta corriente")
+    // "Consumidor final" es una fila real, así que acá no alcanza con que haya
+    // un cliente: fiarle al público acumularía deuda sobre alguien que no
+    // existe y nadie podría pagarla nunca.
+    if (medioPago === "cuenta_corriente" && (!cliente || esConsumidorFinal(cliente))) {
+      toast.error("Elegí un cliente real para vender a cuenta corriente")
       return
     }
 
