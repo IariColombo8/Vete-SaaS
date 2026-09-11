@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Check, ChevronsUpDown, Loader2, UserPlus, UserRound, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  AlertTriangle, Check, ChevronsUpDown, Loader2, RefreshCw, UserPlus, UserRound, X,
+} from "lucide-react"
 import { toast } from "sonner"
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -43,16 +45,35 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
   const [dniNuevo, setDniNuevo] = useState("")
   const [telefonoNuevo, setTelefonoNuevo] = useState("")
   const [guardando, setGuardando] = useState(false)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // `getClientesBasic` relanza el error de Supabase (RLS, columna que no
+  // existe en la base de producción, PostgREST): sin este `catch` la promesa
+  // quedaba rechazada sin atrapar, la lista se quedaba vacía y en pantalla no
+  // pasaba absolutamente nada — imposible distinguir "no hay clientes" de
+  // "la query explotó", que es justo lo que `lib/supabase/assert.ts` intenta
+  // evitar en la capa de datos.
+  const cargar = useCallback(() => {
+    setCargando(true)
+    setError(null)
+    return getClientesBasic(tenantId)
+      .then((c) => {
+        setClientes(c)
+        setError(null)
+      })
+      .catch((e: unknown) => {
+        const detalle = e instanceof Error ? e.message : "Error desconocido"
+        console.error("No se pudieron cargar los clientes:", e)
+        setError(detalle)
+        toast.error(`No se pudieron cargar los clientes: ${detalle}`)
+      })
+      .finally(() => setCargando(false))
+  }, [tenantId])
 
   useEffect(() => {
-    let vigente = true
-    getClientesBasic(tenantId).then((c) => {
-      if (vigente) setClientes(c)
-    })
-    return () => {
-      vigente = false
-    }
-  }, [tenantId])
+    void cargar()
+  }, [cargar])
 
   const consumidorFinal = useMemo(() => buscarConsumidorFinal(clientes), [clientes])
 
@@ -202,7 +223,15 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
             >
               <CommandInput placeholder="Buscar por nombre, teléfono o DNI" />
               <CommandList>
-                <CommandEmpty>No se encontró ningún cliente</CommandEmpty>
+                <CommandEmpty>
+                  {cargando
+                    ? "Cargando clientes…"
+                    : error
+                      ? "No se pudieron cargar los clientes"
+                      : clientes.length === 0
+                        ? "Todavía no hay clientes cargados"
+                        : "No se encontró ningún cliente"}
+                </CommandEmpty>
                 <CommandGroup>
                   {/* Sin la fila "Consumidor final" creada, volver a nadie
                       sigue siendo `null`; con ella, el ítem fijo de arriba ya
@@ -243,6 +272,26 @@ export function ClienteSelector({ tenantId, seleccionado, onCambiar, obligatorio
                   ))}
                 </CommandGroup>
               </CommandList>
+              {/* El detalle de PostgREST se muestra tal cual: es lo que
+                  permite ver si fue RLS, una columna que falta o la red. */}
+              {error && (
+                <div className="border-t bg-destructive/10 p-2.5">
+                  <p className="flex items-start gap-2 text-xs text-destructive">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 break-words">{error}</span>
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full gap-2"
+                    disabled={cargando}
+                    onClick={() => void cargar()}
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${cargando ? "animate-spin" : ""}`} />
+                    Reintentar
+                  </Button>
+                </div>
+              )}
               <div className="border-t p-1">
                 <Button
                   variant="ghost"

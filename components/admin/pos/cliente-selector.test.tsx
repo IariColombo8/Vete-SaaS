@@ -119,6 +119,53 @@ describe("ClienteSelector", () => {
     expect(onCambiar).toHaveBeenCalledWith(juan2)
   })
 
+  describe("cuando la carga de clientes falla", () => {
+    // Este era el caso invisible: la promesa quedaba rechazada sin atrapar,
+    // la lista vacía, y en pantalla no pasaba nada.
+    const fallar = () =>
+      getClientesBasic.mockRejectedValue(
+        new Error('column clientes.domicilio does not exist'),
+      )
+
+    it("muestra el detalle del error de Supabase, no un vacío mudo", async () => {
+      fallar()
+      render(<ClienteSelector tenantId="vet" seleccionado={null} onCambiar={vi.fn()} />)
+      await abrirLista()
+
+      expect(await screen.findByText(/column clientes.domicilio does not exist/i)).toBeInTheDocument()
+      expect(screen.getByText(/no se pudieron cargar los clientes/i)).toBeInTheDocument()
+    })
+
+    it("ofrece reintentar", async () => {
+      fallar()
+      render(<ClienteSelector tenantId="vet" seleccionado={null} onCambiar={vi.fn()} />)
+      await abrirLista()
+      await screen.findByRole("button", { name: /reintentar/i })
+
+      getClientesBasic.mockResolvedValue([ANA, CONSUMIDOR, JOSE])
+      fireEvent.click(screen.getByRole("button", { name: /reintentar/i }))
+
+      expect(await screen.findByText("Ana Gómez")).toBeInTheDocument()
+    })
+
+    it("no autoselecciona nada: no se sabe si existe la fila al público", async () => {
+      fallar()
+      const onCambiar = vi.fn()
+      render(<ClienteSelector tenantId="vet" seleccionado={null} onCambiar={onCambiar} />)
+
+      await waitFor(() => expect(getClientesBasic).toHaveBeenCalled())
+      expect(onCambiar).not.toHaveBeenCalled()
+    })
+  })
+
+  it("distingue 'todavía no hay clientes' de una búsqueda sin resultados", async () => {
+    getClientesBasic.mockResolvedValue([])
+    render(<ClienteSelector tenantId="vet" seleccionado={null} onCambiar={vi.fn()} />)
+    await abrirLista()
+
+    expect(await screen.findByText(/todavía no hay clientes cargados/i)).toBeInTheDocument()
+  })
+
   describe("obligatorio (cuenta corriente)", () => {
     it("no ofrece 'Consumidor final' en la lista", async () => {
         render(<ClienteSelector tenantId="vet" seleccionado={null} onCambiar={vi.fn()} obligatorio />)
