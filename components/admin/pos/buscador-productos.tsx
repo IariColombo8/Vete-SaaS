@@ -117,11 +117,10 @@ export function BuscadorProductos({ tenantId, carrito, onElegir, onQuitarUno, on
 
   const elegir = (producto: Producto, cantidad?: number) => {
     onElegir(producto, cantidad)
-    setBusqueda("")
-    // Con un filtro de categoría/marca activo, la lista se deja tal cual:
-    // el vendedor suele agregar varios productos seguidos del mismo rubro y
-    // que la lista se vacíe de golpe lo obligaba a elegir el filtro de nuevo.
-    if (!categoria && !marca) setResultados([])
+    // La búsqueda y los resultados quedan como estaban: el vendedor suele
+    // agregar varias unidades del mismo producto o mirar el resto de la
+    // lista, y que desaparezca de golpe lo obligaba a escribir todo de nuevo
+    // por cada ítem.
     inputRef.current?.focus()
   }
 

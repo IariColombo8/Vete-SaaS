@@ -159,9 +159,15 @@ export function PosManagement({ tenantId }: Props) {
     agregar(producto, cantidad)
   }
 
+  // `agregarAlCarrito`/`cambiarCantidad` validan stock y pueden tirar. Se
+  // calculan ACÁ, fuera del updater de `setCarrito`: si el updater funcional
+  // que le pasás a `setState` tira, React puede volver a invocarlo fuera de
+  // este `try/catch` (doble invocación en desarrollo, re-render) y el error
+  // se escapa como excepción no atrapada en vez de mostrarse como toast.
   const agregar = (producto: Producto, cantidad: number) => {
     try {
-      setCarrito((actual) => agregarAlCarrito(actual, producto, cantidad))
+      const nuevo = agregarAlCarrito(carrito, producto, cantidad)
+      setCarrito(nuevo)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo agregar el producto")
     }
@@ -169,7 +175,8 @@ export function PosManagement({ tenantId }: Props) {
 
   const actualizarCantidad = (productoId: string, cantidad: number) => {
     try {
-      setCarrito((actual) => cambiarCantidad(actual, productoId, cantidad))
+      const nuevo = cambiarCantidad(carrito, productoId, cantidad)
+      setCarrito(nuevo)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo cambiar la cantidad")
     }
