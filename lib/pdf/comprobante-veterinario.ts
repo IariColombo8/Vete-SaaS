@@ -45,7 +45,10 @@ interface GenerarComprobanteParams {
   mascotaNombre: string
   /** YYYY-MM-DD. Por defecto, hoy — pasarla al reimprimir para mostrar la fecha original, no la del reimpreso. */
   fecha?: string
-  items: ItemComprobante[]
+  /** Modo itemizado (vacunas/medicamentos/servicios/desparasitación). */
+  items?: ItemComprobante[]
+  /** Modo nota libre (orden médica de texto libre) — alternativo a `items`. */
+  notaLibre?: string
 }
 
 const MARGEN = 28
@@ -56,8 +59,9 @@ function nombreArchivoComprobante(mascotaNombre: string): string {
   return `orden-veterinaria-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`
 }
 
-export async function generarComprobanteVeterinario(params: GenerarComprobanteParams): Promise<void> {
-  const { emisor, profesional, clienteNombre, mascotaNombre, fecha, items } = params
+/** Construye el documento sin guardarlo — reutilizado por la descarga y por la vista previa. */
+async function construirComprobante(params: GenerarComprobanteParams): Promise<jsPDF> {
+  const { emisor, profesional, clienteNombre, mascotaNombre, fecha, items, notaLibre } = params
 
   const [logo, firma, sello] = await Promise.all([
     cargarLogo(emisor.logoUrl),
@@ -113,15 +117,22 @@ export async function generarComprobanteVeterinario(params: GenerarComprobantePa
   const lineasCuerpo: { texto: string; bold?: boolean; size?: number }[] = [
     { texto: `Paciente: ${mascotaNombre || "—"}    ·    Responsable: ${clienteNombre || "—"}`, bold: true, size: 9.5 },
   ]
-  items.forEach((item) => {
-    lineasCuerpo.push({ texto: `${item.tipoLabel}: ${item.nombre}`, bold: true, size: 10 })
-    if (item.indicaciones?.trim()) {
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(9)
-      const envueltas = doc.splitTextToSize(item.indicaciones.trim(), anchoUtil - PAD * 2 - 10) as string[]
-      envueltas.forEach((linea) => lineasCuerpo.push({ texto: `  ${linea}`, size: 9 }))
-    }
-  })
+  if (notaLibre !== undefined) {
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(9.5)
+    const envueltas = doc.splitTextToSize(notaLibre.trim() || "—", anchoUtil - PAD * 2) as string[]
+    envueltas.forEach((linea) => lineasCuerpo.push({ texto: linea, size: 9.5 }))
+  } else {
+    (items ?? []).forEach((item) => {
+      lineasCuerpo.push({ texto: `${item.tipoLabel}: ${item.nombre}`, bold: true, size: 10 })
+      if (item.indicaciones?.trim()) {
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        const envueltas = doc.splitTextToSize(item.indicaciones.trim(), anchoUtil - PAD * 2 - 10) as string[]
+        envueltas.forEach((linea) => lineasCuerpo.push({ texto: `  ${linea}`, size: 9 }))
+      }
+    })
+  }
 
   const altoLinea = 15
   const altoCuerpo = Math.max(lineasCuerpo.length * altoLinea + PAD * 2, 90)
@@ -171,5 +182,29 @@ export async function generarComprobanteVeterinario(params: GenerarComprobantePa
     l.texto(`M.P. ${profesional.matricula}`, xFirma + ANCHO_FIRMA / 2, yFirma, { size: 8, color: COLOR.gris, align: "center" })
   }
 
-  doc.save(nombreArchivoComprobante(mascotaNombre))
+  return doc
+}
+
+export async function generarComprobanteVeterinario(params: GenerarComprobanteParams): Promise<void> {
+  const doc = await construirComprobante(params)
+  doc.save(nombreArchivoComprobante(params.mascotaNombre))
+}
+
+/**
+ * Blob URL del PDF, para mostrar una vista previa (ej. en un `<iframe>`) antes
+ * de descargar. Blob URL en vez de data URI: los navegadores lo renderizan de
+ * forma confiable en un iframe (el data URI queda en blanco en algunos casos).
+ * Quien llama es responsable de revocar la URL (`URL.revokeObjectURL`) cuando
+ * ya no la necesita.
+ */
+export async function previsualizarComprobante(params: GenerarComprobanteParams): Promise<string> {
+  const doc = await construirComprobante(params)
+  return URL.createObjectURL(doc.output("blob"))
+}
+
+/** El PDF como `File`, para adjuntarlo directo con la Web Share API (`navigator.share`). */
+export async function generarComprobanteArchivo(params: GenerarComprobanteParams): Promise<File> {
+  const doc = await construirComprobante(params)
+  const blob = doc.output("blob") as Blob
+  return new File([blob], nombreArchivoComprobante(params.mascotaNombre), { type: "application/pdf" })
 }

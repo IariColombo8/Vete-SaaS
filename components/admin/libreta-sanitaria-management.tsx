@@ -57,7 +57,8 @@ import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults";
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad";
 import { format } from "date-fns";
 import { generarLibretaPDF, type VeterinariaLibreta } from "@/lib/pdf/libreta-pdf";
-import { generarComprobanteVeterinario } from "@/lib/pdf/comprobante-veterinario";
+import { generarComprobanteVeterinario, previsualizarComprobante } from "@/lib/pdf/comprobante-veterinario";
+import { telefonoWhatsApp } from "@/lib/ventas/remito";
 import { useAuth } from "@/hooks/use-auth";
 import { useCarritoCompartido } from "@/hooks/pos/useCarritoCompartido";
 import {
@@ -377,6 +378,16 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [cobrandoAplicacion, setCobrandoAplicacion] = useState(false);
   const [descuentoAplicacion, setDescuentoAplicacion] = useState<Descuento>(SIN_DESCUENTO);
   const [medioPagoAplicacion, setMedioPagoAplicacion] = useState<MedioPago>("efectivo");
+
+  const [addOrdenOpen, setAddOrdenOpen] = useState(false);
+  const [addOrdenMascota, setAddOrdenMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
+  const [fechaOrden, setFechaOrden] = useState("");
+  const [textoOrden, setTextoOrden] = useState("");
+  const [previewOrdenUrl, setPreviewOrdenUrl] = useState<string | null>(null);
+  const [descargandoOrden, setDescargandoOrden] = useState(false);
+  const [enviandoOrdenWhatsApp, setEnviandoOrdenWhatsApp] = useState(false);
+  /** Evita duplicar la entrada en la historia clínica si se descarga y después se manda por WhatsApp (o viceversa) en la misma sesión del diálogo. */
+  const [historiaOrdenGuardada, setHistoriaOrdenGuardada] = useState(false);
   const [servicioAtencionProducto, setServicioAtencionProducto] = useState<Producto | null>(null);
   const { setDraft: setCarritoPosDraft } = useCarritoCompartido(tenantId);
   const router = useRouter();
@@ -941,6 +952,181 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     setTimeout(() => setAddAplicacionOpen(true), isMobile ? 150 : 0);
   };
 
+  const openAddOrden = (cliente: Cliente, mascota: Mascota) => {
+    const clienteId = cliente?.id ?? "";
+    const mascotaId = mascota?.id ?? "";
+    if (!clienteId || !mascotaId) {
+      toast({ title: "Error", description: "No se pudo identificar cliente o mascota.", variant: "destructive" });
+      return;
+    }
+    if (isMobile) setDetailSheetOpen(false);
+    setAddOrdenMascota({ cliente: { ...cliente, id: clienteId }, mascota: { ...mascota, id: mascotaId } });
+    setFechaOrden(new Date().toISOString().slice(0, 10));
+    setTextoOrden("");
+    setPreviewOrdenUrl(null);
+    setHistoriaOrdenGuardada(false);
+    setTimeout(() => setAddOrdenOpen(true), isMobile ? 150 : 0);
+  };
+
+  /** Deja la orden médica registrada en la historia clínica (una sola vez por diálogo abierto), como el resto de las notas. */
+  const guardarHistoriaOrden = async () => {
+    if (historiaOrdenGuardada || !addOrdenMascota?.cliente.id || !addOrdenMascota?.mascota.id || !textoOrden.trim()) return;
+    try {
+      await createHistoria(tenantId, addOrdenMascota.cliente.id, addOrdenMascota.mascota.id, {
+        fechaAtencion: fechaOrden?.trim() || new Date().toISOString().slice(0, 10),
+        motivo: "Orden médica",
+        diagnostico: "", tratamiento: "—",
+        observaciones: textoOrden.trim(),
+        tipoVisita: "orden_medica",
+        creadoPor: user?.id,
+      });
+      setHistoriaOrdenGuardada(true);
+      if (clienteExpandido?.cliente.id === addOrdenMascota.cliente.id && selectedMascotaId === addOrdenMascota.mascota.id) {
+        loadTimeline(addOrdenMascota.cliente.id, addOrdenMascota.mascota.id);
+      }
+    } catch (e) {
+      console.error("Error guardando la orden médica en la historia:", e);
+      toast({ title: "Se generó el PDF, pero no se pudo guardar en la historia clínica", variant: "destructive" });
+    }
+  };
+
+  /** Params comunes (emisor + firma del profesional) para las 3 operaciones sobre la orden. */
+  const construirParamsOrden = async () => {
+    if (!addOrdenMascota) return null;
+    const uidFirma = user?.id;
+    const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
+    return {
+      emisor: {
+        nombre: veterinaria.nombre,
+        logoUrl: veterinaria.logoUrl,
+        direccion: veterinaria.direccion,
+        telefono: veterinaria.telefono,
+        rubro: rubroServicios,
+      },
+      profesional: {
+        nombre: firma?.nombre ?? undefined,
+        especialidad: firma?.especialidad,
+        matricula: firma?.matricula ?? undefined,
+        firmaUrl: firma?.firmaUrl ?? undefined,
+        selloUrl: firma?.selloUrl ?? undefined,
+      },
+      clienteNombre: addOrdenMascota.cliente.nombre,
+      mascotaNombre: addOrdenMascota.mascota.nombre,
+      fecha: fechaOrden,
+      notaLibre: textoOrden,
+    };
+  };
+
+  /** Vista previa en vivo (debounced): se regenera cada vez que cambia el texto o la fecha. */
+  useEffect(() => {
+    if (!addOrdenOpen || !addOrdenMascota) return;
+    let cancelado = false;
+    const timeout = setTimeout(async () => {
+      const params = await construirParamsOrden();
+      if (!params || cancelado) return;
+      const url = await previsualizarComprobante(params);
+      if (cancelado) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setPreviewOrdenUrl((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return url;
+      });
+    }, 400);
+    return () => {
+      cancelado = true;
+      clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addOrdenOpen, addOrdenMascota, fechaOrden, textoOrden]);
+
+  // Al cerrar el diálogo, liberar el último blob de la vista previa.
+  useEffect(() => {
+    if (!addOrdenOpen && previewOrdenUrl) {
+      URL.revokeObjectURL(previewOrdenUrl);
+      setPreviewOrdenUrl(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addOrdenOpen]);
+
+  const descargarOrden = async () => {
+    const params = await construirParamsOrden();
+    if (!params) return;
+    setDescargandoOrden(true);
+    try {
+      await generarComprobanteVeterinario(params);
+      await guardarHistoriaOrden();
+    } catch (e) {
+      console.error("Error generando la orden médica:", e);
+      toast({ title: "Error", description: "No se pudo generar la orden", variant: "destructive" });
+    } finally {
+      setDescargandoOrden(false);
+    }
+  };
+
+  /**
+   * WhatsApp no tiene forma de recibir un adjunto por link (`wa.me` solo
+   * manda texto) — para mandar el PDF adjunto hay dos caminos reales:
+   *
+   * 1. Selector nativo del sistema (`navigator.share` con `files`), que en
+   *    Android/iOS y en Windows con la app de WhatsApp instalada lista a
+   *    WhatsApp como destino y manda el PDF ya adjunto. Se intenta primero,
+   *    reusando el blob de la vista previa (ya generado) para no perder la
+   *    "activación" del click esperando a construir el PDF de nuevo.
+   * 2. Si no está disponible o el usuario cancela sin elegir nada, se abre
+   *    `wa.me` con el mensaje (ventana abierta ANTES del await, si no el
+   *    navegador la bloquea) y se descarga el PDF aparte para adjuntarlo a
+   *    mano — eso sí es una limitación real de WhatsApp, no del código.
+   */
+  const enviarOrdenPorWhatsApp = async () => {
+    // Guarda contra doble click: `navigator.share` tira InvalidStateError si
+    // se lo llama de nuevo mientras el share anterior todavía no resolvió.
+    if (!addOrdenMascota || enviandoOrdenWhatsApp) return;
+    setEnviandoOrdenWhatsApp(true);
+    const mensaje = `Hola ${addOrdenMascota.cliente.nombre}, te comparto la orden médica de ${addOrdenMascota.mascota.nombre}.`;
+
+    try {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        const respuesta = previewOrdenUrl
+          ? await fetch(previewOrdenUrl)
+          : null;
+        const blob = respuesta ? await respuesta.blob() : null;
+        // Cast del constructor: @types/node declara un `File` global propio
+        // (para `undici`) que pisa la sobrecarga del DOM y hace que TS vea
+        // el constructor de 3 argumentos como inexistente pese a que en el
+        // navegador es el de siempre.
+        const FileCtor = globalThis.File as unknown as {
+          new (bits: BlobPart[], name: string, options?: FilePropertyBag): File;
+        };
+        const archivo = blob
+          ? new FileCtor([blob], `orden-medica-${addOrdenMascota.mascota.nombre}.pdf`, { type: "application/pdf" })
+          : null;
+        if (archivo && navigator.canShare?.({ files: [archivo] })) {
+          await navigator.share({ files: [archivo], text: mensaje });
+          await guardarHistoriaOrden();
+          return;
+        }
+      } catch (e) {
+        // AbortError = el usuario cerró el selector sin elegir nada: no es un error, sigue al fallback.
+        if (!(e instanceof Error && e.name === "AbortError")) {
+          console.error("Error compartiendo la orden médica:", e);
+        }
+      }
+    }
+
+    const telefono = telefonoWhatsApp(addOrdenMascota.cliente.telefono);
+    const texto = encodeURIComponent(`${mensaje} Adjunto el PDF a continuación (descargalo y adjuntalo en el chat).`);
+    const link = telefono ? `https://wa.me/${telefono}?text=${texto}` : `https://wa.me/?text=${texto}`;
+    const chat = window.open(link, "_blank", "noopener,noreferrer");
+    if (!chat) toast({ title: "El navegador bloqueó la ventana de WhatsApp", variant: "destructive" });
+    await descargarOrden();
+    } finally {
+      setEnviandoOrdenWhatsApp(false);
+    }
+  };
+
   const cambiarItemAplicacion = (i: number, cambios: Partial<ItemAplicacion>) =>
     setItemsAplicacion((prev) => prev.map((item, idx) => (idx === i ? { ...item, ...cambios } : item)));
 
@@ -996,6 +1182,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     creadoPor: string | undefined,
     clienteNombre: string,
     mascotaNombre: string,
+    notaLibre?: string,
   ) => {
     const uidFirma = creadoPor || user?.id;
     const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
@@ -1017,17 +1204,31 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       clienteNombre,
       mascotaNombre,
       fecha: fechaAtencion,
-      items: aplicaciones.map((a) => ({
-        tipoLabel: TIPO_APLICACION_LABEL[a.tipo],
-        nombre: a.nombre,
-        indicaciones: a.indicaciones,
-      })),
+      ...(notaLibre !== undefined ? { notaLibre } : {
+        items: aplicaciones.map((a) => ({
+          tipoLabel: TIPO_APLICACION_LABEL[a.tipo],
+          nombre: a.nombre,
+          indicaciones: a.indicaciones,
+        })),
+      }),
     });
   };
 
-  /** "Volver a descargar la orden" de una entrada ya cargada (nueva o vieja, suelta). */
+  /** "Volver a descargar la orden" de una entrada ya cargada (nueva o vieja, suelta — vacuna/medicamento o nota libre). */
   const redescargarComprobante = async (h: Historia, clienteNombre: string, mascotaNombre: string) => {
     if (!h.id) return;
+    if (h.tipoVisita === "orden_medica") {
+      setDescargandoComprobanteId(h.id);
+      try {
+        await descargarComprobante([], h.fechaAtencion, h.creadoPor, clienteNombre, mascotaNombre, h.observaciones ?? "");
+      } catch (e) {
+        console.error("Error regenerando la orden médica:", e);
+        toast({ title: "Error", description: "No se pudo generar la orden", variant: "destructive" });
+      } finally {
+        setDescargandoComprobanteId(null);
+      }
+      return;
+    }
     const aplicaciones: AplicacionHistoria[] = h.aplicaciones?.length
       ? h.aplicaciones
       : h.tipoVisita && h.tipoVisita !== "consulta" && h.tipoVisita !== "turno_programado" && h.tipoVisita !== "visita_programada" && h.productoAplicado
@@ -1580,6 +1781,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                               <DropdownMenuItem onSelect={() => openAddAplicacion(clienteExpandido.cliente, m)}>
                                 <Syringe className="h-4 w-4" /> Agregar vacuna, medicamento o desparasitación
                               </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openAddOrden(clienteExpandido.cliente, m)}>
+                                <FileText className="h-4 w-4" /> Orden médica
+                              </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => openAddNota(clienteExpandido.cliente, m)}>
                                 <Plus className="h-4 w-4" /> Agregar nota clínica
                               </DropdownMenuItem>
@@ -1690,7 +1894,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                           </Badge>
                                         </div>
                                         <div className="flex items-center gap-0.5 shrink-0">
-                                          {aplicacionesDeH.length > 0 && (
+                                          {(aplicacionesDeH.length > 0 || h.tipoVisita === "orden_medica") && (
                                             <button
                                               type="button"
                                               className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
@@ -1708,7 +1912,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         </div>
                                       </div>
                                       <div className="text-xs text-slate-600 dark:text-slate-400">
-                                        {aplicacionesDeH.length > 0 ? (
+                                        {h.tipoVisita === "orden_medica" ? (
+                                          <p className="whitespace-pre-wrap">{h.observaciones || "—"}</p>
+                                        ) : aplicacionesDeH.length > 0 ? (
                                           <div className="space-y-1">
                                             {aplicacionesDeH.map((a, i) => (
                                               <p key={i}>
@@ -2610,6 +2816,64 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             <Button onClick={cobrarAplicacion} disabled={savingAplicacion || cobrandoAplicacion || lineasPreview.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
               {cobrandoAplicacion ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Cobrar ahora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Orden médica (nota libre: medicamento a comprar en farmacia, aclaraciones, etc.) */}
+      <Dialog open={addOrdenOpen} onOpenChange={(open) => {
+          setAddOrdenOpen(open);
+          if (!open) {
+            setAddOrdenMascota(null);
+            setPreviewOrdenUrl(null);
+            setHistoriaOrdenGuardada(false);
+            if (isMobile && expandedClienteId) setDetailSheetOpen(true);
+          }
+        }}>
+        <DialogContent className="max-w-7xl w-[98vw] max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Orden médica</DialogTitle>
+            <DialogDescription>
+              {addOrdenMascota ? `${addOrdenMascota.mascota.nombre} — ${addOrdenMascota.cliente.nombre}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Fecha</Label>
+                <Input type="date" value={fechaOrden} onChange={(e) => setFechaOrden(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Nota / indicación</Label>
+                <Textarea
+                  value={textoOrden}
+                  onChange={(e) => setTextoOrden(e.target.value)}
+                  className="mt-1 min-h-[500px] resize-y"
+                  placeholder="Ej: Amoxicilina 500mg, 1 comprimido cada 12hs por 7 días. Comprar en farmacia."
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Vista previa</Label>
+              {previewOrdenUrl ? (
+                <iframe src={previewOrdenUrl} title="Vista previa de la orden" className="mt-1 w-full h-[550px] border rounded bg-white" />
+              ) : (
+                <div className="mt-1 w-full h-[550px] border rounded flex items-center justify-center text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Generando vista previa…
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setAddOrdenOpen(false)} className="sm:mr-auto">Cancelar</Button>
+            <Button variant="outline" onClick={enviarOrdenPorWhatsApp} disabled={descargandoOrden || enviandoOrdenWhatsApp || !textoOrden.trim()}>
+              {enviandoOrdenWhatsApp ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageCircle className="h-4 w-4 mr-2" />}
+              Enviar por WhatsApp
+            </Button>
+            <Button onClick={descargarOrden} disabled={descargandoOrden || enviandoOrdenWhatsApp || !textoOrden.trim()}>
+              {descargandoOrden ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
+              Descargar orden
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -252,7 +252,7 @@ export interface Historia {
   observaciones?: string
   proximaVisita?: string
   archivos?: string[]
-  tipoVisita?: "consulta" | "turno_programado" | "visita_programada" | "vacuna" | "medicamento" | "desparasitacion" | "aplicacion"
+  tipoVisita?: "consulta" | "turno_programado" | "visita_programada" | "vacuna" | "medicamento" | "desparasitacion" | "aplicacion" | "orden_medica"
   turnoId?: string
   /** true = solo la ve el staff. false = aparece también en "Mi Historia" del cliente. */
   esPrivada?: boolean
