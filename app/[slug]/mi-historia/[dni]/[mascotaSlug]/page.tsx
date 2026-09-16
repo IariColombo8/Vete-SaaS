@@ -265,15 +265,16 @@ export default function PerfilMascotaPage() {
     }
   }
 
-  /** Vuelve a generar la orden médica de una nota de vacuna/medicamento/desparasitación ya cargada. */
+  /** Vuelve a generar la orden médica de una nota de vacuna/medicamento/desparasitación, o de una orden de nota libre, ya cargada. */
   const descargarOrden = async (h: Historia) => {
     if (!mascota || !cliente || !h.id) return
+    const esOrdenLibre = h.tipoVisita === "orden_medica"
     const aplicaciones: AplicacionHistoria[] = h.aplicaciones?.length
       ? h.aplicaciones
       : h.tipoVisita && ["vacuna", "medicamento", "desparasitacion"].includes(h.tipoVisita) && h.productoAplicado
         ? [{ tipo: h.tipoVisita as AplicacionHistoria["tipo"], nombre: h.productoAplicado, indicaciones: h.observaciones, proxima: h.proximaVisita }]
         : []
-    if (aplicaciones.length === 0) return
+    if (aplicaciones.length === 0 && !esOrdenLibre) return
     setDescargandoOrdenId(h.id)
     try {
       const firma = h.creadoPor ? await getFirmaVeterinarioPublico(h.creadoPor) : null
@@ -295,11 +296,15 @@ export default function PerfilMascotaPage() {
         clienteNombre: cliente.nombre,
         mascotaNombre: mascota.nombre,
         fecha: h.fechaAtencion,
-        items: aplicaciones.map((a) => ({
-          tipoLabel: TIPO_APLICACION_LABEL[a.tipo],
-          nombre: a.nombre,
-          indicaciones: a.indicaciones,
-        })),
+        ...(esOrdenLibre
+          ? { notaLibre: h.observaciones ?? "" }
+          : {
+              items: aplicaciones.map((a) => ({
+                tipoLabel: TIPO_APLICACION_LABEL[a.tipo],
+                nombre: a.nombre,
+                indicaciones: a.indicaciones,
+              })),
+            }),
       })
     } catch (e) {
       console.error("Error generando la orden:", e)
@@ -455,7 +460,8 @@ export default function PerfilMascotaPage() {
               {historias.map((h) => {
                 const esOrdenDescargable = !!(
                   h.aplicaciones?.length ||
-                  (h.tipoVisita && ["vacuna", "medicamento", "desparasitacion"].includes(h.tipoVisita) && h.productoAplicado)
+                  (h.tipoVisita && ["vacuna", "medicamento", "desparasitacion"].includes(h.tipoVisita) && h.productoAplicado) ||
+                  h.tipoVisita === "orden_medica"
                 )
                 const { Icon, dot, chip } = estiloDeEntrada(h)
                 return (
@@ -488,7 +494,7 @@ export default function PerfilMascotaPage() {
                               </div>
                             ))}
                           </div>
-                        ) : (
+                        ) : h.tipoVisita !== "orden_medica" ? (
                           <div className="space-y-1">
                             {h.diagnostico && (
                               <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -501,7 +507,7 @@ export default function PerfilMascotaPage() {
                               </p>
                             )}
                           </div>
-                        )}
+                        ) : null}
 
                         {h.observaciones && (
                           <p className="text-xs text-slate-500 dark:text-slate-400 italic border-l-2 border-slate-200 dark:border-slate-700 pl-2">{h.observaciones}</p>
