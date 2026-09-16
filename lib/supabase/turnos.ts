@@ -223,7 +223,7 @@ export async function getTurnosByClienteEmail(
   return (data ?? []).map(aTurno)
 }
 
-/** Turnos de un cliente, sin sesión (para /mi-historia/[mascotaId]). */
+/** Turnos de un cliente, sin sesión (para /mi-historia/[dni]/[mascotaSlug]). */
 export async function getTurnosPublico(
   tenantId: string,
   clienteId: string,
@@ -236,7 +236,7 @@ export async function getTurnosPublico(
 }
 
 /**
- * Turnos de una mascota puntual, sin sesión (para /mi-historia/[mascotaId]).
+ * Turnos de una mascota puntual, sin sesión (para /mi-historia/[dni]/[mascotaSlug]).
  * A diferencia de `getTurnosPublico`, no depende de qué DNI reservó el
  * turno: sirve para que un co-dueño (ver `mascota_duenos`) vea también los
  * turnos que sacó el otro dueño para la misma mascota.

@@ -95,7 +95,7 @@ export async function cargarLogo(
     // Los SVG no los rasteriza jsPDF: quedarían como un rectángulo vacío.
     if (!/^image\/(png|jpeg|jpg|webp)$/.test(blob.type)) return null
 
-    const dataUrl = await new Promise<string>((resolve, reject) => {
+    const dataUrlOriginal = await new Promise<string>((resolve, reject) => {
       const lector = new FileReader()
       lector.onload = () => resolve(String(lector.result))
       lector.onerror = () => reject(new Error("No se pudo leer el logo"))
@@ -103,14 +103,24 @@ export async function cargarLogo(
     })
 
     // Las proporciones reales hacen falta para no deformarlo en el encabezado.
-    const { ancho, alto } = await new Promise<{ ancho: number; alto: number }>(
-      (resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve({ ancho: img.naturalWidth, alto: img.naturalHeight })
-        img.onerror = () => reject(new Error("Logo inválido"))
-        img.src = dataUrl
-      },
-    )
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error("Logo inválido"))
+      el.src = dataUrlOriginal
+    })
+    const ancho = img.naturalWidth
+    const alto = img.naturalHeight
+
+    // jsPDF reconoce el formato mirando los bytes de la imagen, y su detector
+    // interno no cubre WEBP (viene de fotos/capturas de celular): sale
+    // "UNKNOWN" al querer incrustarlo. Redibujar en un canvas y exportar
+    // siempre como PNG evita depender de qué formato haya subido el usuario.
+    const canvas = document.createElement("canvas")
+    canvas.width = ancho
+    canvas.height = alto
+    const ctx = canvas.getContext("2d")
+    const dataUrl = ctx ? (ctx.drawImage(img, 0, 0), canvas.toDataURL("image/png")) : dataUrlOriginal
 
     return { dataUrl, ancho, alto }
   } catch {

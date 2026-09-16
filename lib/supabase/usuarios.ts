@@ -18,6 +18,11 @@ function aUsuario(f: Fila): Usuario {
     isAdmin: role === "veterinario" || role === "empleado" || role === "superadmin",
     createdAt: f.created_at,
     lastLogin: f.last_login,
+    firmaUrl: (f.firma_url as string) ?? null,
+    selloUrl: (f.sello_url as string) ?? null,
+    nombreProfesional: (f.nombre_profesional as string) ?? null,
+    matricula: (f.matricula as string) ?? null,
+    especialidad: (f.especialidad as string) ?? "Médico Veterinario",
   }
 }
 
@@ -41,6 +46,64 @@ export async function getUsuarios(): Promise<Usuario[]> {
     return []
   }
   return (data ?? []).map(aUsuario)
+}
+
+export async function getUsuarioById(uid: string): Promise<Usuario | null> {
+  const { data, error } = await supabase.from("usuarios").select("*").eq("id", uid).maybeSingle()
+  if (error || !data) return null
+  return aUsuario(data)
+}
+
+export interface FirmaVeterinario {
+  nombre: string | null
+  especialidad: string
+  matricula: string | null
+  firmaUrl: string | null
+  selloUrl: string | null
+}
+
+/**
+ * Firma de un veterinario para el comprobante, sin depender de sesión ni de
+ * que sea el propio usuario. `usuarios_self_read` (RLS) solo deja leer la
+ * fila propia, así que esto pasa por un RPC `security definer` en vez de un
+ * `select` directo — necesario tanto para "Mi Historia" (sin sesión) como
+ * para reimprimir la orden de un veterinario distinto al que está logueado.
+ */
+export async function getFirmaVeterinarioPublico(uid: string): Promise<FirmaVeterinario | null> {
+  const { data, error } = await supabase
+    .rpc("obtener_firma_veterinario_publico", { p_usuario_id: uid })
+    .maybeSingle()
+  if (error || !data) return null
+  const f = data as Fila
+  return {
+    nombre: (f.nombre_profesional as string) || (f.display_name as string) || null,
+    especialidad: (f.especialidad as string) || "Médico Veterinario",
+    matricula: (f.matricula as string) ?? null,
+    firmaUrl: (f.firma_url as string) ?? null,
+    selloUrl: (f.sello_url as string) ?? null,
+  }
+}
+
+/**
+ * Firma digital del profesional para el comprobante/orden veterinaria.
+ * Actualiza la propia fila (RLS `usuarios_self_update`): cada veterinario
+ * carga la suya, no la de otro.
+ */
+export async function actualizarFirmaVeterinario(
+  uid: string,
+  datos: Pick<Usuario, "firmaUrl" | "selloUrl" | "nombreProfesional" | "matricula" | "especialidad">,
+): Promise<void> {
+  const { error } = await supabase
+    .from("usuarios")
+    .update({
+      firma_url: datos.firmaUrl ?? null,
+      sello_url: datos.selloUrl ?? null,
+      nombre_profesional: datos.nombreProfesional ?? null,
+      matricula: datos.matricula ?? null,
+      especialidad: datos.especialidad || "Médico Veterinario",
+    })
+    .eq("id", uid)
+  if (error) throw new Error(`No se pudo guardar la firma: ${error.message}`)
 }
 
 // ============ INVITACIONES ============

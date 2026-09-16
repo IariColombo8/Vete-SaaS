@@ -34,6 +34,7 @@ import {
   getClienteCompleto,
   getClientesStats,
   getMascotas,
+  getMascotasBasicByClienteIds,
   createCliente,
   updateCliente,
   type HistorialDato,
@@ -143,27 +144,32 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     if (!searchTerm || searchTerm.length < 2) return;
     const toLoad = clientes
-      .filter((c) => c.id && !mascotasByClienteId[c.id] && !loadingMascotas[c.id])
+      .filter((c): c is Cliente & { id: string } => !!c.id && !mascotasByClienteId[c.id] && !loadingMascotas[c.id])
       .slice(0, 15);
-    toLoad.forEach((c) => c.id && loadMascotasForCliente(c.id));
+    if (toLoad.length === 0) return;
+    precargarMascotas(toLoad);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, clientes]);
 
   // Precarga las mascotas de una lista de clientes (para el resumen en la tabla).
   // En paralelo: son requests independientes, esperarlos en cadena multiplica
   // la demora de carga inicial por la cantidad de clientes de la página.
   const precargarMascotas = async (lista: Cliente[]) => {
-    const entries = await Promise.all(
-      lista
-        .filter((c): c is Cliente & { id: string } => !!c.id)
-        .map(async (c) => {
-          try {
-            return [c.id, await getMascotas(tenantId, c.id)] as const;
-          } catch {
-            return [c.id, []] as const;
-          }
-        })
-    );
-    setMascotasByClienteId((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+    const ids = lista.filter((c): c is Cliente & { id: string } => !!c.id).map((c) => c.id);
+    try {
+      const porCliente = await getMascotasBasicByClienteIds(tenantId, ids);
+      setMascotasByClienteId((prev) => {
+        const next = { ...prev };
+        ids.forEach((id) => { next[id] = porCliente.get(id) ?? []; });
+        return next;
+      });
+    } catch {
+      setMascotasByClienteId((prev) => {
+        const next = { ...prev };
+        ids.forEach((id) => { next[id] = next[id] ?? []; });
+        return next;
+      });
+    }
   };
 
   // Carga inicial: primera página cursor-based.

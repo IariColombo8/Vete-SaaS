@@ -10,7 +10,8 @@
 export type {
   UserRole, Usuario, Invitacion, ServicioTenant, HorarioTenant, Tenant, Modalidad,
   MascotaTurnoConfig, ServicioTurnoConfig, Profesional, VacunaTurnoConfig, TurnoConfig,
-  TenantConfig, TenantFull, HistorialDato, Cliente, Mascota, Turno, Historia,
+  TenantConfig, TenantFull, HistorialDato, Cliente, Mascota, SexoMascota, Turno, Historia,
+  AplicacionHistoria, TipoAplicacionHistoria,
   HistoriaClinicaRegistro, ClientesCursor, ClientesPage, LibretaPublica,
   RecordatorioVacuna, DiaBloqueado, Unsubscribe,
   Producto, ProductoUnidad, OfertaTipo, MovimientoStock, MovimientoStockTipo,

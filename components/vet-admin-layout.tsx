@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { HelpCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { getUserRole, getUsuarioData, signOut } from "@/lib/supabase/auth"
+import { getUsuarioData, signOut } from "@/lib/supabase/auth"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { VetAdminSidebar } from "@/components/vet-admin-sidebar"
 import {
@@ -66,32 +66,39 @@ export function VetAdminLayout({ slug, children }: Props) {
   const [trialVencido, setTrialVencido] = useState(false)
   const [role, setRole] = useState<UserRole | null>(null)
 
+  // Solo depende de `user`/`slug`: rol, tenant y config no cambian al navegar
+  // entre páginas del panel, así que no hace falta repetir estas 2 queries
+  // (ni mostrar el spinner de pantalla completa) en cada click del sidebar.
   useEffect(() => {
     if (authLoading) return
     if (!user) { router.push("/login"); return }
 
     Promise.all([
-      getUserRole(user.id),
       getUsuarioData(user.id),
       getTenantConfig(slug),
-    ]).then(([userRole, userData, config]) => {
+    ]).then(([userData, config]) => {
+      const userRole = (userData?.role as UserRole | undefined) ?? null
       const userTenantId = userData?.tenantId as string | undefined
       // Acceso: superadmin, o pertenece al tenant (veterinario/empleado con tenantId === slug)
       const perteneceAlTenant = userTenantId === slug && (userRole === "veterinario" || userRole === "empleado")
       const isOwner = perteneceAlTenant || userRole === "superadmin"
       if (!isOwner) { router.push("/"); return }
       setRole(userRole)
-      // Guard de sección: empleado no accede a configuración
-      const section = sectionFromPath(pathname, slug)
-      if (section && !canAccessSection(userRole, section)) {
-        router.push(`/${slug}/admin/Dashboard`)
-        return
-      }
       setVetNombre(config?.nombre || slug)
       setTrialVencido(getTrialStatus(config ?? {}).vencido)
       setChecking(false)
     })
-  }, [user, authLoading, slug, router, pathname])
+  }, [user, authLoading, slug, router])
+
+  // Guard de sección (empleado no accede a configuración): reacciona a la
+  // ruta sin volver a pedir nada a la base.
+  useEffect(() => {
+    if (checking || !role) return
+    const section = sectionFromPath(pathname, slug)
+    if (section && !canAccessSection(role, section)) {
+      router.push(`/${slug}/admin/Dashboard`)
+    }
+  }, [pathname, slug, role, checking, router])
 
   if (authLoading || checking) {
     return (

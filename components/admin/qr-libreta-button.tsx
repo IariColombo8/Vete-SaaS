@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { forwardRef, useImperativeHandle, useState } from "react"
 import QRCode from "qrcode"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,9 +20,18 @@ interface Props {
   clienteId: string
   mascotaId: string
   vetNombre?: string
+  /** Sin trigger propio: lo abre un menú externo ("Acciones") vía `ref.abrir()`. */
+  sinTrigger?: boolean
 }
 
-export function QrLibretaButton({ tenantId, clienteId, mascotaId, vetNombre }: Props) {
+export interface QrLibretaButtonRef {
+  abrir: () => void
+}
+
+export const QrLibretaButton = forwardRef<QrLibretaButtonRef, Props>(function QrLibretaButton(
+  { tenantId, clienteId, mascotaId, vetNombre, sinTrigger },
+  ref,
+) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -57,18 +66,22 @@ export function QrLibretaButton({ tenantId, clienteId, mascotaId, vetNombre }: P
     }
   }
 
+  useImperativeHandle(ref, () => ({ abrir: handleGenerar }))
+
   return (
     <>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
-        onClick={handleGenerar}
-        disabled={loading}
-        title="Generar QR de la libreta pública"
-      >
-        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-      </Button>
+      {!sinTrigger && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
+          onClick={handleGenerar}
+          disabled={loading}
+          title="Generar QR de la libreta pública"
+        >
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -101,4 +114,4 @@ export function QrLibretaButton({ tenantId, clienteId, mascotaId, vetNombre }: P
       </Dialog>
     </>
   )
-}
+})

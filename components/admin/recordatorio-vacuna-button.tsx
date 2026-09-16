@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { forwardRef, useImperativeHandle, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,9 +23,18 @@ interface Props {
   mascotaId: string
   mascotaNombre: string
   telefono: string
+  /** Sin trigger propio: lo abre un menú externo ("Acciones") vía `ref.abrir()`. */
+  sinTrigger?: boolean
 }
 
-export function RecordatorioVacunaButton({ tenantId, clienteId, mascotaId, mascotaNombre, telefono }: Props) {
+export interface RecordatorioVacunaButtonRef {
+  abrir: () => void
+}
+
+export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, Props>(function RecordatorioVacunaButton(
+  { tenantId, clienteId, mascotaId, mascotaNombre, telefono, sinTrigger },
+  ref,
+) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -76,17 +85,21 @@ export function RecordatorioVacunaButton({ tenantId, clienteId, mascotaId, masco
     }
   }
 
+  useImperativeHandle(ref, () => ({ abrir: handleAbrir }))
+
   return (
     <>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
-        onClick={handleAbrir}
-        title="Programar recordatorio de vacuna"
-      >
-        <Syringe className="h-5 w-5" />
-      </Button>
+      {!sinTrigger && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
+          onClick={handleAbrir}
+          title="Programar recordatorio de vacuna"
+        >
+          <Syringe className="h-5 w-5" />
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -117,4 +130,4 @@ export function RecordatorioVacunaButton({ tenantId, clienteId, mascotaId, masco
       </Dialog>
     </>
   )
-}
+})

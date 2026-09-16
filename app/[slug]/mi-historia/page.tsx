@@ -14,6 +14,7 @@ import { getSorteoActivo } from "@/lib/supabase/sorteos"
 import { getComprasClientePublico, type CompraClientePublico } from "@/lib/supabase/ventas"
 import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
+import { slugificarMascota } from "@/lib/mascotas/slug"
 import { formatCurrency } from "@/lib/format"
 import type { Cliente, Mascota, Sorteo } from "@/lib/supabase/types"
 import { Search, Loader2, PawPrint, CalendarPlus, ShoppingBag } from "lucide-react"
@@ -130,7 +131,7 @@ export default function MiHistoriaPage() {
                 <Card
                   key={mascota.id}
                   className="hover:border-emerald-400 transition-colors cursor-pointer overflow-hidden"
-                  onClick={() => router.push(`/${slug}/mi-historia/${mascota.id}?dni=${encodeURIComponent(dni.trim())}`)}
+                  onClick={() => router.push(`/${slug}/mi-historia/${encodeURIComponent(dni.trim())}/${encodeURIComponent(slugificarMascota(mascota.nombre))}`)}
                 >
                   <div
                     className="h-24 bg-cover bg-center flex items-center justify-center text-4xl"

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -24,6 +25,8 @@ import { useToast } from "@/hooks/use-toast"
 import { createCliente, getClienteByDNI, getClienteGlobalPorDNI } from "@/lib/supabase/clientes"
 import { createMascota, getMascotas } from "@/lib/supabase/mascotas"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
+import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
+import { format } from "date-fns"
 import { UserPlus, PlusCircle, Trash2, Loader2, PartyPopper, Sparkles } from "lucide-react"
 
 interface RegistroClienteDialogProps {
@@ -42,13 +45,22 @@ interface MascotaBorrador {
   nombre: string
   tipo: string
   raza: string
+  edadValor: string
+  edadUnidad: UnidadEdad
+  peso: string
+  tieneChip: boolean
+  chipNumero: string
 }
 
 type Paso = "dni" | "formulario"
 type Reconocimiento = "ninguno" | "local" | "global"
 
 const CLIENTE_VACIO = { nombre: "", telefono: "", email: "", dni: "", domicilio: "" }
-const MASCOTA_VACIA: MascotaBorrador = { nombre: "", tipo: "perro", raza: "" }
+const MASCOTA_VACIA: MascotaBorrador = {
+  nombre: "", tipo: "perro", raza: "",
+  edadValor: "", edadUnidad: "meses", peso: "",
+  tieneChip: false, chipNumero: "",
+}
 
 export function RegistroClienteDialog({
   tenantId, trigger, dniInicial, onExito, open: openControlado, onOpenChange: onOpenChangeControlado,
@@ -96,7 +108,14 @@ export function RegistroClienteDialog({
           nombre: local.nombre, telefono: local.telefono, email: local.email,
           domicilio: local.domicilio ?? "", dni: dniLimpio,
         })
-        setMascotas(mascotasLocales.map((m) => ({ nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "" })))
+        setMascotas(mascotasLocales.map((m) => ({
+          nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
+          edadValor: m.edadValor !== undefined ? String(m.edadValor) : "",
+          edadUnidad: m.edadUnidad ?? "meses",
+          peso: (m.peso ?? "").replace(/[^\d.,]/g, ""),
+          tieneChip: m.tieneChip ?? false,
+          chipNumero: m.chipNumero ?? "",
+        })))
         setReconocimiento("local")
         setPaso("formulario")
         return
@@ -108,7 +127,11 @@ export function RegistroClienteDialog({
           nombre: global.nombre, telefono: global.telefono, email: global.email,
           domicilio: global.domicilio, dni: dniLimpio,
         })
-        setMascotas(global.mascotas.map((m) => ({ nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "" })))
+        setMascotas(global.mascotas.map((m) => ({
+          nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
+          edadValor: "", edadUnidad: "meses" as UnidadEdad, peso: "",
+          tieneChip: false, chipNumero: "",
+        })))
         setReconocimiento("global")
       } else {
         setCliente({ ...CLIENTE_VACIO, dni: dniLimpio })
@@ -126,7 +149,7 @@ export function RegistroClienteDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, dniInicial])
 
-  const actualizarMascota = (i: number, campo: keyof MascotaBorrador, valor: string) => {
+  const actualizarMascota = (i: number, campo: keyof MascotaBorrador, valor: string | boolean) => {
     setMascotas((prev) => prev.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m)))
   }
 
@@ -144,13 +167,27 @@ export function RegistroClienteDialog({
       // Best-effort: si falla una mascota puntual no queremos que el
       // registro del cliente (lo que importa para el sorteo) se pierda.
       let mascotasConError = 0
+      const hoy = format(new Date(), "yyyy-MM-dd")
       for (const m of mascotas) {
         if (!m.nombre.trim()) continue
+        const edadValor = m.edadValor ? Number(m.edadValor) : undefined
+        const datosEdad = edadValor !== undefined && !Number.isNaN(edadValor)
+          ? {
+              edad: formatearEdad({ valor: edadValor, unidad: m.edadUnidad }),
+              edadValor,
+              edadUnidad: m.edadUnidad,
+              edadRegistradaEn: hoy,
+            }
+          : {}
         try {
           await createMascota(tenantId, clienteCreado.id, {
             nombre: m.nombre.trim(),
             tipo: m.tipo,
             raza: m.raza.trim() || undefined,
+            peso: m.peso.trim() ? `${m.peso.trim()} kg` : undefined,
+            tieneChip: m.tieneChip,
+            chipNumero: m.tieneChip ? m.chipNumero.trim() || undefined : undefined,
+            ...datosEdad,
           })
         } catch {
           mascotasConError++
@@ -329,6 +366,51 @@ export function RegistroClienteDialog({
                         onChange={(e) => actualizarMascota(i, "raza", e.target.value)}
                         placeholder="Raza (opcional)"
                       />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={m.edadValor}
+                        onChange={(e) => actualizarMascota(i, "edadValor", e.target.value)}
+                        placeholder="Edad"
+                      />
+                      <Select value={m.edadUnidad} onValueChange={(v) => actualizarMascota(i, "edadUnidad", v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="meses">meses</SelectItem>
+                          <SelectItem value="anios">años</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={m.peso}
+                        onChange={(e) => actualizarMascota(i, "peso", e.target.value)}
+                        placeholder="Peso (kg)"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`tieneChip-${i}`}
+                          checked={m.tieneChip}
+                          onCheckedChange={(checked) => actualizarMascota(i, "tieneChip", checked === true)}
+                        />
+                        <Label htmlFor={`tieneChip-${i}`} className="text-sm font-normal cursor-pointer">
+                          Tiene Chip
+                        </Label>
+                      </div>
+                      {m.tieneChip && (
+                        <Input
+                          value={m.chipNumero}
+                          onChange={(e) => actualizarMascota(i, "chipNumero", e.target.value)}
+                          placeholder="Número de chip"
+                        />
+                      )}
                     </div>
                   </div>
                   <Button

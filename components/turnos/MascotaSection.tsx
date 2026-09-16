@@ -1,6 +1,7 @@
 // /components/turnos/MascotaSection.tsx
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,8 +22,10 @@ interface MascotaSectionProps {
     edadUnidadMascota: "meses" | "anios";
     razaMascota: string;
     pesoMascota: string;
+    tieneChipMascota: boolean;
+    chipNumeroMascota: string;
   };
-  handleChange: (field: string, value: string) => void;
+  handleChange: (field: string, value: string | boolean) => void;
   mascotas: { id?: string; nombre: string; tipo: string; raza?: string }[];
   mostrarNuevaMascota: boolean;
   setMostrarNuevaMascota: (value: boolean) => void;
@@ -235,6 +238,35 @@ export function MascotaSection({
                 <span className="text-sm font-semibold text-muted-foreground shrink-0">kg</span>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="tieneChipMascota"
+                checked={formData.tieneChipMascota}
+                onCheckedChange={(checked) =>
+                  handleChange("tieneChipMascota", checked === true)
+                }
+              />
+              <Label htmlFor="tieneChipMascota" className="text-sm font-semibold cursor-pointer">
+                Tiene Chip
+              </Label>
+            </div>
+            {formData.tieneChipMascota && (
+              <div className="space-y-2 animate-in fade-in duration-300">
+                <Label htmlFor="chipNumeroMascota" className="text-sm font-semibold">
+                  Número de Chip
+                </Label>
+                <Input
+                  id="chipNumeroMascota"
+                  placeholder="985141000123456"
+                  value={formData.chipNumeroMascota}
+                  onChange={(e) => handleChange("chipNumeroMascota", e.target.value)}
+                  className="h-11 border-2 focus-visible:ring-primary/50"
+                />
+              </div>
+            )}
           </div>
         </>
       )}

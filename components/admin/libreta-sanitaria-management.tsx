@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -12,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,15 +36,48 @@ import {
   getClientesBasic,
   getClienteCompleto,
   getMascotas,
+  getMascotasBasicByClienteIds,
   getHistorias,
   getTurnosByClienteId,
+  getTenantConfig,
+  getProductos,
+  getProductoPorId,
   createHistoria,
   updateHistoria,
   updateCliente,
   updateTurno,
+  updateMascota,
 } from "@/lib/supabase/queries";
-import type { Cliente, Mascota, Historia, Turno, HistorialDato } from "@/lib/supabase/queries";
-import { uploadArchivoHistoria } from "@/lib/supabase/storage";
+import type { Cliente, Mascota, Historia, Turno, HistorialDato, SexoMascota, Producto, AplicacionHistoria } from "@/lib/supabase/queries";
+import type { Venta } from "@/lib/supabase/types";
+import { getVentas } from "@/lib/supabase/ventas";
+import { getSaldoCliente } from "@/lib/supabase/cuentaCorriente";
+import { uploadArchivoHistoria, uploadFotoTenant } from "@/lib/supabase/storage";
+import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults";
+import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad";
+import { format } from "date-fns";
+import { generarLibretaPDF, type VeterinariaLibreta } from "@/lib/pdf/libreta-pdf";
+import { generarComprobanteVeterinario } from "@/lib/pdf/comprobante-veterinario";
+import { useAuth } from "@/hooks/use-auth";
+import { useCarritoCompartido } from "@/hooks/pos/useCarritoCompartido";
+import {
+  agregarAlCarrito,
+  agregarAtencion,
+  itemsParaRPC,
+  montoDescuento,
+  totalesCarrito,
+  subtotalLinea,
+  SIN_DESCUENTO,
+  type Descuento,
+  type LineaCarrito,
+} from "@/lib/ventas/carrito";
+import { getOrCrearServicioAtencion } from "@/lib/supabase/productos";
+import { registrarVenta } from "@/lib/supabase/ventas";
+import { esConsumidorFinal } from "@/lib/clientes/consumidor-final";
+import { MEDIOS_PAGO, type MedioPago } from "@/lib/supabase/types";
+import { formatCurrency } from "@/lib/format";
+import { useRouter } from "next/navigation";
+import { getFirmaVeterinarioPublico } from "@/lib/supabase/usuarios";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -70,11 +111,21 @@ import {
   Film,
   File,
   FileDown,
+  Camera,
+  Syringe,
+  MoreVertical,
+  QrCode,
+  ShoppingCart,
 } from "lucide-react";
 import LibretaDetallesModal from "./LibretaDetallesModal";
-import { generarLibretaPDF } from "@/lib/pdf/libreta-pdf";
-import { QrLibretaButton } from "./qr-libreta-button";
-import { RecordatorioVacunaButton } from "./recordatorio-vacuna-button";
+import { QrLibretaButton, type QrLibretaButtonRef } from "./qr-libreta-button";
+import { RecordatorioVacunaButton, type RecordatorioVacunaButtonRef } from "./recordatorio-vacuna-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -165,7 +216,69 @@ const emptyHistoriaForm = {
   proximaVisita: "",
   pesoActual: "",
   temperatura: "",
+  esPrivada: true,
 };
+
+const emptyMascotaDataForm = {
+  tipo: "", raza: "", edadValor: "", edadUnidad: "meses" as UnidadEdad,
+  peso: "", tieneChip: false, chipNumero: "", sexo: "" as SexoMascota | "", color: "",
+};
+
+type TipoAplicacion = "vacuna" | "medicamento" | "desparasitacion" | "servicio";
+/** Los que sí se guardan en `Historia.aplicaciones` (columna con enum propio). "servicio" es solo carrito. */
+type TipoAplicacionHistoriaLocal = Exclude<TipoAplicacion, "servicio">;
+
+const TIPO_APLICACION_LABEL: Record<TipoAplicacion, string> = {
+  vacuna: "Vacuna",
+  medicamento: "Medicamento",
+  desparasitacion: "Desparasitación",
+  servicio: "Servicio",
+};
+
+const esTipoHistoria = (tipo: TipoAplicacion): tipo is TipoAplicacionHistoriaLocal => tipo !== "servicio";
+
+interface ItemAplicacion {
+  tipo: TipoAplicacion;
+  nombre: string;
+  productoId?: string;
+  /** Producto real del catálogo, si se eligió uno: sin esto no se puede armar la línea de carrito. */
+  producto?: Producto;
+  busqueda: string;
+  resultados: Producto[];
+  proxima: string;
+  observaciones: string;
+  /** Precio a cobrar por este ítem (se autocompleta al elegir un producto del catálogo). */
+  precio: string;
+}
+
+interface ItemExtra {
+  productoId?: string;
+  producto?: Producto;
+  nombre: string;
+  busqueda: string;
+  resultados: Producto[];
+  cantidad: string;
+  precio: string;
+}
+
+function nuevoItemAplicacion(): ItemAplicacion {
+  return {
+    tipo: "vacuna",
+    nombre: "", productoId: undefined, busqueda: "", resultados: [],
+    proxima: "", observaciones: "", precio: "",
+  };
+}
+
+function nuevoItemExtra(): ItemExtra {
+  return { productoId: undefined, nombre: "", busqueda: "", resultados: [], cantidad: "1", precio: "" };
+}
+
+/** Título legible de una nota combinada, para el timeline y el PDF: "Vacuna, Medicamento y Desparasitación". */
+function tituloAplicaciones(items: { tipo: TipoAplicacionHistoriaLocal }[]): string {
+  const tipos = Array.from(new Set(items.map((i) => TIPO_APLICACION_LABEL[i.tipo])));
+  if (tipos.length <= 1) return tipos[0] ?? "Aplicación";
+  return `${tipos.slice(0, -1).join(", ")} y ${tipos[tipos.length - 1]}`;
+}
 
 function SkeletonCard() {
   return (
@@ -204,6 +317,28 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     timeline: TimelineItem[];
   } | null>(null);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
+  const [ventasCliente, setVentasCliente] = useState<Venta[]>([]);
+  const [saldoCtaCte, setSaldoCtaCte] = useState(0);
+  const [veterinaria, setVeterinaria] = useState<VeterinariaLibreta>({});
+  const [rubroServicios, setRubroServicios] = useState("");
+  const [descargandoLibretaId, setDescargandoLibretaId] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  // Identidad de la veterinaria para el encabezado del PDF de libreta y del
+  // comprobante: se pide una sola vez, no cambia entre clientes ni mascotas.
+  useEffect(() => {
+    getTenantConfig(tenantId).then((config) => {
+      if (!config) return;
+      setVeterinaria({
+        nombre: config.nombre,
+        logoUrl: config.logo,
+        telefono: config.telefono,
+        direccion: config.direccion,
+        modalidad: config.modalidad,
+      });
+      setRubroServicios(config.servicios?.length ? config.servicios.map((s) => s.nombre).join(" - ") : (config.descripcion ?? ""));
+    });
+  }, [tenantId]);
 
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [clienteForm, setClienteForm] = useState({ domicilio: "", telefono: "", email: "", nombre: "" });
@@ -217,12 +352,35 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [formTurno, setFormTurno] = useState({ fecha: "", hora: "", motivo: "", diagnostico: "", tratamiento: "", medicacion: "", observaciones: "" });
   const [savingEntrada, setSavingEntrada] = useState(false);
 
+  const [editMascotaDataOpen, setEditMascotaDataOpen] = useState(false);
+  const [editMascotaDataTarget, setEditMascotaDataTarget] = useState<{ clienteId: string; mascotaId: string; fotoUrl?: string } | null>(null);
+  const [formMascotaData, setFormMascotaData] = useState(emptyMascotaDataForm);
+  const [savingMascotaData, setSavingMascotaData] = useState(false);
+  const [subiendoFotoMascota, setSubiendoFotoMascota] = useState(false);
+  const fotoMascotaInputRef = useRef<HTMLInputElement>(null);
+  const qrRefs = useRef<Map<string, QrLibretaButtonRef>>(new Map());
+  const recordatorioRefs = useRef<Map<string, RecordatorioVacunaButtonRef>>(new Map());
+
   const [addNotaOpen, setAddNotaOpen] = useState(false);
   const [addNotaMascota, setAddNotaMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
   const [formNota, setFormNota] = useState(emptyHistoriaForm);
   const [archivosNota, setArchivosNota] = useState<File[]>([]);
   const [uploadingArchivos, setUploadingArchivos] = useState(false);
   const [savingNota, setSavingNota] = useState(false);
+
+  const [addAplicacionOpen, setAddAplicacionOpen] = useState(false);
+  const [addAplicacionMascota, setAddAplicacionMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
+  const [fechaAplicacion, setFechaAplicacion] = useState("");
+  const [itemsAplicacion, setItemsAplicacion] = useState<ItemAplicacion[]>([nuevoItemAplicacion()]);
+  const [itemsExtra, setItemsExtra] = useState<ItemExtra[]>([]);
+  const [savingAplicacion, setSavingAplicacion] = useState(false);
+  const [cobrandoAplicacion, setCobrandoAplicacion] = useState(false);
+  const [descuentoAplicacion, setDescuentoAplicacion] = useState<Descuento>(SIN_DESCUENTO);
+  const [medioPagoAplicacion, setMedioPagoAplicacion] = useState<MedioPago>("efectivo");
+  const [servicioAtencionProducto, setServicioAtencionProducto] = useState<Producto | null>(null);
+  const { setDraft: setCarritoPosDraft } = useCarritoCompartido(tenantId);
+  const router = useRouter();
+  const [descargandoComprobanteId, setDescargandoComprobanteId] = useState<string | null>(null);
 
   const [addArchivoOpen, setAddArchivoOpen] = useState(false);
   const [addArchivoMascota, setAddArchivoMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
@@ -285,18 +443,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     let alive = true;
     const load = async () => {
       try {
-        const results = await Promise.all(
-          missingIds.map(async (id) => {
-            const mascotas = await getMascotas(tenantId, id);
-            const names = mascotas.map((m) => m.nombre).filter(Boolean);
-            return { id, count: mascotas.length, names };
-          })
-        );
+        const porCliente = await getMascotasBasicByClienteIds(tenantId, missingIds);
         if (!alive) return;
         setMascotasResumen((prev) => {
           const next = { ...prev };
-          results.forEach((r) => {
-            next[r.id] = { count: r.count, names: r.names };
+          missingIds.forEach((id) => {
+            const mascotas = porCliente.get(id) ?? [];
+            next[id] = { count: mascotas.length, names: mascotas.map((m) => m.nombre).filter(Boolean) };
           });
           return next;
         });
@@ -364,12 +517,17 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       setLoadingCliente(true);
       if (isMobile) setDetailSheetOpen(true);
       try {
-        const [completo, turnos] = await Promise.all([
+        const [completo, turnos, mascotas] = await Promise.all([
           getClienteCompleto(tenantId, clienteId),
           getTurnosByClienteId(tenantId, clienteId),
+          // `getMascotas` (RPC) incluye mascotas donde el cliente es co-dueño,
+          // no solo dueño principal — el embed de getClienteCompleto (FK
+          // directa) se queda corto ahí y antes se usaba como fuente
+          // primaria, así que un co-dueño sin mascotas propias siempre veía
+          // "0 mascotas" aunque compartiera una.
+          getMascotas(tenantId, clienteId),
         ]);
         if (completo) {
-          const mascotas = completo.mascotas || (await getMascotas(tenantId, clienteId));
           const clienteFull = { ...completo, mascotas, historialDatos: (completo as Cliente & { historialDatos?: HistorialDato[] }).historialDatos } as Cliente;
           setClienteExpandido({
             cliente: clienteFull,
@@ -425,6 +583,25 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     }
   }, [expandedClienteId, selectedMascotaId, clienteExpandido?.cliente.id, loadTimeline]);
 
+  // Ventas y saldo de cuenta corriente del dueño: todo ya está vinculado
+  // (venta.cliente_id, cuenta_corriente_movimientos.cliente_id), esto solo
+  // lo muestra en la ficha de la mascota para no tener que ir a buscarlo a
+  // otra pantalla.
+  useEffect(() => {
+    const clienteId = clienteExpandido?.cliente.id;
+    if (!clienteId) { setVentasCliente([]); setSaldoCtaCte(0); return; }
+    let activo = true;
+    Promise.all([
+      getVentas(tenantId, { clienteId, porPagina: 5 }),
+      getSaldoCliente(tenantId, clienteId),
+    ]).then(([pagina, saldo]) => {
+      if (!activo) return;
+      setVentasCliente(pagina.ventas);
+      setSaldoCtaCte(saldo);
+    }).catch((e) => console.error("Error cargando ventas/cta cte del cliente:", e));
+    return () => { activo = false; };
+  }, [tenantId, clienteExpandido?.cliente.id]);
+
   const openEditCliente = (c: Cliente) => {
     setEditingCliente(c);
     setClienteForm({
@@ -461,6 +638,91 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
+  const openEditMascotaData = (cliente: Cliente, mascota: Mascota) => {
+    if (!cliente.id || !mascota.id) return;
+    setEditMascotaDataTarget({ clienteId: cliente.id, mascotaId: mascota.id, fotoUrl: mascota.fotoUrl });
+    setFormMascotaData({
+      tipo: mascota.tipo || "",
+      raza: mascota.raza || "",
+      edadValor: mascota.edadValor !== undefined ? String(mascota.edadValor) : "",
+      edadUnidad: mascota.edadUnidad || "meses",
+      peso: (mascota.peso || "").replace(/[^\d.,]/g, ""),
+      tieneChip: mascota.tieneChip || false,
+      chipNumero: mascota.chipNumero || "",
+      sexo: mascota.sexo || "",
+      color: mascota.color || "",
+    });
+    setEditMascotaDataOpen(true);
+  };
+
+  const subirFotoMascota = async (file: File) => {
+    if (!editMascotaDataTarget) return;
+    setSubiendoFotoMascota(true);
+    try {
+      const url = await uploadFotoTenant(tenantId, `mascotas/${editMascotaDataTarget.mascotaId}`, file);
+      await updateMascota(tenantId, editMascotaDataTarget.clienteId, editMascotaDataTarget.mascotaId, { fotoUrl: url });
+      setEditMascotaDataTarget((prev) => (prev ? { ...prev, fotoUrl: url } : prev));
+      const mascotasActualizadas = await getMascotas(tenantId, editMascotaDataTarget.clienteId);
+      setClienteExpandido((prev) =>
+        prev && prev.cliente.id === editMascotaDataTarget.clienteId ? { ...prev, mascotas: mascotasActualizadas } : prev
+      );
+      toast({ title: "Foto actualizada" });
+    } catch (e) {
+      console.error("Error subiendo la foto de la mascota:", e);
+      toast({ title: "Error", description: "No se pudo subir la foto", variant: "destructive" });
+    } finally {
+      setSubiendoFotoMascota(false);
+    }
+  };
+
+  const saveMascotaData = async () => {
+    if (!editMascotaDataTarget) return;
+    if (!formMascotaData.sexo) {
+      toast({ title: "Falta el sexo", description: "Es un dato obligatorio para la ficha de la mascota.", variant: "destructive" });
+      return;
+    }
+    setSavingMascotaData(true);
+    try {
+      const edadValor = formMascotaData.edadValor ? Number(formMascotaData.edadValor) : undefined;
+      const datosEdad = edadValor !== undefined && !Number.isNaN(edadValor)
+        ? {
+            edad: formatearEdad({ valor: edadValor, unidad: formMascotaData.edadUnidad }),
+            edadValor,
+            edadUnidad: formMascotaData.edadUnidad,
+            edadRegistradaEn: format(new Date(), "yyyy-MM-dd"),
+          }
+        : {};
+
+      await updateMascota(tenantId, editMascotaDataTarget.clienteId, editMascotaDataTarget.mascotaId, {
+        tipo: formMascotaData.tipo,
+        raza: formMascotaData.raza,
+        peso: formMascotaData.peso.trim() ? `${formMascotaData.peso.trim()} kg` : "",
+        tieneChip: formMascotaData.tieneChip,
+        chipNumero: formMascotaData.tieneChip ? formMascotaData.chipNumero.trim() : "",
+        sexo: formMascotaData.sexo,
+        color: formMascotaData.color.trim(),
+        ...datosEdad,
+      });
+
+      const mascotasActualizadas = await getMascotas(tenantId, editMascotaDataTarget.clienteId);
+      setClienteExpandido((prev) =>
+        prev && prev.cliente.id === editMascotaDataTarget.clienteId
+          ? { ...prev, mascotas: mascotasActualizadas }
+          : prev
+      );
+      toast({ title: "Datos de la mascota actualizados" });
+      setEditMascotaDataOpen(false);
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "No se pudo guardar",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingMascotaData(false);
+    }
+  };
+
   const openEditHistoria = (h: Historia, clienteId: string, mascotaId: string) => {
     if (isMobile) setDetailSheetOpen(false);
     setEditTipo("historia");
@@ -475,6 +737,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       proximaVisita: h.proximaVisita ?? "",
       pesoActual: "",
       temperatura: "",
+      esPrivada: h.esPrivada ?? false,
     });
     setTimeout(() => setEditEntradaOpen(true), isMobile ? 150 : 0);
   };
@@ -501,10 +764,11 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     if (editTipo === "historia" && editHistoria) {
       setSavingEntrada(true);
       try {
-        const historiaPayload: Record<string, string> = {
+        const historiaPayload: Record<string, string | boolean> = {
           fechaAtencion: formHistoria.fechaAtencion,
           diagnostico: formHistoria.diagnostico,
           tratamiento: formHistoria.tratamiento,
+          esPrivada: formHistoria.esPrivada,
         };
         if (formHistoria.motivo) historiaPayload.motivo = formHistoria.motivo;
         if (formHistoria.observaciones) historiaPayload.observaciones = formHistoria.observaciones;
@@ -616,6 +880,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       tratamiento: trat || "—",
       observaciones: observacionesFinal,
       proximaVisita: proximaFinal,
+      esPrivada: formNota.esPrivada,
     };
 
     setSavingNota(true);
@@ -655,6 +920,306 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       });
     } finally {
       setSavingNota(false);
+    }
+  };
+
+  const openAddAplicacion = (cliente: Cliente, mascota: Mascota) => {
+    const clienteId = cliente?.id ?? "";
+    const mascotaId = mascota?.id ?? "";
+    if (!clienteId || !mascotaId) {
+      toast({ title: "Error", description: "No se pudo identificar cliente o mascota.", variant: "destructive" });
+      return;
+    }
+    if (isMobile) setDetailSheetOpen(false);
+    setAddAplicacionMascota({ cliente: { ...cliente, id: clienteId }, mascota: { ...mascota, id: mascotaId } });
+    setFechaAplicacion(new Date().toISOString().slice(0, 10));
+    setItemsAplicacion([nuevoItemAplicacion()]);
+    setItemsExtra([]);
+    setDescuentoAplicacion(SIN_DESCUENTO);
+    setMedioPagoAplicacion("efectivo");
+    getOrCrearServicioAtencion(tenantId).then(setServicioAtencionProducto).catch(() => setServicioAtencionProducto(null));
+    setTimeout(() => setAddAplicacionOpen(true), isMobile ? 150 : 0);
+  };
+
+  const cambiarItemAplicacion = (i: number, cambios: Partial<ItemAplicacion>) =>
+    setItemsAplicacion((prev) => prev.map((item, idx) => (idx === i ? { ...item, ...cambios } : item)));
+
+  const agregarItemAplicacion = () => setItemsAplicacion((prev) => [...prev, nuevoItemAplicacion()]);
+  const quitarItemAplicacion = (i: number) => setItemsAplicacion((prev) => prev.filter((_, idx) => idx !== i));
+
+  const buscarProductoAplicacion = (i: number, termino: string) => {
+    cambiarItemAplicacion(i, { busqueda: termino, productoId: undefined, nombre: termino });
+    if (termino.trim().length < 2) {
+      cambiarItemAplicacion(i, { resultados: [] });
+      return;
+    }
+    getProductos(tenantId, { busqueda: termino.trim(), porPagina: 6 }).then(({ productos }) =>
+      cambiarItemAplicacion(i, { resultados: productos })
+    );
+  };
+
+  const elegirProductoAplicacion = (i: number, producto: Producto) => {
+    cambiarItemAplicacion(i, { productoId: producto.id, producto, nombre: producto.nombre, busqueda: "", resultados: [], precio: String(producto.precio ?? "") });
+  };
+
+  const cambiarItemExtra = (i: number, cambios: Partial<ItemExtra>) =>
+    setItemsExtra((prev) => prev.map((item, idx) => (idx === i ? { ...item, ...cambios } : item)));
+  const agregarItemExtra = () => setItemsExtra((prev) => [...prev, nuevoItemExtra()]);
+  const quitarItemExtra = (i: number) => setItemsExtra((prev) => prev.filter((_, idx) => idx !== i));
+
+  const buscarProductoExtra = (i: number, termino: string) => {
+    cambiarItemExtra(i, { busqueda: termino, productoId: undefined, nombre: termino });
+    if (termino.trim().length < 2) {
+      cambiarItemExtra(i, { resultados: [] });
+      return;
+    }
+    getProductos(tenantId, { busqueda: termino.trim(), porPagina: 6 }).then(({ productos }) =>
+      cambiarItemExtra(i, { resultados: productos })
+    );
+  };
+
+  const elegirProductoExtra = (i: number, producto: Producto) => {
+    cambiarItemExtra(i, { productoId: producto.id, producto, nombre: producto.nombre, busqueda: "", resultados: [], precio: String(producto.precio ?? "") });
+  };
+
+
+  /**
+   * Genera (o vuelve a generar) el comprobante de una nota de
+   * vacuna/medicamento/desparasitación. Sirve tanto para el momento en que
+   * se guarda como para "Descargar orden" en una entrada ya cargada: en ese
+   * caso la firma es la del veterinario que la creó (`creadoPor`), no la de
+   * quien está mirando la libreta ahora.
+   */
+  const descargarComprobante = async (
+    aplicaciones: AplicacionHistoria[],
+    fechaAtencion: string,
+    creadoPor: string | undefined,
+    clienteNombre: string,
+    mascotaNombre: string,
+  ) => {
+    const uidFirma = creadoPor || user?.id;
+    const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
+    await generarComprobanteVeterinario({
+      emisor: {
+        nombre: veterinaria.nombre,
+        logoUrl: veterinaria.logoUrl,
+        direccion: veterinaria.direccion,
+        telefono: veterinaria.telefono,
+        rubro: rubroServicios,
+      },
+      profesional: {
+        nombre: firma?.nombre ?? undefined,
+        especialidad: firma?.especialidad,
+        matricula: firma?.matricula ?? undefined,
+        firmaUrl: firma?.firmaUrl ?? undefined,
+        selloUrl: firma?.selloUrl ?? undefined,
+      },
+      clienteNombre,
+      mascotaNombre,
+      fecha: fechaAtencion,
+      items: aplicaciones.map((a) => ({
+        tipoLabel: TIPO_APLICACION_LABEL[a.tipo],
+        nombre: a.nombre,
+        indicaciones: a.indicaciones,
+      })),
+    });
+  };
+
+  /** "Volver a descargar la orden" de una entrada ya cargada (nueva o vieja, suelta). */
+  const redescargarComprobante = async (h: Historia, clienteNombre: string, mascotaNombre: string) => {
+    if (!h.id) return;
+    const aplicaciones: AplicacionHistoria[] = h.aplicaciones?.length
+      ? h.aplicaciones
+      : h.tipoVisita && h.tipoVisita !== "consulta" && h.tipoVisita !== "turno_programado" && h.tipoVisita !== "visita_programada" && h.productoAplicado
+        ? [{ tipo: h.tipoVisita as TipoAplicacionHistoriaLocal, nombre: h.productoAplicado, indicaciones: h.observaciones, proxima: h.proximaVisita }]
+        : [];
+    if (aplicaciones.length === 0) return;
+    setDescargandoComprobanteId(h.id);
+    try {
+      await descargarComprobante(aplicaciones, h.fechaAtencion, h.creadoPor, clienteNombre, mascotaNombre);
+    } catch (e) {
+      console.error("Error regenerando el comprobante:", e);
+      toast({ title: "Error", description: "No se pudo generar el comprobante", variant: "destructive" });
+    } finally {
+      setDescargandoComprobanteId(null);
+    }
+  };
+
+  /** Ítems con nombre + producto de catálogo + precio > 0: lo único que se puede cobrar. */
+  const medicosCobrables = () =>
+    itemsAplicacion.filter((item) => esTipoHistoria(item.tipo) && item.nombre.trim() && item.producto && Number(item.precio) > 0);
+  const serviciosValidos = () =>
+    itemsAplicacion.filter((item) => item.tipo === "servicio" && item.nombre.trim() && Number(item.precio) > 0);
+  const extrasValidos = () => itemsExtra.filter((item) => item.nombre.trim() && item.producto && Number(item.cantidad) > 0);
+
+  const vinculoAplicacion = () => addAplicacionMascota && {
+    clienteId: addAplicacionMascota.cliente.id!,
+    mascotaId: addAplicacionMascota.mascota.id!,
+    mascotaNombre: addAplicacionMascota.mascota.nombre,
+  };
+
+  /** Líneas de carrito de ESTA aplicación, sin tocar lo que ya hubiera en Vender. Puro y sincrónico. */
+  const construirLineasNuevas = (): LineaCarrito[] => {
+    let lineas: LineaCarrito[] = [];
+    for (const item of medicosCobrables()) {
+      lineas = agregarAlCarrito(lineas, { ...item.producto!, precio: Number(item.precio) }, 1);
+    }
+    if (servicioAtencionProducto) {
+      const vinculo = vinculoAplicacion();
+      for (const item of serviciosValidos()) {
+        lineas = agregarAtencion(lineas, servicioAtencionProducto, Number(item.precio), item.nombre.trim(), vinculo ?? undefined);
+      }
+    }
+    for (const item of extrasValidos()) {
+      lineas = agregarAlCarrito(lineas, { ...item.producto!, precio: Number(item.precio) || item.producto!.precio }, Number(item.cantidad) || 1);
+    }
+    return lineas;
+  };
+
+  // `construirLineasNuevas` valida stock (vía `agregarAlCarrito`) y puede
+  // tirar si algún producto no alcanza — como esto se recalcula en cada
+  // render para la vista previa, un producto sin stock no puede tumbar el
+  // diálogo entero: se atrapa y se muestra vacío, el error real recién
+  // aparece al intentar Guardar/Cobrar (ahí sí se avisa con un toast).
+  let lineasPreview: LineaCarrito[] = [];
+  let errorPreview: string | null = null;
+  try {
+    lineasPreview = construirLineasNuevas();
+  } catch (e) {
+    errorPreview = e instanceof Error ? e.message : "No se pudo calcular el carrito";
+  }
+  const totalesPreview = totalesCarrito(lineasPreview, descuentoAplicacion);
+
+  /** Crea la historia (solo ítems médicos) y descarga la orden. Común a "Guardar" y "Cobrar". */
+  const registrarHistoriaYOrden = async (): Promise<boolean> => {
+    if (!addAplicacionMascota?.cliente.id || !addAplicacionMascota?.mascota.id) return false;
+    const validos = itemsAplicacion.filter((item) => item.nombre.trim());
+    const medicos = validos.filter((item) => esTipoHistoria(item.tipo));
+    const fecha = fechaAplicacion?.trim() || new Date().toISOString().slice(0, 10);
+    const aplicaciones: AplicacionHistoria[] = medicos.map((item) => ({
+      tipo: item.tipo as TipoAplicacionHistoriaLocal,
+      nombre: item.nombre.trim(),
+      indicaciones: item.observaciones.trim() || undefined,
+      proxima: item.proxima.trim() || undefined,
+    }));
+    if (aplicaciones.length === 0) return true;
+
+    await createHistoria(tenantId, addAplicacionMascota.cliente.id, addAplicacionMascota.mascota.id, {
+      fechaAtencion: fecha,
+      motivo: tituloAplicaciones(aplicaciones),
+      diagnostico: "", tratamiento: "", observaciones: "",
+      tipoVisita: "aplicacion", aplicaciones, creadoPor: user?.id,
+    });
+    if (clienteExpandido?.cliente.id === addAplicacionMascota.cliente.id && selectedMascotaId === addAplicacionMascota.mascota.id) {
+      loadTimeline(addAplicacionMascota.cliente.id, addAplicacionMascota.mascota.id);
+    }
+    try {
+      await descargarComprobante(aplicaciones, fecha, user?.id, addAplicacionMascota.cliente.nombre, addAplicacionMascota.mascota.nombre);
+    } catch (e) {
+      console.error("Error generando el comprobante:", e);
+      toast({ title: "Se guardó, pero no se pudo generar el comprobante", variant: "destructive" });
+    }
+    return true;
+  };
+
+  const cerrarYLimpiarAplicacion = () => {
+    setAddAplicacionOpen(false);
+    setAddAplicacionMascota(null);
+    setItemsAplicacion([nuevoItemAplicacion()]);
+    setItemsExtra([]);
+    setDescuentoAplicacion(SIN_DESCUENTO);
+    setMedioPagoAplicacion("efectivo");
+  };
+
+  /** Guarda la nota médica + orden, y deja las líneas cobrables esperando en el carrito de Vender (no cobra ni redirige). */
+  const saveAplicacion = async () => {
+    if (itemsAplicacion.every((item) => !item.nombre.trim()) && itemsExtra.every((item) => !item.nombre.trim())) {
+      toast({ title: "Falta el producto", description: "Elegí al menos una vacuna, medicamento, desparasitación, servicio o extra.", variant: "destructive" });
+      return;
+    }
+    setSavingAplicacion(true);
+    try {
+      await registrarHistoriaYOrden();
+      const nuevas = construirLineasNuevas();
+      if (nuevas.length > 0) {
+        setCarritoPosDraft((d) => {
+          let carrito = d.carrito;
+          for (const linea of nuevas) {
+            carrito = linea.vinculo
+              ? [...carrito, linea]
+              : agregarAlCarrito(carrito, linea.producto, linea.cantidad);
+          }
+          return { ...d, carrito };
+        });
+        toast({ title: "Guardado", description: "Se agregó al carrito de Vender (sin cobrar todavía)." });
+      } else {
+        toast({ title: "Guardado" });
+      }
+      cerrarYLimpiarAplicacion();
+    } catch (e) {
+      console.error("Error registrando la aplicación:", e);
+      toast({ title: "Error", description: "No se pudo registrar", variant: "destructive" });
+    } finally {
+      setSavingAplicacion(false);
+    }
+  };
+
+  /** Cobra ahora mismo, sin pasar por Vender: crea la historia+orden y registra la venta con las líneas de este diálogo. */
+  const cobrarAplicacion = async () => {
+    if (!addAplicacionMascota?.cliente.id) return;
+    const lineas = construirLineasNuevas();
+    if (lineas.length === 0) {
+      toast({ title: "Nada para cobrar", description: "Cargá al menos un ítem con producto y precio.", variant: "destructive" });
+      return;
+    }
+
+    // La deuda (si se cobra a cuenta corriente) tiene que quedar a nombre del
+    // dueño principal de la mascota, no de quien esté abierto en pantalla:
+    // si el vet llegó acá desde la ficha de un co-dueño (ej. Emanuel, sobre
+    // la mascota de Iara), venderle "a cuenta corriente" tiene que cargarle
+    // la cuenta a Iara, no a Emanuel.
+    const duenoId = addAplicacionMascota.mascota.clienteId || addAplicacionMascota.cliente.id;
+    const dueno = duenoId === addAplicacionMascota.cliente.id
+      ? addAplicacionMascota.cliente
+      : (await getClienteCompleto(tenantId, duenoId)) ?? addAplicacionMascota.cliente;
+
+    if (medioPagoAplicacion === "cuenta_corriente" && esConsumidorFinal(dueno)) {
+      toast({ title: "Elegí un cliente real para vender a cuenta corriente", variant: "destructive" });
+      return;
+    }
+    setCobrandoAplicacion(true);
+    try {
+      await registrarHistoriaYOrden();
+      await registrarVenta(tenantId, {
+        items: itemsParaRPC(lineas),
+        medioPago: medioPagoAplicacion,
+        clienteId: duenoId,
+        descuento: montoDescuento(totalesCarrito(lineas).subtotal, descuentoAplicacion),
+      });
+      if (medioPagoAplicacion === "cuenta_corriente" && duenoId !== addAplicacionMascota.cliente.id) {
+        toast({ title: "Deuda cargada a " + (dueno.nombre || "el dueño principal") });
+      }
+      // Los "servicio" quedan anotados en la historia recién ahora que se cobraron de verdad.
+      for (const linea of lineas.filter((l) => l.vinculo)) {
+        try {
+          await createHistoria(tenantId, linea.vinculo!.clienteId, linea.vinculo!.mascotaId, {
+            fechaAtencion: new Date().toISOString().slice(0, 10),
+            motivo: linea.motivo || "Atención veterinaria",
+            diagnostico: "", tratamiento: "",
+            observaciones: `Cobrado en Libreta Sanitaria: ${formatCurrency(linea.precioManual ?? linea.producto.precio)}`,
+            tipoVisita: "consulta",
+          });
+        } catch {
+          toast({ title: "Se cobró, pero no se pudo anotar el servicio en la historia", variant: "destructive" });
+        }
+      }
+      toast({ title: "Cobrado", description: `Total: ${formatCurrency(totalesPreview.total)}` });
+      cerrarYLimpiarAplicacion();
+    } catch (e) {
+      console.error("Error cobrando la aplicación:", e);
+      toast({ title: "Error", description: e instanceof Error ? e.message : "No se pudo cobrar", variant: "destructive" });
+    } finally {
+      setCobrandoAplicacion(false);
     }
   };
 
@@ -927,45 +1492,133 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     <div className="space-y-3">
                       {/* Cabecera mascota: Nombre - Raza - Edad - Peso + contadores + botón + */}
                       <div className="flex items-center gap-2 flex-wrap rounded-xl border border-slate-200 dark:border-slate-700 p-3 bg-white dark:bg-slate-900 shadow-sm">
-                        <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
-                          <Icon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                        <div className="h-9 w-9 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
+                          {m.fotoUrl
+                            ? <img src={m.fotoUrl} alt={m.nombre} className="h-full w-full object-cover" />
+                            : <Icon className="h-5 w-5 text-slate-600 dark:text-slate-400" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{m.nombre} · {m.tipo}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{[m.raza, m.edad, m.peso].filter(Boolean).join(" · ") || "Sin datos"}</p>
+                          <button
+                            type="button"
+                            onClick={() => openEditMascotaData(clienteExpandido.cliente, m)}
+                            className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                            title="Cargar o corregir datos de la mascota"
+                          >
+                            {[m.raza, m.edad, m.peso, m.sexo === "macho" ? "Macho" : m.sexo === "hembra" ? "Hembra" : null, m.color, m.tieneChip ? "Chip" : null].filter(Boolean).join(" · ") || "Sin datos"}
+                            <Edit3 className="h-3 w-3 shrink-0" />
+                          </button>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-[10px]">{visitasReales.length} visitas</Badge>
                           {proximos > 0 && <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">{proximos} próximo{proximos !== 1 ? "s" : ""}</Badge>}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
-                            onClick={() => generarLibretaPDF(clienteExpandido.cliente, m, visitasReales)}
-                            title="Descargar libreta en PDF"
-                          >
-                            <FileDown className="h-5 w-5" />
-                          </Button>
                           {clienteExpandido.cliente.id && m.id && (
-                            <QrLibretaButton
-                              tenantId={tenantId}
-                              clienteId={clienteExpandido.cliente.id}
-                              mascotaId={m.id}
-                            />
+                            <>
+                              <QrLibretaButton
+                                ref={(r) => { if (r && m.id) qrRefs.current.set(m.id, r); }}
+                                tenantId={tenantId}
+                                clienteId={clienteExpandido.cliente.id}
+                                mascotaId={m.id}
+                                sinTrigger
+                              />
+                              <RecordatorioVacunaButton
+                                ref={(r) => { if (r && m.id) recordatorioRefs.current.set(m.id, r); }}
+                                tenantId={tenantId}
+                                clienteId={clienteExpandido.cliente.id}
+                                mascotaId={m.id}
+                                mascotaNombre={m.nombre ?? ""}
+                                telefono={clienteExpandido.cliente.telefono ?? ""}
+                                sinTrigger
+                              />
+                            </>
                           )}
-                          {clienteExpandido.cliente.id && m.id && (
-                            <RecordatorioVacunaButton
-                              tenantId={tenantId}
-                              clienteId={clienteExpandido.cliente.id}
-                              mascotaId={m.id}
-                              mascotaNombre={m.nombre ?? ""}
-                              telefono={clienteExpandido.cliente.telefono ?? ""}
-                            />
-                          )}
-                          <Button size="sm" variant="outline" className="h-11 w-11 p-0 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0" onClick={() => openAddArchivo(clienteExpandido.cliente, m)} title="Subir archivo adjunto"><Paperclip className="h-5 w-5" /></Button>
-                          <Button size="sm" className="h-11 w-11 p-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0" onClick={() => openAddNota(clienteExpandido.cliente, m)} title="Agregar nota clínica"><Plus className="h-6 w-6" /></Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0 gap-1.5 px-3">
+                                {descargandoLibretaId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                                Acciones
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-64">
+                              <DropdownMenuItem
+                                disabled={descargandoLibretaId === m.id}
+                                onSelect={async () => {
+                                  if (!m.id) return;
+                                  const nombreMascota = (m.nombre ?? "").trim().toLowerCase();
+                                  const turnosMascota = clienteExpandido.turnos.filter(
+                                    (t) => t.mascotaId === m.id || (t.mascota?.nombre ?? "").trim().toLowerCase() === nombreMascota
+                                  );
+                                  setDescargandoLibretaId(m.id);
+                                  try {
+                                    await generarLibretaPDF({
+                                      tenantId,
+                                      veterinaria,
+                                      cliente: clienteExpandido.cliente,
+                                      mascota: m,
+                                      historias: visitasReales,
+                                      turnos: turnosMascota,
+                                    });
+                                  } catch (e) {
+                                    console.error("Error generando la libreta PDF:", e);
+                                    toast({ title: "Error", description: "No se pudo generar el PDF de la libreta", variant: "destructive" });
+                                  } finally {
+                                    setDescargandoLibretaId(null);
+                                  }
+                                }}
+                              >
+                                <FileDown className="h-4 w-4" /> Descargar libreta sanitaria (PDF)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => m.id && qrRefs.current.get(m.id)?.abrir()}>
+                                <QrCode className="h-4 w-4" /> Generar QR de la libreta pública
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => m.id && recordatorioRefs.current.get(m.id)?.abrir()}>
+                                <Syringe className="h-4 w-4" /> Programar recordatorio de vacuna
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openAddArchivo(clienteExpandido.cliente, m)}>
+                                <Paperclip className="h-4 w-4" /> Subir archivo adjunto
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openAddAplicacion(clienteExpandido.cliente, m)}>
+                                <Syringe className="h-4 w-4" /> Agregar vacuna, medicamento o desparasitación
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openAddNota(clienteExpandido.cliente, m)}>
+                                <Plus className="h-4 w-4" /> Agregar nota clínica
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
+
+                      {/* Ventas y cuenta corriente del dueño: ya están vinculadas por cliente_id, esto solo lo muestra */}
+                      {(ventasCliente.length > 0 || saldoCtaCte > 0) && (
+                        <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 flex-wrap">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <ShoppingCart className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600 dark:text-slate-400 min-w-0">
+                              {ventasCliente.slice(0, 3).map((v) => (
+                                <span key={v.id} className={v.estado === "anulada" ? "line-through text-slate-400" : ""}>
+                                  #{v.numero} · {formatCurrency(v.total)}
+                                </span>
+                              ))}
+                              {ventasCliente.length === 0 && <span className="text-slate-400">Sin ventas registradas</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {saldoCtaCte > 0 && (
+                              <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">
+                                Debe {formatCurrency(saldoCtaCte)}
+                              </Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-slate-500"
+                              onClick={() => router.push(`/${tenantId}/admin/CuentaCorriente`)}
+                            >
+                              Ver cuenta corriente
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Tabs: Historia Clínica (default) | Turnos */}
                       <Tabs value={mascotaContentTab} onValueChange={(v) => setMascotaContentTab(v as "historia" | "turnos")} className="w-full">
@@ -1018,18 +1671,58 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                   <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
                                     {fechaStr ? new Date(fechaStr + "T00:00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "—"}
                                   </p>
-                                  {entradas.map((h) => (
+                                  {entradas.map((h) => {
+                                    const aplicacionesDeH: AplicacionHistoria[] = h.aplicaciones?.length
+                                      ? h.aplicaciones
+                                      : h.tipoVisita && ["vacuna", "medicamento", "desparasitacion"].includes(h.tipoVisita) && h.productoAplicado
+                                        ? [{ tipo: h.tipoVisita as TipoAplicacionHistoriaLocal, nombre: h.productoAplicado, indicaciones: h.observaciones, proxima: h.proximaVisita }]
+                                        : [];
+                                    return (
                                     <div key={h.id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm space-y-2">
                                       <div className="flex items-start justify-between gap-2">
-                                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{h.motivo || "Consulta"}</p>
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{h.motivo || "Consulta"}</p>
+                                          <Badge
+                                            variant="secondary"
+                                            className={`text-[9px] px-1.5 py-0 shrink-0 ${h.esPrivada ? "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"}`}
+                                          >
+                                            {h.esPrivada ? "Privada" : "Visible al cliente"}
+                                          </Badge>
+                                        </div>
                                         <div className="flex items-center gap-0.5 shrink-0">
+                                          {aplicacionesDeH.length > 0 && (
+                                            <button
+                                              type="button"
+                                              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                                              disabled={descargandoComprobanteId === h.id}
+                                              onClick={() => redescargarComprobante(h, clienteExpandido.cliente.nombre, m.nombre ?? "")}
+                                              title="Descargar orden"
+                                            >
+                                              {descargandoComprobanteId === h.id
+                                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                : <FileDown className="h-3.5 w-3.5" />}
+                                            </button>
+                                          )}
                                           <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: h }); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
                                           <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => openEditHistoria(h, clienteExpandido.cliente.id!, m.id!)} title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                                         </div>
                                       </div>
                                       <div className="text-xs text-slate-600 dark:text-slate-400">
-                                        <p><span className="font-semibold">Diagnóstico:</span> {(h.diagnostico || "—").slice(0, 120)}{(h.diagnostico?.length ?? 0) > 120 ? "…" : ""}</p>
-                                        <p className="mt-0.5"><span className="font-semibold">Tratamiento:</span> {(h.tratamiento || "—").slice(0, 120)}{(h.tratamiento?.length ?? 0) > 120 ? "…" : ""}</p>
+                                        {aplicacionesDeH.length > 0 ? (
+                                          <div className="space-y-1">
+                                            {aplicacionesDeH.map((a, i) => (
+                                              <p key={i}>
+                                                <span className="font-semibold">{TIPO_APLICACION_LABEL[a.tipo]}:</span> {a.nombre}
+                                                {a.indicaciones ? ` — ${a.indicaciones}` : ""}
+                                              </p>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <p><span className="font-semibold">Diagnóstico:</span> {(h.diagnostico || "—").slice(0, 120)}{(h.diagnostico?.length ?? 0) > 120 ? "…" : ""}</p>
+                                            <p className="mt-0.5"><span className="font-semibold">Tratamiento:</span> {(h.tratamiento || "—").slice(0, 120)}{(h.tratamiento?.length ?? 0) > 120 ? "…" : ""}</p>
+                                          </>
+                                        )}
                                         {h.archivos && h.archivos.length > 0 && (() => {
                                           const visibles = filtroArchivos === "todos"
                                             ? h.archivos
@@ -1060,7 +1753,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         })()}
                                       </div>
                                     </div>
-                                  ))}
+                                  );})}
                                 </div>
                               ))}
                             </div>
@@ -1395,6 +2088,16 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     className="mt-1 min-h-[50px] text-sm"
                   />
                 </div>
+                <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                  <Checkbox
+                    id="edit-nota-visible-cliente"
+                    checked={!formHistoria.esPrivada}
+                    onCheckedChange={(checked) => setFormHistoria((f) => ({ ...f, esPrivada: checked !== true }))}
+                  />
+                  <Label htmlFor="edit-nota-visible-cliente" className="text-xs font-normal cursor-pointer">
+                    Visible para el cliente (aparece en su &quot;Mi Historia&quot;)
+                  </Label>
+                </div>
               </>
             ) : (
               <>
@@ -1478,8 +2181,443 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         </DialogContent>
       </Dialog>
 
+      {/* Modal datos generales de la mascota (raza, edad, peso, chip) */}
+      <Dialog open={editMascotaDataOpen} onOpenChange={setEditMascotaDataOpen}>
+        <DialogContent className="sm:max-w-sm border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+              Datos de la mascota
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-3">
+              <input
+                ref={fotoMascotaInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) subirFotoMascota(file);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fotoMascotaInputRef.current?.click()}
+                disabled={subiendoFotoMascota}
+                className="relative h-16 w-16 shrink-0 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-800 hover:border-emerald-500 transition-colors"
+                title="Cambiar foto"
+              >
+                {subiendoFotoMascota ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                ) : editMascotaDataTarget?.fotoUrl ? (
+                  <img src={editMascotaDataTarget.fotoUrl} alt="Foto de la mascota" className="h-full w-full object-cover" />
+                ) : (
+                  <Camera className="h-5 w-5 text-slate-400" />
+                )}
+              </button>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="font-medium text-slate-700 dark:text-slate-300">Foto</p>
+                <p>Se recorta cuadrada para la libreta.</p>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Tipo</Label>
+              <Select value={formMascotaData.tipo} onValueChange={(v) => setFormMascotaData((d) => ({ ...d, tipo: v }))}>
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue placeholder="Selecciona..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {MASCOTAS_DEFAULT.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.emoji} {t.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Raza</Label>
+              <Input
+                value={formMascotaData.raza}
+                onChange={(e) => setFormMascotaData((d) => ({ ...d, raza: e.target.value }))}
+                className="mt-1 h-9"
+                placeholder="Golden Retriever"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Sexo *</Label>
+                <Select value={formMascotaData.sexo} onValueChange={(v) => setFormMascotaData((d) => ({ ...d, sexo: v as SexoMascota }))}>
+                  <SelectTrigger className="mt-1 h-9">
+                    <SelectValue placeholder="Selecciona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="macho">Macho</SelectItem>
+                    <SelectItem value="hembra">Hembra</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Color</Label>
+                <Input
+                  value={formMascotaData.color}
+                  onChange={(e) => setFormMascotaData((d) => ({ ...d, color: e.target.value }))}
+                  className="mt-1 h-9"
+                  placeholder="Negro y blanco"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs">Edad</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formMascotaData.edadValor}
+                    onChange={(e) => setFormMascotaData((d) => ({ ...d, edadValor: e.target.value }))}
+                    className="h-9"
+                    placeholder="8"
+                  />
+                  <Select
+                    value={formMascotaData.edadUnidad}
+                    onValueChange={(v) => setFormMascotaData((d) => ({ ...d, edadUnidad: v as UnidadEdad }))}
+                  >
+                    <SelectTrigger className="h-9 w-24 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="meses">meses</SelectItem>
+                      <SelectItem value="anios">años</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Peso (kg)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formMascotaData.peso}
+                  onChange={(e) => setFormMascotaData((d) => ({ ...d, peso: e.target.value }))}
+                  className="mt-1 h-9"
+                  placeholder="15"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="mascota-tiene-chip"
+                  checked={formMascotaData.tieneChip}
+                  onCheckedChange={(checked) => setFormMascotaData((d) => ({ ...d, tieneChip: checked === true }))}
+                />
+                <Label htmlFor="mascota-tiene-chip" className="text-xs font-normal cursor-pointer">
+                  Tiene Chip
+                </Label>
+              </div>
+              {formMascotaData.tieneChip && (
+                <Input
+                  value={formMascotaData.chipNumero}
+                  onChange={(e) => setFormMascotaData((d) => ({ ...d, chipNumero: e.target.value }))}
+                  className="h-9"
+                  placeholder="Número de chip"
+                />
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditMascotaDataOpen(false)}>Cancelar</Button>
+            <Button onClick={saveMascotaData} disabled={savingMascotaData} className="bg-emerald-600 hover:bg-emerald-700">
+              {savingMascotaData ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Agregar vacuna / medicamento / desparasitación (una o varias) */}
+      <Dialog open={addAplicacionOpen} onOpenChange={(open) => {
+          setAddAplicacionOpen(open);
+          if (!open) {
+            setAddAplicacionMascota(null);
+            if (isMobile && expandedClienteId) setDetailSheetOpen(true);
+          }
+        }}>
+        <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Syringe className="h-4 w-4 text-emerald-600" /> Vacunas, medicamentos, servicios y desparasitación
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+              {addAplicacionMascota ? `${addAplicacionMascota.cliente.nombre} – ${addAplicacionMascota.mascota.nombre}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Fecha</Label>
+              <Input
+                type="date"
+                value={fechaAplicacion}
+                onChange={(e) => setFechaAplicacion(e.target.value)}
+                className="mt-1 h-9"
+              />
+              <p className="mt-1 text-[11px] text-slate-400">Vacuna/medicamento/desparasitación quedan como una sola nota en la historia clínica. Servicio solo se cobra (su historia la crea el cobro en Vender).</p>
+            </div>
+            {itemsAplicacion.map((item, i) => (
+              <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2.5 relative">
+                {itemsAplicacion.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => quitarItemAplicacion(i)}
+                    className="absolute top-2 right-2 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-600"
+                    title="Quitar"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <div>
+                  <Label className="text-xs">Tipo</Label>
+                  <Select value={item.tipo} onValueChange={(v) => cambiarItemAplicacion(i, { tipo: v as TipoAplicacion, productoId: undefined, nombre: "", busqueda: "", resultados: [] })}>
+                    <SelectTrigger className="mt-1 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vacuna">Vacuna</SelectItem>
+                      <SelectItem value="medicamento">Medicamento</SelectItem>
+                      <SelectItem value="desparasitacion">Desparasitación</SelectItem>
+                      <SelectItem value="servicio">Servicio (Atención, Urgencia...)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {item.tipo === "servicio" ? (
+                  <div>
+                    <Label className="text-xs">Servicio *</Label>
+                    <Input
+                      value={item.nombre}
+                      onChange={(e) => cambiarItemAplicacion(i, { nombre: e.target.value })}
+                      className="mt-1 h-9"
+                      placeholder="Ej: Atención, Urgencia, Consulta domiciliaria…"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Label className="text-xs">{TIPO_APLICACION_LABEL[item.tipo]} *</Label>
+                    <Input
+                      value={item.productoId ? item.nombre : item.busqueda}
+                      onChange={(e) => buscarProductoAplicacion(i, e.target.value)}
+                      className="mt-1 h-9"
+                      placeholder="Buscar en productos (ej: Triple Felina)…"
+                    />
+                    {item.resultados.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-40 overflow-y-auto">
+                        {item.resultados.map((prod) => (
+                          <button
+                            key={prod.id}
+                            type="button"
+                            onClick={() => elegirProductoAplicacion(i, prod)}
+                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                          >
+                            <span>{prod.nombre}</span>
+                            <span className="text-xs text-slate-400">{formatCurrency(prod.precio)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!item.productoId && item.busqueda.trim().length >= 2 && item.resultados.length === 0 && (
+                      <p className="mt-1 text-[11px] text-slate-400">Sin coincidencias en productos: se guarda como texto libre (no se puede cobrar en Vender sin un producto del catálogo).</p>
+                    )}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Precio</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.precio}
+                      onChange={(e) => cambiarItemAplicacion(i, { precio: e.target.value })}
+                      className="mt-1 h-9"
+                      placeholder="0"
+                    />
+                  </div>
+                  {item.tipo !== "servicio" && (
+                    <div>
+                      <Label className="text-xs">Próxima aplicación</Label>
+                      <Input
+                        type="date"
+                        value={item.proxima}
+                        onChange={(e) => cambiarItemAplicacion(i, { proxima: e.target.value })}
+                        className="mt-1 h-9"
+                      />
+                    </div>
+                  )}
+                </div>
+                {item.tipo !== "servicio" && (
+                  <div>
+                    <Label className="text-xs">Observaciones</Label>
+                    <Input
+                      value={item.observaciones}
+                      onChange={(e) => cambiarItemAplicacion(i, { observaciones: e.target.value })}
+                      className="mt-1 h-9"
+                      placeholder="Dosis, frecuencia, duración… (opcional)"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={agregarItemAplicacion} className="w-full gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> Agregar otra
+            </Button>
+
+            {/* Extras: productos sueltos (alimento, artículos) que no son un dato médico, solo se cobran */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+              <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Extras (alimento, artículos)</Label>
+              <div className="space-y-2 mt-2">
+                {itemsExtra.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        value={item.productoId ? item.nombre : item.busqueda}
+                        onChange={(e) => buscarProductoExtra(i, e.target.value)}
+                        className="h-9"
+                        placeholder="Buscar producto…"
+                      />
+                      {item.resultados.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-40 overflow-y-auto">
+                          {item.resultados.map((prod) => (
+                            <button
+                              key={prod.id}
+                              type="button"
+                              onClick={() => elegirProductoExtra(i, prod)}
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              <span>{prod.nombre}</span>
+                              <span className="text-xs text-slate-400">{formatCurrency(prod.precio)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-20 shrink-0">
+                      <Input
+                        type="number"
+                        min="0"
+                        step={item.producto?.unidad === "kg" ? "0.1" : "1"}
+                        value={item.cantidad}
+                        onChange={(e) => cambiarItemExtra(i, { cantidad: e.target.value })}
+                        className="h-9"
+                        placeholder={item.producto?.unidad === "kg" ? "Kg" : "Cant."}
+                      />
+                      {item.producto && (
+                        <p className="mt-0.5 text-[10px] text-slate-400 text-center">
+                          {item.producto.unidad === "kg" ? "kg" : "un."} · {formatCurrency(item.producto.precio)}{item.producto.unidad === "kg" ? "/kg" : ""}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => quitarItemExtra(i)}
+                      className="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-600 shrink-0"
+                      title="Quitar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" onClick={agregarItemExtra} className="w-full gap-1.5 mt-2">
+                <Plus className="h-3.5 w-3.5" /> Agregar extra
+              </Button>
+            </div>
+
+            {/* Carrito: lo que se va a cobrar por esto, con descuento y medio de pago — igual que en Vender */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
+                <ShoppingCart className="h-3.5 w-3.5 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Carrito</span>
+              </div>
+              {errorPreview ? (
+                <p className="px-3 py-3 text-xs text-red-600">{errorPreview}</p>
+              ) : lineasPreview.length === 0 ? (
+                <p className="px-3 py-3 text-xs text-slate-400">Elegí un producto con precio, un servicio o un extra para poder cobrar.</p>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {lineasPreview.map((linea) => (
+                    <div key={linea.id} className="flex items-center justify-between px-3 py-1.5 text-sm">
+                      <span className="text-slate-700 dark:text-slate-300 truncate">
+                        {linea.producto.nombre}{linea.cantidad !== 1 ? ` × ${linea.cantidad}` : ""}
+                      </span>
+                      <span className="text-slate-600 dark:text-slate-400 shrink-0 ml-2">{formatCurrency(subtotalLinea(linea))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="p-3 space-y-2 bg-slate-50/60 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(totalesPreview.subtotal)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs shrink-0">Descuento</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={descuentoAplicacion.valor || ""}
+                    onChange={(e) => setDescuentoAplicacion((d) => ({ ...d, valor: Number(e.target.value) || 0 }))}
+                    className="h-8 flex-1"
+                    placeholder="0"
+                  />
+                  <Select value={descuentoAplicacion.tipo} onValueChange={(v) => setDescuentoAplicacion((d) => ({ ...d, tipo: v as Descuento["tipo"] }))}>
+                    <SelectTrigger className="h-8 w-20 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monto">$</SelectItem>
+                      <SelectItem value="porcentaje">%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs shrink-0 w-20">Medio de pago</Label>
+                  <Select value={medioPagoAplicacion} onValueChange={(v) => setMedioPagoAplicacion(v as MedioPago)}>
+                    <SelectTrigger className="h-8 flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MEDIOS_PAGO.filter((m) => m.id !== "mixto").map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
+                  <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Total</span>
+                  <span className="text-base font-bold text-emerald-800 dark:text-emerald-300">{formatCurrency(totalesPreview.total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setAddAplicacionOpen(false)} className="sm:mr-auto">Cancelar</Button>
+            <Button variant="outline" onClick={saveAplicacion} disabled={savingAplicacion || cobrandoAplicacion}>
+              {savingAplicacion ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Guardar sin cobrar
+            </Button>
+            <Button onClick={cobrarAplicacion} disabled={savingAplicacion || cobrandoAplicacion || lineasPreview.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
+              {cobrandoAplicacion ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Cobrar ahora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal Nueva Nota Clínica */}
       <Dialog open={addNotaOpen} onOpenChange={(open) => {
+          setAddNotaOpen(open);
           if (!open) {
             setAddNotaMascota(null);
             if (isMobile && expandedClienteId) setDetailSheetOpen(true);
@@ -1545,6 +2683,16 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   className="mt-1 min-h-[60px] text-sm"
                   placeholder="Notas adicionales (opcional)"
                 />
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                <Checkbox
+                  id="nota-visible-cliente"
+                  checked={!formNota.esPrivada}
+                  onCheckedChange={(checked) => setFormNota((f) => ({ ...f, esPrivada: checked !== true }))}
+                />
+                <Label htmlFor="nota-visible-cliente" className="text-xs font-normal cursor-pointer">
+                  Visible para el cliente (aparece en su &quot;Mi Historia&quot;). Si no se marca, es una nota privada solo para el staff.
+                </Label>
               </div>
               {/* Adjuntos */}
               <div>

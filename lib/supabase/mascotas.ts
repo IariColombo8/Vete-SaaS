@@ -31,6 +31,10 @@ export function aMascota(f: Fila): Mascota {
     edadRegistradaEn,
     raza: (f.raza as string) ?? undefined,
     peso: (f.peso as string) ?? undefined,
+    tieneChip: (f.tiene_chip as boolean) ?? false,
+    chipNumero: (f.chip_numero as string) ?? undefined,
+    sexo: (f.sexo as Mascota["sexo"]) ?? undefined,
+    color: (f.color as string) ?? undefined,
     libretaToken: (f.libreta_token as string) ?? undefined,
     fotoUrl: (f.foto_url as string) ?? undefined,
   }
@@ -60,6 +64,10 @@ export async function createMascota(
       edadRegistradaEn: data.edadRegistradaEn ?? null,
       raza: data.raza ?? null,
       peso: data.peso ?? null,
+      tieneChip: data.tieneChip ?? false,
+      chipNumero: data.chipNumero ?? null,
+      sexo: data.sexo ?? null,
+      color: data.color ?? null,
     },
   })
 
@@ -76,6 +84,56 @@ export async function getMascotas(tenantId: string, clienteId: string): Promise<
 
 export const getMascotasByClienteId = getMascotas
 
+/**
+ * Mascotas de varios clientes en una sola query, agrupadas por `cliente_id`.
+ * Reemplaza a llamar `getMascotas` (RPC, 1 round-trip por cliente) en un
+ * loop: para una lista de N clientes evita el patrón N+1 al pedir solo el
+ * resumen (nombre/tipo) para mostrar en un listado colapsado. Usa RLS
+ * (`es_staff`) en vez de la RPC pública, así que solo sirve con sesión.
+ *
+ * Incluye también las mascotas donde el cliente es co-dueño (`mascota_duenos`,
+ * ver 022): si no, un co-dueño buscado en el panel aparecía con "0 mascotas"
+ * aunque comparta una con el dueño principal.
+ */
+export async function getMascotasBasicByClienteIds(
+  tenantId: string,
+  clienteIds: string[],
+): Promise<Map<string, Mascota[]>> {
+  const resultado = new Map<string, Mascota[]>()
+  if (clienteIds.length === 0) return resultado
+
+  const [{ data: propias, error: errorPropias }, { data: coDuenos, error: errorCoDuenos }] = await Promise.all([
+    supabase.from("mascotas").select("*").eq("tenant_id", tenantId).in("cliente_id", clienteIds),
+    supabase.from("mascota_duenos").select("cliente_id, mascota_id").eq("tenant_id", tenantId).in("cliente_id", clienteIds),
+  ])
+  throwIfSupabaseError(errorPropias, "Error al cargar mascotas del listado")
+  throwIfSupabaseError(errorCoDuenos, "Error al cargar co-dueños del listado")
+
+  const agregar = (clienteId: string, mascota: Mascota) => {
+    const lista = resultado.get(clienteId) ?? []
+    if (!lista.some((m) => m.id === mascota.id)) lista.push(mascota)
+    resultado.set(clienteId, lista)
+  }
+
+  for (const fila of propias ?? []) {
+    agregar((fila as Fila).cliente_id as string, aMascota(fila))
+  }
+
+  const idsCompartidas = [...new Set((coDuenos ?? []).map((f) => (f as Fila).mascota_id as string))]
+  if (idsCompartidas.length > 0) {
+    const { data: mascotasCompartidas, error: errorCompartidas } = await supabase
+      .from("mascotas").select("*").eq("tenant_id", tenantId).in("id", idsCompartidas)
+    throwIfSupabaseError(errorCompartidas, "Error al cargar mascotas compartidas del listado")
+    const porId = new Map((mascotasCompartidas ?? []).map((f) => [(f as Fila).id as string, aMascota(f)]))
+    for (const f of coDuenos ?? []) {
+      const mascota = porId.get((f as Fila).mascota_id as string)
+      if (mascota) agregar((f as Fila).cliente_id as string, mascota)
+    }
+  }
+
+  return resultado
+}
+
 export async function updateMascota(
   tenantId: string,
   clienteId: string,
@@ -91,6 +149,10 @@ export async function updateMascota(
   if (data.edadRegistradaEn !== undefined) datos.edadRegistradaEn = data.edadRegistradaEn
   if (data.raza !== undefined) datos.raza = data.raza
   if (data.peso !== undefined) datos.peso = data.peso
+  if (data.tieneChip !== undefined) datos.tieneChip = data.tieneChip
+  if (data.chipNumero !== undefined) datos.chipNumero = data.chipNumero
+  if (data.sexo !== undefined) datos.sexo = data.sexo
+  if (data.color !== undefined) datos.color = data.color
   if (data.libretaToken !== undefined) datos.libretaToken = data.libretaToken
 
   if (Object.keys(datos).length === 0) return { success: true, id: mascotaId }
@@ -107,7 +169,7 @@ export async function updateMascota(
   return { success: true, id: mascotaId }
 }
 
-/** Una mascota puntual, sin sesión (para /mi-historia/[mascotaId]). */
+/** Una mascota puntual, sin sesión (para /mi-historia/[dni]/[mascotaSlug]). */
 export async function getMascotaPublico(
   tenantId: string,
   mascotaId: string,

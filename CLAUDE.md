@@ -6,6 +6,41 @@ Guía de referencia para Claude Code. Refleja decisiones tomadas y el rumbo del 
 
 ---
 
+## Regla de cuidado — nunca romper algo al arreglar otra cosa
+
+**Incidente real:** al limpiar scripts temporales se corrió `rm -f *.mjs` parado
+en la raíz del repo (en vez de solo borrar el archivo puntual por nombre). Ese
+glob se llevó de paso `next.config.mjs` y `postcss.config.mjs` — sin
+`postcss.config.mjs`, Tailwind deja de generar clases utilitarias y **toda la
+app se ve rota** (sin grid/flex, todo apilado), en cualquier página, no solo
+donde se estaba trabajando. Costó tiempo de diagnóstico y de reinicios de
+servidor que se pudo evitar.
+
+**Reglas concretas a partir de ahora:**
+
+- **Nunca usar comandos con glob (`*`, `rm -f *.ext`, `rm -rf carpeta/*`, etc.)
+  para limpiar archivos propios.** Borrar siempre por nombre exacto y completo
+  (`rm archivo-especifico.mjs`), nunca por patrón, ni siquiera "para limpiar
+  rápido". Un glob mal acotado no distingue un script temporal de un archivo
+  de configuración del proyecto.
+- **Antes de borrar cualquier archivo en la raíz del repo**, listar primero
+  qué matchea el patrón (`ls` / `git status`) y confirmar visualmente que la
+  lista contiene *solo* lo que se quiere borrar.
+- Los scripts temporales de este tipo de trabajo (verificaciones puntuales
+  contra la base, pruebas de una sola vez) van al scratchpad de la sesión, no
+  a la raíz del repo — así un error de limpieza ahí no puede tocar nada del
+  proyecto.
+- Después de cualquier operación destructiva o de limpieza, correr
+  `git status` y revisar que no aparezca nada inesperado como borrado o
+  modificado antes de seguir. Si aparece algo que no se tocó a propósito,
+  restaurarlo (`git checkout -- archivo`) antes de continuar con la tarea
+  original.
+- Priorizar explícitamente no generar un error nuevo por sobre la velocidad de
+  arreglar el error actual — si hay duda entre "hacerlo rápido" o "verificar
+  primero qué toca", siempre verificar primero.
+
+---
+
 ## Comandos
 
 ```bash
@@ -14,6 +49,15 @@ npm run build      # build de producción
 npm run lint       # ESLint
 npx tsc --noEmit   # verificar tipos sin compilar
 ```
+
+**Si en algún momento todo carga lento en localhost** (incluso el home, sin
+fetch de datos, y empeora con el tiempo dentro del mismo proceso hasta 45-56s
+por request): no es el código, es Turbopack. `next dev` en Next 16.1.6 usa
+Turbopack por default y tiene una regresión real de performance — CPU pegada,
+degradación progresiva, igual en todas las rutas. Confirmado comparando contra
+`npx next dev --webpack`, que responde consistente en <300ms. Si vuelve a
+pasar, reiniciar con `--webpack` para confirmar antes de sospechar de queries
+o de componentes.
 
 ---
 

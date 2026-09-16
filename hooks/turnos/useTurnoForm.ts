@@ -87,6 +87,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
     mascotaExistenteId: "", nombreMascota: "", tipoMascota: "",
     edadValorMascota: "", edadUnidadMascota: "meses" as UnidadEdad,
     razaMascota: "", pesoMascota: "",
+    tieneChipMascota: false, chipNumeroMascota: "",
     servicio: "", motivo: "", fecha: "", hora: "",
     vacunas: [] as string[],
     lugar: "" as string,
@@ -143,6 +144,8 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       edadUnidadMascota: m.edadUnidad || "meses",
       razaMascota: m.raza || "",
       pesoMascota: (m.peso || "").replace(/[^\d.,]/g, ""),
+      tieneChipMascota: m.tieneChip || false,
+      chipNumeroMascota: m.chipNumero || "",
     }))
   }, [defaultMascotaId, mascotas, formData.mascotaExistenteId])
 
@@ -183,7 +186,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
     if (formData.hora && !disponibles.includes(formData.hora)) handleChange("hora", "")
   }, [selectedDate, turnosExistentes, tenantHorarios, turnoConfig, tenantConfig, formData.profesionalId, formData.servicio])
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     if (lockDni && field === "dni") return
     setFormData(prev => ({ ...prev, [field]: value }) as typeof prev)
     if (["nombre", "telefono", "email", "domicilio"].includes(field) && clienteExistente) setDatosEditados(true)
@@ -200,6 +203,8 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
           edadUnidadMascota: m.edadUnidad || "meses",
           razaMascota: m.raza || "",
           pesoMascota: (m.peso || "").replace(/[^\d.,]/g, ""),
+          tieneChipMascota: m.tieneChip || false,
+          chipNumeroMascota: m.chipNumero || "",
         }))
       } else {
         setFormData(prev => ({
@@ -207,6 +212,7 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
           nombreMascota: "", tipoMascota: "",
           edadValorMascota: "", edadUnidadMascota: "meses",
           razaMascota: "", pesoMascota: "",
+          tieneChipMascota: false, chipNumeroMascota: "",
         }))
       }
     }
@@ -275,13 +281,19 @@ export function useTurnoForm(options: UseTurnoFormOptions) {
       if (mostrarNuevaMascota || !mascotaId) {
         const mascotaRef = await createMascota(tenantId, clienteId, {
           nombre: formData.nombreMascota, tipo: formData.tipoMascota,
-          raza: formData.razaMascota, peso, ...datosEdad,
+          raza: formData.razaMascota, peso,
+          tieneChip: formData.tieneChipMascota,
+          chipNumero: formData.tieneChipMascota ? formData.chipNumeroMascota : undefined,
+          ...datosEdad,
         })
         mascotaId = mascotaRef.id
       } else {
         await updateMascota(tenantId, clienteId, mascotaId, {
           nombre: formData.nombreMascota, tipo: formData.tipoMascota,
-          raza: formData.razaMascota, peso, ...datosEdad,
+          raza: formData.razaMascota, peso,
+          tieneChip: formData.tieneChipMascota,
+          chipNumero: formData.tieneChipMascota ? formData.chipNumeroMascota : undefined,
+          ...datosEdad,
         })
       }
 

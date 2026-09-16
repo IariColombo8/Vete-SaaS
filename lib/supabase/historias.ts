@@ -1,7 +1,7 @@
 import { supabase } from "./config"
 import { throwIfSupabaseError } from "./assert"
 import { getClientesBasic } from "./clientes"
-import type { Historia, HistoriaClinicaRegistro } from "./types"
+import type { Historia, HistoriaClinicaRegistro, AplicacionHistoria } from "./types"
 
 /**
  * Historias clínicas. Firmas idénticas a la versión Firestore
@@ -22,6 +22,10 @@ function aHistoria(f: Fila): Historia {
     archivos: (f.archivos as string[]) ?? [],
     tipoVisita: (f.tipo_visita as Historia["tipoVisita"]) ?? undefined,
     turnoId: (f.turno_id as string) ?? undefined,
+    esPrivada: (f.es_privada as boolean) ?? false,
+    productoAplicado: (f.producto_aplicado as string) ?? undefined,
+    creadoPor: (f.creado_por as string) ?? undefined,
+    aplicaciones: (f.aplicaciones as AplicacionHistoria[]) ?? undefined,
   }
 }
 
@@ -117,6 +121,10 @@ export async function createHistoria(
       archivos: historiaData.archivos ?? [],
       tipoVisita: historiaData.tipoVisita ?? "consulta",
       turnoId: historiaData.turnoId || null,
+      esPrivada: historiaData.esPrivada ?? false,
+      productoAplicado: historiaData.productoAplicado || null,
+      creadoPor: historiaData.creadoPor || null,
+      aplicaciones: historiaData.aplicaciones ?? [],
     },
   })
 
@@ -137,7 +145,7 @@ export async function getHistorias(
   return (data ?? []).map(aHistoria)
 }
 
-/** Historias de una mascota, sin sesión (para /mi-historia/[mascotaId]). */
+/** Historias de una mascota, sin sesión (para /mi-historia/[dni]/[mascotaSlug]). */
 export async function getHistoriasPublico(
   tenantId: string,
   mascotaId: string,
@@ -179,6 +187,9 @@ export async function updateHistoria(
   if (data.archivos !== undefined) fila.archivos = data.archivos
   if (data.tipoVisita !== undefined) fila.tipo_visita = data.tipoVisita
   if (data.turnoId !== undefined) fila.turno_id = data.turnoId || null
+  if (data.esPrivada !== undefined) fila.es_privada = data.esPrivada
+  if (data.productoAplicado !== undefined) fila.producto_aplicado = data.productoAplicado || null
+  if (data.aplicaciones !== undefined) fila.aplicaciones = data.aplicaciones
 
   if (Object.keys(fila).length === 0) return
   const { error } = await supabase.from("historias").update(fila).eq("id", historiaId)

@@ -18,6 +18,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin, Home, PawPrint, FileText, Syringe } from "lucide-react"
 import { EquipoManagement } from "@/components/admin/equipo-management"
 import { EmailProviderConfig } from "@/components/admin/email-provider-config"
+import { MiFirmaManagement } from "@/components/admin/mi-firma-management"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
@@ -35,7 +36,7 @@ export default function ConfiguracionPage() {
   const { toast } = useToast()
   const [loadingData, setLoadingData] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"datos" | "turnos" | "equipo">("datos")
+  const [activeTab, setActiveTab] = useState<"datos" | "turnos" | "equipo" | "firma">("datos")
 
   // ── Datos de la veterinaria ──
   const [basic, setBasic] = useState({ nombre: "", telefono: "", email: "", direccion: "", ciudad: "" })
@@ -390,11 +391,12 @@ export default function ConfiguracionPage() {
           <p className="text-sm text-muted-foreground">Gestiona los datos de tu veterinaria y la configuracion de turnos.</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "datos" | "turnos" | "equipo")}>
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "datos" | "turnos" | "equipo" | "firma")}>
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="datos">Datos</TabsTrigger>
             <TabsTrigger value="turnos">Turnos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
+            <TabsTrigger value="firma">Mi firma</TabsTrigger>
           </TabsList>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -1279,6 +1281,13 @@ export default function ConfiguracionPage() {
           {/* ═══════════════════════════════════════════════════════════════════ */}
           <TabsContent value="equipo" className="space-y-6 mt-6">
             <EquipoManagement tenantId={slug} />
+          </TabsContent>
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/*  TAB: MI FIRMA (por profesional, no por tenant)                    */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <TabsContent value="firma" className="space-y-6 mt-6">
+            <MiFirmaManagement tenantId={slug} />
           </TabsContent>
         </Tabs>
 

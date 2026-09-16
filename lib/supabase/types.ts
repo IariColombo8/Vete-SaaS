@@ -19,6 +19,14 @@ export interface Usuario {
   isAdmin?: boolean
   createdAt?: unknown
   lastLogin?: unknown
+  /** Firma digital del profesional, para el comprobante/orden veterinaria. */
+  firmaUrl?: string | null
+  selloUrl?: string | null
+  /** Nombre tal como debe salir impreso (puede diferir del de la cuenta). */
+  nombreProfesional?: string | null
+  /** M.P. / matrícula profesional. */
+  matricula?: string | null
+  especialidad?: string
 }
 
 // ── Invitaciones ──
@@ -173,11 +181,18 @@ export interface Mascota {
   edadRegistradaEn?: string
   raza?: string
   peso?: string
+  tieneChip?: boolean
+  chipNumero?: string
+  sexo?: SexoMascota
+  /** Opcional: no toda mascota tiene un color fácil de describir en una palabra. */
+  color?: string
   /** Token aleatorio para la libreta pública por QR (no adivinable). */
   libretaToken?: string
   /** Foto opcional subida por el dueño; fondo del perfil público. */
   fotoUrl?: string
 }
+
+export type SexoMascota = "macho" | "hembra"
 
 export interface Turno {
   id?: string
@@ -216,6 +231,18 @@ export interface Turno {
   observaciones?: string
 }
 
+export type TipoAplicacionHistoria = "vacuna" | "medicamento" | "desparasitacion"
+
+/** Un ítem de "Agregar vacuna/medicamento/desparasitación", dentro de `Historia.aplicaciones`. */
+export interface AplicacionHistoria {
+  tipo: TipoAplicacionHistoria
+  nombre: string
+  /** Dosis, vía de administración, frecuencia, duración — texto libre del veterinario. */
+  indicaciones?: string
+  /** Próxima aplicación/dosis (YYYY-MM-DD), si corresponde. */
+  proxima?: string
+}
+
 export interface Historia {
   id?: string
   fechaAtencion: string
@@ -225,8 +252,16 @@ export interface Historia {
   observaciones?: string
   proximaVisita?: string
   archivos?: string[]
-  tipoVisita?: "consulta" | "turno_programado" | "visita_programada"
+  tipoVisita?: "consulta" | "turno_programado" | "visita_programada" | "vacuna" | "medicamento" | "desparasitacion" | "aplicacion"
   turnoId?: string
+  /** true = solo la ve el staff. false = aparece también en "Mi Historia" del cliente. */
+  esPrivada?: boolean
+  /** @deprecated usar `aplicaciones`. Se mantiene para leer entradas viejas (tipoVisita vacuna/medicamento/desparasitacion sueltas). */
+  productoAplicado?: string
+  /** uid del usuario (staff) que cargó la entrada. Ausente en flujos anónimos. */
+  creadoPor?: string
+  /** Vacunas/medicamentos/desparasitaciones cargados juntos en una sola nota (tipoVisita "aplicacion"). */
+  aplicaciones?: AplicacionHistoria[]
 }
 
 export interface HistoriaClinicaRegistro {

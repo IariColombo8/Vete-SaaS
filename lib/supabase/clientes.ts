@@ -1,6 +1,7 @@
 import { supabase } from "./config"
 import { throwIfSupabaseError } from "./assert"
 import type { Cliente, ClientesCursor, ClientesPage, ClientesStats, HistorialDato } from "./types"
+import { aMascota } from "./mascotas"
 
 export type { ClientesStats } from "./types"
 
@@ -193,15 +194,13 @@ export async function getClienteCompleto(tenantId: string, clienteId: string) {
   const { mascotas: filasMascotas, ...filaCliente } = data as Fila & { mascotas: Fila[] }
   return {
     ...aCliente(filaCliente),
-    mascotas: (filasMascotas ?? []).map((m) => ({
-      id: m.id as string,
-      nombre: (m.nombre as string) ?? "",
-      tipo: (m.tipo as string) ?? "",
-      edad: (m.edad as string) ?? undefined,
-      raza: (m.raza as string) ?? undefined,
-      peso: (m.peso as string) ?? undefined,
-      libretaToken: (m.libreta_token as string) ?? undefined,
-    })),
+    // `aMascota` es el mismo mapeo que usa el resto de la app (getMascotas,
+    // getMascotasBasicByClienteIds, etc.): antes esto tenía su propia lista
+    // de campos a mano, que se quedó atrás cada vez que se agregó una
+    // columna nueva a mascotas (chip, sexo, color, foto) y por eso la ficha
+    // de "Datos de la mascota" en Libreta Sanitaria los mostraba vacíos aun
+    // teniéndolos guardados.
+    mascotas: (filasMascotas ?? []).map(aMascota),
   }
 }
 

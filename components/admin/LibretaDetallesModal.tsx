@@ -239,22 +239,40 @@ export default function LibretaDetallesModal({
                 </p>
               </div>
             ) : null}
-            <div className="mt-2 sm:mt-3">
-              <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Diagnóstico
-              </p>
-              <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
-                {diagnostico || "—"}
-              </p>
-            </div>
-            <div className="mt-2 sm:mt-3">
-              <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Tratamiento
-              </p>
-              <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
-                {tratamiento || "—"}
-              </p>
-            </div>
+            {h?.aplicaciones?.length ? (
+              <div className="mt-2 sm:mt-3 space-y-2">
+                {h.aplicaciones.map((a, i) => (
+                  <div key={i} className="p-2 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600">
+                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
+                      {a.tipo === "vacuna" ? "Vacuna" : a.tipo === "medicamento" ? "Medicamento" : "Desparasitación"}
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">{a.nombre}</p>
+                    {a.indicaciones && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{a.indicaciones}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 sm:mt-3">
+                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Diagnóstico
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {diagnostico || "—"}
+                  </p>
+                </div>
+                <div className="mt-2 sm:mt-3">
+                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Tratamiento
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {tratamiento || "—"}
+                  </p>
+                </div>
+              </>
+            )}
             {proximaVisita ? (
               <div className="mt-2 sm:mt-3">
                 <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
