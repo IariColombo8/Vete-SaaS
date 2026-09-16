@@ -2458,10 +2458,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 {item.tipo !== "servicio" && (
                   <div>
                     <Label className="text-xs">Observaciones</Label>
-                    <Input
+                    <Textarea
                       value={item.observaciones}
                       onChange={(e) => cambiarItemAplicacion(i, { observaciones: e.target.value })}
-                      className="mt-1 h-9"
+                      className="mt-1 min-h-[70px] resize-y"
                       placeholder="Dosis, frecuencia, duración… (opcional)"
                     />
                   </div>
