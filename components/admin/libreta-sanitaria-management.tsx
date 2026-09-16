@@ -116,6 +116,7 @@ import {
   MoreVertical,
   QrCode,
   ShoppingCart,
+  AlertTriangle,
 } from "lucide-react";
 import LibretaDetallesModal from "./LibretaDetallesModal";
 import { QrLibretaButton, type QrLibretaButtonRef } from "./qr-libreta-button";
@@ -390,6 +391,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const { setDraft: setCarritoPosDraft } = useCarritoCompartido(tenantId);
   const router = useRouter();
   const [descargandoComprobanteId, setDescargandoComprobanteId] = useState<string | null>(null);
+  /** Nombre, matrícula o firma sin cargar en "Mi Firma" para el usuario logueado — el comprobante sale incompleto. `null` = todavía no se chequeó. */
+  const [firmaProfesionalIncompleta, setFirmaProfesionalIncompleta] = useState<boolean | null>(null);
 
   const [addArchivoOpen, setAddArchivoOpen] = useState(false);
   const [addArchivoMascota, setAddArchivoMascota] = useState<{ cliente: Cliente; mascota: Mascota } | null>(null);
@@ -988,6 +991,28 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
+  /**
+   * Chequea si el usuario logueado tiene su ficha de "Mi Firma" completa,
+   * para avisar ANTES de descargar en vez de que el veterinario recién se
+   * entere al mirar el PDF ya impreso. Corre al abrir cualquiera de los dos
+   * diálogos que generan el comprobante (orden médica y vacuna/aplicación).
+   */
+  useEffect(() => {
+    if (!addOrdenOpen && !addAplicacionOpen) return;
+    if (!user?.id) return;
+    let cancelado = false;
+    setFirmaProfesionalIncompleta(null);
+    getFirmaVeterinarioPublico(user.id).then((firma) => {
+      if (cancelado) return;
+      const incompleta = !firma || !firma.nombre?.trim() || !firma.matricula?.trim() || !firma.firmaUrl;
+      setFirmaProfesionalIncompleta(incompleta);
+    });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addOrdenOpen, addAplicacionOpen, user?.id]);
+
   /** Params comunes (emisor + firma del profesional) para las 3 operaciones sobre la orden. */
   const construirParamsOrden = async () => {
     if (!addOrdenMascota) return null;
@@ -1119,8 +1144,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     clienteNombre: string,
     mascotaNombre: string,
     notaLibre?: string,
+    /** Ignora `creadoPor` y firma con el usuario logueado — usado cuando quien cargó la entrada no tiene la firma completa. */
+    forzarFirmaPropia?: boolean,
   ) => {
-    const uidFirma = creadoPor || user?.id;
+    const uidFirma = (forzarFirmaPropia ? user?.id : creadoPor) || user?.id;
     const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
     await generarComprobanteVeterinario({
       emisor: {
@@ -1150,13 +1177,27 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     });
   };
 
-  /** "Volver a descargar la orden" de una entrada ya cargada (nueva o vieja, suelta — vacuna/medicamento o nota libre). */
+  /**
+   * "Volver a descargar la orden" de una entrada ya cargada (nueva o vieja,
+   * suelta — vacuna/medicamento o nota libre). Antes de descargar, chequea si
+   * a quien cargó la entrada le falta la firma: si es así, usa directamente
+   * la del usuario logueado, sin avisar ni preguntar nada — una sola
+   * descarga, ya con firma si hay alguna cuenta en el tenant que la tenga
+   * cargada.
+   */
   const redescargarComprobante = async (h: Historia, clienteNombre: string, mascotaNombre: string) => {
     if (!h.id) return;
+    let forzarFirmaPropia = false;
+    const uidFirma = h.creadoPor || user?.id;
+    const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
+    const incompleta = !firma || !firma.nombre?.trim() || !firma.matricula?.trim() || !firma.firmaUrl;
+    if (incompleta && h.creadoPor && h.creadoPor !== user?.id) {
+      forzarFirmaPropia = true;
+    }
     if (h.tipoVisita === "orden_medica") {
       setDescargandoComprobanteId(h.id);
       try {
-        await descargarComprobante([], h.fechaAtencion, h.creadoPor, clienteNombre, mascotaNombre, h.observaciones ?? "");
+        await descargarComprobante([], h.fechaAtencion, h.creadoPor, clienteNombre, mascotaNombre, h.observaciones ?? "", forzarFirmaPropia);
       } catch (e) {
         console.error("Error regenerando la orden médica:", e);
         toast({ title: "Error", description: "No se pudo generar la orden", variant: "destructive" });
@@ -1173,7 +1214,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     if (aplicaciones.length === 0) return;
     setDescargandoComprobanteId(h.id);
     try {
-      await descargarComprobante(aplicaciones, h.fechaAtencion, h.creadoPor, clienteNombre, mascotaNombre);
+      await descargarComprobante(aplicaciones, h.fechaAtencion, h.creadoPor, clienteNombre, mascotaNombre, undefined, forzarFirmaPropia);
     } catch (e) {
       console.error("Error regenerando el comprobante:", e);
       toast({ title: "Error", description: "No se pudo generar el comprobante", variant: "destructive" });
@@ -2497,6 +2538,17 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
+            {firmaProfesionalIncompleta && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  Te falta cargar nombre, matrícula o firma en tu perfil — el comprobante va a salir incompleto.{" "}
+                  <button type="button" className="underline font-medium" onClick={() => window.open(`/${tenantId}/admin/Configuracion`, "_blank")}>
+                    Completar en Configuración → Mi firma
+                  </button>
+                </span>
+              </div>
+            )}
             <div>
               <Label className="text-xs">Fecha</Label>
               <Input
@@ -2774,6 +2826,17 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               {addOrdenMascota ? `${addOrdenMascota.mascota.nombre} — ${addOrdenMascota.cliente.nombre}` : ""}
             </DialogDescription>
           </DialogHeader>
+          {firmaProfesionalIncompleta && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                Te falta cargar nombre, matrícula o firma en tu perfil — el comprobante va a salir incompleto.{" "}
+                <button type="button" className="underline font-medium" onClick={() => window.open(`/${tenantId}/admin/Configuracion`, "_blank")}>
+                  Completar en Configuración → Mi firma
+                </button>
+              </span>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-3">
               <div>

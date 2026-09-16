@@ -73,7 +73,14 @@ export async function getFirmaVeterinarioPublico(uid: string): Promise<FirmaVete
   const { data, error } = await supabase
     .rpc("obtener_firma_veterinario_publico", { p_usuario_id: uid })
     .maybeSingle()
-  if (error || !data) return null
+  if (error) {
+    // No tragarse el error: si el RPC falla (falta la migración, permiso,
+    // etc.) antes esto devolvía null en silencio y el comprobante salía sin
+    // firma sin ninguna pista de por qué.
+    console.error("Error obteniendo la firma del veterinario:", error.message, error.details, error.hint)
+    return null
+  }
+  if (!data) return null
   const f = data as Fila
   return {
     nombre: (f.nombre_profesional as string) || (f.display_name as string) || null,
