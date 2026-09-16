@@ -58,7 +58,6 @@ import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad";
 import { format } from "date-fns";
 import { generarLibretaPDF, type VeterinariaLibreta } from "@/lib/pdf/libreta-pdf";
 import { generarComprobanteVeterinario, previsualizarComprobante } from "@/lib/pdf/comprobante-veterinario";
-import { telefonoWhatsApp } from "@/lib/ventas/remito";
 import { useAuth } from "@/hooks/use-auth";
 import { useCarritoCompartido } from "@/hooks/pos/useCarritoCompartido";
 import {
@@ -385,8 +384,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [textoOrden, setTextoOrden] = useState("");
   const [previewOrdenUrl, setPreviewOrdenUrl] = useState<string | null>(null);
   const [descargandoOrden, setDescargandoOrden] = useState(false);
-  const [enviandoOrdenWhatsApp, setEnviandoOrdenWhatsApp] = useState(false);
-  /** Evita duplicar la entrada en la historia clínica si se descarga y después se manda por WhatsApp (o viceversa) en la misma sesión del diálogo. */
+  /** Evita duplicar la entrada en la historia clínica si se descarga la orden más de una vez en la misma sesión del diálogo. */
   const [historiaOrdenGuardada, setHistoriaOrdenGuardada] = useState(false);
   const [servicioAtencionProducto, setServicioAtencionProducto] = useState<Producto | null>(null);
   const { setDraft: setCarritoPosDraft } = useCarritoCompartido(tenantId);
@@ -1062,68 +1060,6 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       toast({ title: "Error", description: "No se pudo generar la orden", variant: "destructive" });
     } finally {
       setDescargandoOrden(false);
-    }
-  };
-
-  /**
-   * WhatsApp no tiene forma de recibir un adjunto por link (`wa.me` solo
-   * manda texto) — para mandar el PDF adjunto hay dos caminos reales:
-   *
-   * 1. Selector nativo del sistema (`navigator.share` con `files`), que en
-   *    Android/iOS y en Windows con la app de WhatsApp instalada lista a
-   *    WhatsApp como destino y manda el PDF ya adjunto. Se intenta primero,
-   *    reusando el blob de la vista previa (ya generado) para no perder la
-   *    "activación" del click esperando a construir el PDF de nuevo.
-   * 2. Si no está disponible o el usuario cancela sin elegir nada, se abre
-   *    `wa.me` con el mensaje (ventana abierta ANTES del await, si no el
-   *    navegador la bloquea) y se descarga el PDF aparte para adjuntarlo a
-   *    mano — eso sí es una limitación real de WhatsApp, no del código.
-   */
-  const enviarOrdenPorWhatsApp = async () => {
-    // Guarda contra doble click: `navigator.share` tira InvalidStateError si
-    // se lo llama de nuevo mientras el share anterior todavía no resolvió.
-    if (!addOrdenMascota || enviandoOrdenWhatsApp) return;
-    setEnviandoOrdenWhatsApp(true);
-    const mensaje = `Hola ${addOrdenMascota.cliente.nombre}, te comparto la orden médica de ${addOrdenMascota.mascota.nombre}.`;
-
-    try {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        const respuesta = previewOrdenUrl
-          ? await fetch(previewOrdenUrl)
-          : null;
-        const blob = respuesta ? await respuesta.blob() : null;
-        // Cast del constructor: @types/node declara un `File` global propio
-        // (para `undici`) que pisa la sobrecarga del DOM y hace que TS vea
-        // el constructor de 3 argumentos como inexistente pese a que en el
-        // navegador es el de siempre.
-        const FileCtor = globalThis.File as unknown as {
-          new (bits: BlobPart[], name: string, options?: FilePropertyBag): File;
-        };
-        const archivo = blob
-          ? new FileCtor([blob], `orden-medica-${addOrdenMascota.mascota.nombre}.pdf`, { type: "application/pdf" })
-          : null;
-        if (archivo && navigator.canShare?.({ files: [archivo] })) {
-          await navigator.share({ files: [archivo], text: mensaje });
-          await guardarHistoriaOrden();
-          return;
-        }
-      } catch (e) {
-        // AbortError = el usuario cerró el selector sin elegir nada: no es un error, sigue al fallback.
-        if (!(e instanceof Error && e.name === "AbortError")) {
-          console.error("Error compartiendo la orden médica:", e);
-        }
-      }
-    }
-
-    const telefono = telefonoWhatsApp(addOrdenMascota.cliente.telefono);
-    const texto = encodeURIComponent(`${mensaje} Adjunto el PDF a continuación (descargalo y adjuntalo en el chat).`);
-    const link = telefono ? `https://wa.me/${telefono}?text=${texto}` : `https://wa.me/?text=${texto}`;
-    const chat = window.open(link, "_blank", "noopener,noreferrer");
-    if (!chat) toast({ title: "El navegador bloqueó la ventana de WhatsApp", variant: "destructive" });
-    await descargarOrden();
-    } finally {
-      setEnviandoOrdenWhatsApp(false);
     }
   };
 
@@ -2867,11 +2803,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setAddOrdenOpen(false)} className="sm:mr-auto">Cancelar</Button>
-            <Button variant="outline" onClick={enviarOrdenPorWhatsApp} disabled={descargandoOrden || enviandoOrdenWhatsApp || !textoOrden.trim()}>
-              {enviandoOrdenWhatsApp ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageCircle className="h-4 w-4 mr-2" />}
-              Enviar por WhatsApp
-            </Button>
-            <Button onClick={descargarOrden} disabled={descargandoOrden || enviandoOrdenWhatsApp || !textoOrden.trim()}>
+            <Button onClick={descargarOrden} disabled={descargandoOrden || !textoOrden.trim()}>
               {descargandoOrden ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
               Descargar orden
             </Button>
