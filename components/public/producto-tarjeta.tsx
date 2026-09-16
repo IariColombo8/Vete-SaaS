@@ -36,12 +36,12 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
                  dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-500/50 cursor-pointer text-left"
     >
       {/* Media */}
-      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-white p-4 dark:bg-slate-900">
         <img
           src={imagen}
           alt={p.nombre}
           loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+          className="h-full w-full rounded-xl object-contain shadow-sm transition-transform duration-500 ease-out group-hover:scale-105"
         />
 
         {/* Brillo sutil al pasar el mouse */}

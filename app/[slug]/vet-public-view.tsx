@@ -318,14 +318,12 @@ function VidrieraCarrusel({ children }: { children: ReactNode }) {
 
         <div
           ref={scrollRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2
+          className="grid grid-flow-col grid-rows-2 auto-cols-[calc(25%-9px)] gap-4 snap-x snap-mandatory
+                     overflow-x-auto scroll-smooth pb-2 lg:auto-cols-[calc(33.333%-11px)]
                      [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {items.map((child, i) => (
-            <div
-              key={i}
-              className="w-[calc(25%-12px)] shrink-0 snap-start lg:w-[calc(16.666%-14px)]"
-            >
+            <div key={i} className="snap-start">
               {child}
             </div>
           ))}
