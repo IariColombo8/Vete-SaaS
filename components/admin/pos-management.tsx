@@ -399,7 +399,15 @@ export function PosManagement({ tenantId }: Props) {
         )}
       </Button>
 
-      <Dialog open={carritoAbierto} onOpenChange={setCarritoAbierto}>
+      {/* `modal={false}`: el carrito trae adentro el Popover de ClienteSelector
+          (cuenta corriente). Con el Dialog modal, el scroll-lock y el focus
+          trap de Radix no reconocen el contenido del Popover —portal aparte,
+          montado después— como parte del árbol permitido, y en mobile eso se
+          traduce en no poder tipear, clickear ni scrollear la lista de
+          clientes aunque se vea. Sin `modal`, el Dialog sigue cerrando con
+          Esc/click afuera pero deja de pelear por el foco y el scroll con el
+          Popover anidado. */}
+      <Dialog open={carritoAbierto} onOpenChange={setCarritoAbierto} modal={false}>
         <DialogContent className="flex h-[95dvh] max-w-md flex-col gap-0 p-0 sm:h-[80vh]">
           <DialogTitle className="sr-only">Carrito</DialogTitle>
           <DialogDescription className="sr-only">
