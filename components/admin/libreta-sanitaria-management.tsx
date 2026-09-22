@@ -117,7 +117,9 @@ import {
   QrCode,
   ShoppingCart,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
+import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog";
 import LibretaDetallesModal from "./LibretaDetallesModal";
 import { QrLibretaButton, type QrLibretaButtonRef } from "./qr-libreta-button";
 import { RecordatorioVacunaButton, type RecordatorioVacunaButtonRef } from "./recordatorio-vacuna-button";
@@ -560,6 +562,33 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     },
     [expandedClienteId, isMobile, toast]
   );
+
+  /**
+   * Tras registrar un cliente (o sumarle una mascota) desde el diálogo de
+   * registro: recarga la lista, invalida el resumen de mascotas —el effect de
+   * arriba lo vuelve a pedir— y refresca la ficha abierta si es la misma.
+   */
+  const recargarTrasRegistro = useCallback(async () => {
+    setMascotasResumen({});
+    await loadClientes();
+    if (!expandedClienteId) return;
+    try {
+      const [completo, turnos, mascotas] = await Promise.all([
+        getClienteCompleto(tenantId, expandedClienteId),
+        getTurnosByClienteId(tenantId, expandedClienteId),
+        getMascotas(tenantId, expandedClienteId),
+      ]);
+      if (!completo) return;
+      const clienteFull = {
+        ...completo,
+        mascotas,
+        historialDatos: (completo as Cliente & { historialDatos?: HistorialDato[] }).historialDatos,
+      } as Cliente;
+      setClienteExpandido({ cliente: clienteFull, mascotas, turnos });
+    } catch (e) {
+      console.error("Error refrescando el cliente tras el registro:", e);
+    }
+  }, [expandedClienteId, loadClientes, tenantId]);
 
   const loadTimeline = useCallback(
     async (clienteId: string, mascotaId: string) => {
@@ -2018,7 +2047,20 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <Input placeholder="Buscar por DNI o nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-8 h-9 text-sm border-slate-300 dark:border-slate-700" />
             </div>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{filtered.length} de {total}</p>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">{filtered.length} de {total}</p>
+              <RegistroClienteDialog
+                tenantId={tenantId}
+                modo="admin"
+                onExito={recargarTrasRegistro}
+                trigger={
+                  <Button variant="outline" size="sm" className="h-7 text-[11px]">
+                    <UserPlus className="h-3.5 w-3.5 mr-1" />
+                    Registrar cliente y su mascota
+                  </Button>
+                }
+              />
+            </div>
           </div>
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-2 space-y-1">

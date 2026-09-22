@@ -23,14 +23,23 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { createCliente, getClienteByDNI, getClienteGlobalPorDNI } from "@/lib/supabase/clientes"
-import { createMascota, getMascotas } from "@/lib/supabase/mascotas"
+import { createMascota, updateMascota, getMascotas } from "@/lib/supabase/mascotas"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
 import { format } from "date-fns"
 import { UserPlus, PlusCircle, Trash2, Loader2, PartyPopper, Sparkles } from "lucide-react"
 
+/**
+ * `publico` = lo usa la persona desde la página de la veterinaria ("Registrarme
+ * como cliente"). `admin` = lo usa el staff desde Clientes / Libreta Sanitaria
+ * para dar de alta un cliente y su mascota, o sumarle otra mascota a uno que
+ * ya existe. Solo cambia el texto: el flujo y las RPC son las mismas.
+ */
+type ModoRegistro = "publico" | "admin"
+
 interface RegistroClienteDialogProps {
   tenantId: string
+  modo?: ModoRegistro
   trigger?: ReactNode
   /** DNI con el que abrir el formulario ya cargado (ej: viene de un chequeo previo). */
   dniInicial?: string
@@ -42,6 +51,8 @@ interface RegistroClienteDialogProps {
 }
 
 interface MascotaBorrador {
+  /** Presente solo si la mascota ya existe en esta veterinaria: se actualiza en vez de crearse. */
+  id?: string
   nombre: string
   tipo: string
   raza: string
@@ -63,9 +74,11 @@ const MASCOTA_VACIA: MascotaBorrador = {
 }
 
 export function RegistroClienteDialog({
-  tenantId, trigger, dniInicial, onExito, open: openControlado, onOpenChange: onOpenChangeControlado,
+  tenantId, modo = "publico", trigger, dniInicial, onExito,
+  open: openControlado, onOpenChange: onOpenChangeControlado,
 }: RegistroClienteDialogProps) {
   const { toast } = useToast()
+  const esAdmin = modo === "admin"
   const [openInterno, setOpenInterno] = useState(false)
   const open = openControlado ?? openInterno
   const setOpen = onOpenChangeControlado ?? setOpenInterno
@@ -76,6 +89,8 @@ export function RegistroClienteDialog({
   const [reconocimiento, setReconocimiento] = useState<Reconocimiento>("ninguno")
   const [cliente, setCliente] = useState(CLIENTE_VACIO)
   const [mascotas, setMascotas] = useState<MascotaBorrador[]>([])
+  /** Id del cliente que se encontró por DNI en esta veterinaria (si lo había). */
+  const [clienteExistenteId, setClienteExistenteId] = useState<string | null>(null)
 
   const resetear = () => {
     setPaso("dni")
@@ -83,6 +98,7 @@ export function RegistroClienteDialog({
     setReconocimiento("ninguno")
     setCliente(CLIENTE_VACIO)
     setMascotas([])
+    setClienteExistenteId(null)
   }
 
   useEffect(() => {
@@ -108,14 +124,18 @@ export function RegistroClienteDialog({
           nombre: local.nombre, telefono: local.telefono, email: local.email,
           domicilio: local.domicilio ?? "", dni: dniLimpio,
         })
-        setMascotas(mascotasLocales.map((m) => ({
-          nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
+        // En admin el caso típico de un cliente que ya existe es justamente
+        // "vengo a sumarle otra mascota": le dejamos la fila vacía lista.
+        const filaExtra = esAdmin ? [{ ...MASCOTA_VACIA }] : []
+        setMascotas([...mascotasLocales.map((m) => ({
+          id: m.id, nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
           edadValor: m.edadValor !== undefined ? String(m.edadValor) : "",
           edadUnidad: m.edadUnidad ?? "meses",
           peso: (m.peso ?? "").replace(/[^\d.,]/g, ""),
           tieneChip: m.tieneChip ?? false,
           chipNumero: m.chipNumero ?? "",
-        })))
+        })), ...filaExtra])
+        setClienteExistenteId(local.id)
         setReconocimiento("local")
         setPaso("formulario")
         return
@@ -132,8 +152,10 @@ export function RegistroClienteDialog({
           edadValor: "", edadUnidad: "meses" as UnidadEdad, peso: "",
           tieneChip: false, chipNumero: "",
         })))
+        setClienteExistenteId(null)
         setReconocimiento("global")
       } else {
+        setClienteExistenteId(null)
         setCliente({ ...CLIENTE_VACIO, dni: dniLimpio })
         setMascotas([])
         setReconocimiento("ninguno")
@@ -156,13 +178,23 @@ export function RegistroClienteDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!cliente.nombre.trim()) {
-      toast({ title: "Falta tu nombre", description: "Contanos como te llamas para registrarte.", variant: "destructive" })
+      toast({
+        title: esAdmin ? "Falta el nombre del cliente" : "Falta tu nombre",
+        description: esAdmin
+          ? "Cargá el nombre y apellido para poder registrarlo."
+          : "Contanos como te llamas para registrarte.",
+        variant: "destructive",
+      })
       return
     }
 
     setLoading(true)
     try {
       const clienteCreado = await createCliente(tenantId, cliente)
+      // Si cambiaron el DNI en el formulario, el upsert pudo caer en OTRO
+      // cliente: ahí los ids de mascota que trajimos ya no le pertenecen y
+      // hay que crearlas, no actualizarlas.
+      const mismoCliente = clienteExistenteId !== null && clienteExistenteId === clienteCreado.id
 
       // Best-effort: si falla una mascota puntual no queremos que el
       // registro del cliente (lo que importa para el sorteo) se pierda.
@@ -179,26 +211,42 @@ export function RegistroClienteDialog({
               edadRegistradaEn: hoy,
             }
           : {}
+        // Los campos vacíos se omiten a propósito: la RPC de update hace
+        // coalesce, así que mandar "" pisaría con vacío un dato que ya estaba
+        // cargado. Desde acá se completa o se corrige, nunca se borra.
+        const datos = {
+          nombre: m.nombre.trim(),
+          tipo: m.tipo,
+          raza: m.raza.trim() || undefined,
+          peso: m.peso.trim() ? `${m.peso.trim()} kg` : undefined,
+          tieneChip: m.tieneChip,
+          chipNumero: m.tieneChip ? m.chipNumero.trim() || undefined : undefined,
+          ...datosEdad,
+        }
         try {
-          await createMascota(tenantId, clienteCreado.id, {
-            nombre: m.nombre.trim(),
-            tipo: m.tipo,
-            raza: m.raza.trim() || undefined,
-            peso: m.peso.trim() ? `${m.peso.trim()} kg` : undefined,
-            tieneChip: m.tieneChip,
-            chipNumero: m.tieneChip ? m.chipNumero.trim() || undefined : undefined,
-            ...datosEdad,
-          })
+          if (m.id && mismoCliente) {
+            await updateMascota(tenantId, clienteCreado.id, m.id, datos)
+          } else {
+            await createMascota(tenantId, clienteCreado.id, datos)
+          }
         } catch {
           mascotasConError++
         }
       }
 
+      const tituloOk = esAdmin
+        ? (reconocimiento === "local" ? "Cliente actualizado" : "Cliente registrado")
+        : "¡Listo, ya estás registrado!"
+      const detalleOk = esAdmin
+        ? "Los datos y las mascotas quedaron guardados en la ficha del cliente."
+        : "Tus datos quedaron guardados: sumás puntos para el sorteo y la próxima vez que saques un turno ya vas a estar cargado."
+      const detalleError = esAdmin
+        ? "Guardamos el cliente, pero alguna mascota no se pudo cargar. Probá agregarla de nuevo."
+        : "Guardamos tus datos. Alguna mascota no se pudo guardar, podés cargarla de nuevo al sacar un turno."
+
       toast({
-        title: "¡Listo, ya estás registrado!",
-        description: mascotasConError > 0
-          ? "Guardamos tus datos. Alguna mascota no se pudo guardar, podés cargarla de nuevo al sacar un turno."
-          : "Tus datos quedaron guardados: sumás puntos para el sorteo y la próxima vez que saques un turno ya vas a estar cargado.",
+        title: tituloOk,
+        description: mascotasConError > 0 ? detalleError : detalleOk,
       })
       resetear()
       setOpen(false)
@@ -207,7 +255,9 @@ export function RegistroClienteDialog({
       console.error("Error en registro de cliente:", error)
       toast({
         title: "No pudimos completar el registro",
-        description: "Intentá de nuevo en un momento. Si el problema sigue, contactanos por teléfono.",
+        description: esAdmin
+          ? "Intentá de nuevo en un momento. Si el problema sigue, revisá la conexión."
+          : "Intentá de nuevo en un momento. Si el problema sigue, contactanos por teléfono.",
         variant: "destructive",
       })
     } finally {
@@ -235,12 +285,15 @@ export function RegistroClienteDialog({
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PartyPopper className="h-5 w-5 text-primary" />
-            Registrate como cliente
+            {esAdmin
+              ? <UserPlus className="h-5 w-5 text-primary" />
+              : <PartyPopper className="h-5 w-5 text-primary" />}
+            {esAdmin ? "Registrar cliente y su mascota" : "Registrate como cliente"}
           </DialogTitle>
           <DialogDescription>
-            Dejá tus datos y los de tu mascota (opcional). Suma puntos para el sorteo
-            y la próxima vez que reserves un turno ya vas a estar cargado.
+            {esAdmin
+              ? "Buscá por DNI: si ya es cliente, se actualizan sus datos y podés sumarle otra mascota. Si no, se crea el cliente con sus mascotas."
+              : "Dejá tus datos y los de tu mascota (opcional). Suma puntos para el sorteo y la próxima vez que reserves un turno ya vas a estar cargado."}
           </DialogDescription>
         </DialogHeader>
 
@@ -267,18 +320,24 @@ export function RegistroClienteDialog({
           <form onSubmit={handleSubmit} className="space-y-5">
             {reconocimiento === "local" && (
               <p className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                <Sparkles className="h-3.5 w-3.5 shrink-0" /> Ya te tenemos registrado acá. Revisá tus datos y confirmá.
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />{" "}
+                {esAdmin
+                  ? "Ya es cliente de la veterinaria. Revisá sus datos y agregá la mascota nueva."
+                  : "Ya te tenemos registrado acá. Revisá tus datos y confirmá."}
               </p>
             )}
             {reconocimiento === "global" && (
               <p className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                <Sparkles className="h-3.5 w-3.5 shrink-0" /> Ya tenemos tus datos de otra veterinaria en VetPanel. Revisalos antes de confirmar.
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />{" "}
+                {esAdmin
+                  ? "Es cliente de otra veterinaria en VetPanel. Revisá los datos antes de confirmar el alta."
+                  : "Ya tenemos tus datos de otra veterinaria en VetPanel. Revisalos antes de confirmar."}
               </p>
             )}
 
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="reg-nombre">Nombre y apellido *</Label>
+                <Label htmlFor="reg-nombre">Nombre y apellido {esAdmin ? "del cliente *" : "*"}</Label>
                 <Input
                   id="reg-nombre"
                   value={cliente.nombre}
@@ -330,7 +389,9 @@ export function RegistroClienteDialog({
 
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Tus mascotas (opcional)</Label>
+                <Label className="text-sm font-semibold">
+                  {esAdmin ? "Mascotas del cliente" : "Tus mascotas (opcional)"}
+                </Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -429,7 +490,7 @@ export function RegistroClienteDialog({
             <DialogFooter>
               <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                Registrarme
+                {esAdmin ? "Guardar cliente" : "Registrarme"}
               </Button>
             </DialogFooter>
           </form>

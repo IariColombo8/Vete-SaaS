@@ -44,6 +44,7 @@ import {
 import type { Cliente, Mascota } from "@/lib/supabase/queries";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog";
 import {
   Users,
   Search,
@@ -243,6 +244,17 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
+  /**
+   * Tras dar de alta (o sumarle una mascota a) un cliente desde el diálogo de
+   * registro: la caché de mascotas por cliente queda vieja, así que se limpia
+   * antes de recargar la lista.
+   */
+  const recargarTrasRegistro = () => {
+    setMascotasByClienteId({});
+    loadClientes();
+    loadStats();
+  };
+
   useEffect(() => {
     loadClientes();
     loadStats();
@@ -426,13 +438,29 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={openAdd}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
-            >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Agregar cliente
-            </Button>
+            <div className="flex items-center gap-2">
+              <RegistroClienteDialog
+                tenantId={tenantId}
+                modo="admin"
+                onExito={recargarTrasRegistro}
+                trigger={
+                  <Button
+                    variant="outline"
+                    className="font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+                  >
+                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    Registrar cliente y su mascota
+                  </Button>
+                }
+              />
+              <Button
+                onClick={openAdd}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Agregar cliente
+              </Button>
+            </div>
           </div>
         </div>
       </div>
