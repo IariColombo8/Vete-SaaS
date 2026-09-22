@@ -223,10 +223,10 @@ export function RegistroClienteDialog({
             <Button
               size="lg"
               variant="outline"
-              className="bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold text-lg h-14 px-10 rounded-full
+              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
                          backdrop-blur-md transition-all duration-300 hover:scale-105"
             >
-              <UserPlus className="mr-2 h-5 w-5" />
+              <UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               Registrarme como cliente
             </Button>
           )}

@@ -455,13 +455,13 @@ export default function VetPublicPage() {
       {/* ╔══════════════════════════════════════════════════╗
           ║                     HERO                        ║
           ╚══════════════════════════════════════════════════╝ */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative h-[100svh] sm:h-auto sm:min-h-screen flex items-center justify-center overflow-hidden">
         {/* Background */}
         {hayFotos ? <HeroCarousel fotosDesktop={fotosDesktop} fotosMobile={fotosMobile} /> : <GenerativeHero />}
 
         {/* Contenido central */}
         <div
-          className="relative z-10 container max-w-6xl mx-auto px-6 py-32 flex flex-col items-center text-center"
+          className="relative z-10 container max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-32 flex flex-col items-center justify-center text-center h-full sm:h-auto"
           style={{
             opacity: heroVisible ? 1 : 0,
             transform: heroVisible ? "none" : "translateY(50px)",
@@ -471,7 +471,7 @@ export default function VetPublicPage() {
           {/* Logo */}
           {logo && (
             <div
-              className="mb-8"
+              className="mb-3 sm:mb-8"
               style={{
                 opacity: heroVisible ? 1 : 0,
                 transform: heroVisible ? "scale(1)" : "scale(0.7)",
@@ -481,14 +481,14 @@ export default function VetPublicPage() {
               <img
                 src={logo}
                 alt={`Logo de ${nombre}`}
-                className="w-48 h-48 rounded-[2rem] shadow-2xl shadow-black/40 ring-2 ring-white/20 object-cover"
+                className="w-16 h-16 sm:w-48 sm:h-48 rounded-2xl sm:rounded-[2rem] shadow-2xl shadow-black/40 ring-2 ring-white/20 object-cover"
               />
             </div>
           )}
 
           {/* Badge */}
           <div
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-xl px-5 py-2 mb-8"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-xl px-3 py-1 sm:px-5 sm:py-2 mb-2 sm:mb-8"
             style={{
               opacity: heroVisible ? 1 : 0,
               transform: heroVisible ? "none" : "translateY(20px)",
@@ -496,14 +496,14 @@ export default function VetPublicPage() {
             }}
           >
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-bold text-emerald-300 tracking-[0.15em] uppercase">
+            <span className="text-[10px] sm:text-xs font-bold text-emerald-300 tracking-[0.15em] uppercase">
               Veterinaria
             </span>
           </div>
 
           {/* Nombre ENORME */}
           <h1
-            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none mb-6 tracking-tight"
+            className="text-3xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none mb-2 sm:mb-6 tracking-tight"
             style={{
               opacity: heroVisible ? 1 : 0,
               transform: heroVisible ? "none" : "translateY(30px) scale(0.95)",
@@ -516,7 +516,7 @@ export default function VetPublicPage() {
 
           {/* Slogan */}
           <p
-            className="text-xl sm:text-2xl md:text-3xl text-white/80 font-light mb-4 max-w-2xl leading-snug"
+            className="text-sm sm:text-2xl md:text-3xl text-white/80 font-light mb-1.5 sm:mb-4 max-w-2xl leading-snug px-2"
             style={{
               opacity: heroVisible ? 1 : 0,
               transform: heroVisible ? "none" : "translateY(20px)",
@@ -528,7 +528,7 @@ export default function VetPublicPage() {
 
           {/* Descripción */}
           <p
-            className="text-base sm:text-lg text-white/50 mb-12 max-w-lg"
+            className="hidden sm:block text-base sm:text-lg text-white/50 mb-12 max-w-lg"
             style={{
               opacity: heroVisible ? 1 : 0,
               transition: "opacity 0.8s ease 0.8s",
@@ -539,7 +539,7 @@ export default function VetPublicPage() {
 
           {/* CTAs */}
           <div
-            className="flex flex-col sm:flex-row items-center gap-4"
+            className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mt-4 sm:mt-0 w-full sm:w-auto px-4 sm:px-0"
             style={{
               opacity: heroVisible ? 1 : 0,
               transform: heroVisible ? "none" : "translateY(20px)",
@@ -548,12 +548,12 @@ export default function VetPublicPage() {
           >
             <Button
               size="lg"
-              className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-lg h-14 px-10 rounded-full
+              className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
                          shadow-2xl shadow-emerald-500/30 border-0
                          transition-all duration-300 hover:shadow-emerald-400/40 hover:scale-105"
               onClick={() => router.push(`/${slug}/turno`)}
             >
-              <CalendarPlus className="mr-2 h-5 w-5" />
+              <CalendarPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               Sacar turno
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -563,10 +563,10 @@ export default function VetPublicPage() {
             <Button
               variant="ghost"
               size="lg"
-              className="text-white/80 hover:text-white hover:bg-white/10 font-semibold text-lg h-14 px-10 rounded-full"
+              className="w-full sm:w-auto text-white/80 hover:text-white hover:bg-white/10 font-semibold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full"
               onClick={() => router.push(`/${slug}/mi-historia`)}
             >
-              <PawPrint className="mr-2 h-5 w-5" />
+              <PawPrint className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               Historia clínica de mi mascota
             </Button>
           </div>
