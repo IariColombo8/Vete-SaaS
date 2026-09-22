@@ -180,6 +180,19 @@ export async function updateTenant(
 }
 
 /**
+ * Borra el tenant y, por `on delete cascade` (ver supabase/schema.sql), TODO
+ * lo que cuelga de él: clientes, mascotas, historias, turnos, productos,
+ * ventas, etc. Irreversible — no borra los archivos que haya en Storage bajo
+ * `{slug}/`, esos quedan huérfanos (limpieza manual aparte). Solo superadmin
+ * pasa la policy `tenants_write` (`es_staff(slug)`, ver schema.sql) para un
+ * `delete`.
+ */
+export async function deleteTenant(tenantId: string): Promise<void> {
+  const { error } = await supabase.from("tenants").delete().eq("slug", tenantId)
+  if (error) throw new Error(`No se pudo eliminar la veterinaria: ${error.message}`)
+}
+
+/**
  * Da de alta una veterinaria y promueve al usuario actual a `veterinario` de
  * ese tenant, todo en una transacción (función `crear_veterinaria`).
  *

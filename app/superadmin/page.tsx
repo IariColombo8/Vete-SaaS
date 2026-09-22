@@ -1,14 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
+import { useEffect, useMemo, useState } from "react"
+import { getUsuarios, getTenantsFull, updateTenantConfig, deleteTenant, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
-import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle, Activity } from "lucide-react"
+import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle, Activity, Pencil, Trash2, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
 import Link from "next/link"
 import type React from "react"
 
@@ -43,6 +49,12 @@ const roleLabel: Record<string, { label: string; variant: "default" | "secondary
   usuario: { label: "Usuario", variant: "secondary" },
 }
 
+type EstadoFiltro = "todas" | "activas" | "pausadas"
+type PlanFiltro = "todos" | TenantFull["plan"]
+
+const camposEdicion = ["nombre", "telefono", "email", "direccion", "ciudad"] as const
+type CamposEdicion = Record<(typeof camposEdicion)[number], string>
+
 export default function SuperAdminPage() {
   const [usuarios, setUsuarios]       = useState<Usuario[]>([])
   const [tenants, setTenants]         = useState<TenantFull[]>([])
@@ -53,6 +65,21 @@ export default function SuperAdminPage() {
   const [actividadTenant, setActividadTenant] = useState<TenantFull | null>(null)
   const [actividad, setActividad]     = useState<ActividadTenant | null>(null)
   const [actividadLoading, setActividadLoading] = useState(false)
+
+  // Filtros del listado de veterinarias
+  const [busqueda, setBusqueda]         = useState("")
+  const [filtroEstado, setFiltroEstado] = useState<EstadoFiltro>("todas")
+  const [filtroPlan, setFiltroPlan]     = useState<PlanFiltro>("todos")
+
+  // Edición de datos del tenant
+  const [editTenant, setEditTenant] = useState<TenantFull | null>(null)
+  const [editForm, setEditForm]     = useState<CamposEdicion>({ nombre: "", telefono: "", email: "", direccion: "", ciudad: "" })
+  const [editSaving, setEditSaving] = useState(false)
+
+  // Eliminación de tenant (irreversible)
+  const [deleteTarget, setDeleteTarget]     = useState<TenantFull | null>(null)
+  const [deleteConfirm, setDeleteConfirm]   = useState("")
+  const [deleting, setDeleting]             = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -125,6 +152,66 @@ export default function SuperAdminPage() {
     setActividadLoading(false)
   }
 
+  function abrirEdicion(tenant: TenantFull) {
+    setEditTenant(tenant)
+    setEditForm({
+      nombre: tenant.nombre ?? "",
+      telefono: tenant.telefono ?? "",
+      email: tenant.email ?? "",
+      direccion: tenant.direccion ?? "",
+      ciudad: tenant.ciudad ?? "",
+    })
+  }
+
+  async function handleGuardarEdicion() {
+    if (!editTenant) return
+    setEditSaving(true)
+    try {
+      await updateTenantConfig(editTenant.slug, editForm)
+      setTenants(prev => prev.map(t => t.slug === editTenant.slug ? { ...t, ...editForm } : t))
+      setEditTenant(null)
+    } catch (error) {
+      console.error("Error al editar veterinaria:", error)
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function handleConfirmarEliminar() {
+    if (!deleteTarget || deleteConfirm !== deleteTarget.slug) return
+    setDeleting(true)
+    try {
+      await deleteTenant(deleteTarget.slug)
+      setTenants(prev => prev.filter(t => t.slug !== deleteTarget.slug))
+      setDeleteTarget(null)
+      setDeleteConfirm("")
+    } catch (error) {
+      console.error("Error al eliminar veterinaria:", error)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // Activas primero, pausadas al final; dentro de cada grupo, alfabético.
+  // Filtros de búsqueda/estado/plan se aplican antes de ordenar.
+  const tenantsVisibles = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    return tenants
+      .filter((t) => {
+        if (filtroEstado === "activas" && t.status === "pausado") return false
+        if (filtroEstado === "pausadas" && t.status !== "pausado") return false
+        if (filtroPlan !== "todos" && (t.plan ?? "basico") !== filtroPlan) return false
+        if (q && !(t.nombre ?? t.slug).toLowerCase().includes(q) && !t.slug.toLowerCase().includes(q)) return false
+        return true
+      })
+      .sort((a, b) => {
+        const aPausada = a.status === "pausado"
+        const bPausada = b.status === "pausado"
+        if (aPausada !== bPausada) return aPausada ? 1 : -1
+        return (a.nombre ?? a.slug).localeCompare(b.nombre ?? b.slug)
+      })
+  }, [tenants, busqueda, filtroEstado, filtroPlan])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -163,8 +250,43 @@ export default function SuperAdminPage() {
         <section className="mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Veterinarias registradas</h2>
-            <Badge variant="secondary">{tenants.length} total</Badge>
+            <Badge variant="secondary">{tenantsVisibles.length} de {tenants.length}</Badge>
           </div>
+
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre o slug..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+            <Select value={filtroEstado} onValueChange={(v) => setFiltroEstado(v as EstadoFiltro)}>
+              <SelectTrigger className="h-9 w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todos los estados</SelectItem>
+                <SelectItem value="activas">Solo activas</SelectItem>
+                <SelectItem value="pausadas">Solo pausadas</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filtroPlan} onValueChange={(v) => setFiltroPlan(v as PlanFiltro)}>
+              <SelectTrigger className="h-9 w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los planes</SelectItem>
+                <SelectItem value="basico">Básico</SelectItem>
+                <SelectItem value="plus">Plus</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="rounded-xl border overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
@@ -174,6 +296,11 @@ export default function SuperAdminPage() {
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Stethoscope className="h-10 w-10 mb-3 opacity-30" />
                 <p className="text-sm">No hay veterinarias registradas aún.</p>
+              </div>
+            ) : tenantsVisibles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Search className="h-10 w-10 mb-3 opacity-30" />
+                <p className="text-sm">Ningún resultado con esos filtros.</p>
               </div>
             ) : (
               <table className="w-full text-sm">
@@ -188,7 +315,7 @@ export default function SuperAdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {tenants.map((t) => {
+                  {tenantsVisibles.map((t) => {
                     const isPaused = t.status === "pausado"
                     const isUpdatingThis = updating?.startsWith(t.slug)
                     return (
@@ -308,6 +435,24 @@ export default function SuperAdminPage() {
                                 Ver panel
                               </Button>
                             </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7"
+                              onClick={() => abrirEdicion(t)}
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7 text-destructive hover:text-destructive"
+                              onClick={() => { setDeleteTarget(t); setDeleteConfirm("") }}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Eliminar
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -428,6 +573,109 @@ export default function SuperAdminPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de edición de datos del tenant */}
+      <Dialog open={!!editTenant} onOpenChange={(open) => { if (!open) setEditTenant(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar {editTenant?.nombre ?? editTenant?.slug}</DialogTitle>
+            <DialogDescription>
+              Datos de contacto y presentación. El slug (<code className="bg-muted px-1 py-0.5 rounded">/{editTenant?.slug}</code>) no se cambia desde acá.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-nombre">Nombre</Label>
+              <Input
+                id="edit-nombre"
+                value={editForm.nombre}
+                onChange={(e) => setEditForm(prev => ({ ...prev, nombre: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-telefono">Teléfono</Label>
+              <Input
+                id="edit-telefono"
+                value={editForm.telefono}
+                onChange={(e) => setEditForm(prev => ({ ...prev, telefono: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-direccion">Dirección</Label>
+              <Input
+                id="edit-direccion"
+                value={editForm.direccion}
+                onChange={(e) => setEditForm(prev => ({ ...prev, direccion: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-ciudad">Ciudad</Label>
+              <Input
+                id="edit-ciudad"
+                value={editForm.ciudad}
+                onChange={(e) => setEditForm(prev => ({ ...prev, ciudad: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTenant(null)} disabled={editSaving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleGuardarEdicion} disabled={editSaving}>
+              {editSaving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmación de eliminación (irreversible) */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteConfirm("") } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar {deleteTarget?.nombre ?? deleteTarget?.slug}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Esto borra <strong>para siempre</strong> la veterinaria y todo lo que tiene
+                  cargado: clientes, mascotas, historias clínicas, turnos, productos y ventas.
+                  No se puede deshacer.
+                </p>
+                <p>
+                  Para confirmar, escribí el slug exacto:{" "}
+                  <code className="bg-muted px-1 py-0.5 rounded">{deleteTarget?.slug}</code>
+                </p>
+                <Input
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder={deleteTarget?.slug}
+                  autoComplete="off"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmarEliminar}
+              disabled={deleting || deleteConfirm !== deleteTarget?.slug}
+            >
+              {deleting ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Eliminar definitivamente
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
