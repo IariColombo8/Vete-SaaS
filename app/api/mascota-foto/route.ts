@@ -55,8 +55,8 @@ export async function POST(request: Request) {
 
   const { data: mascotas } = await supabase
     .rpc("obtener_mascotas_publico", { p_tenant: tenantId, p_cliente_id: clienteFila.id })
-  const esDueño = (mascotas ?? []).some((m: { id: string }) => m.id === mascotaId)
-  if (!esDueño) {
+  const mascotaActual = (mascotas ?? []).find((m: { id: string; foto_url?: string | null }) => m.id === mascotaId)
+  if (!mascotaActual) {
     return NextResponse.json({ ok: false, error: "Ese DNI no corresponde a esta mascota" }, { status: 403 })
   }
 
@@ -84,6 +84,24 @@ export async function POST(request: Request) {
   if (updateError) {
     console.error("[mascota-foto] Error actualizando mascota:", updateError.message)
     return NextResponse.json({ ok: false, error: "No se pudo guardar la foto" }, { status: 500 })
+  }
+
+  // Limpieza best-effort de la foto anterior: si falla no aborta la
+  // respuesta (la mascota ya quedó con la foto nueva), solo queda un
+  // archivo huérfano que se puede purgar después.
+  const fotoAnteriorUrl = mascotaActual.foto_url
+  if (fotoAnteriorUrl) {
+    const marker = `/${BUCKET}/`
+    const idx = fotoAnteriorUrl.indexOf(marker)
+    if (idx !== -1) {
+      const pathAnterior = decodeURIComponent(fotoAnteriorUrl.slice(idx + marker.length))
+      if (pathAnterior && pathAnterior !== path) {
+        const { error: removeError } = await admin.storage.from(BUCKET).remove([pathAnterior])
+        if (removeError) {
+          console.error("[mascota-foto] No se pudo borrar la foto anterior:", removeError.message)
+        }
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, fotoUrl })

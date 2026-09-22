@@ -133,6 +133,23 @@ export async function getTurnos(tenantId: string): Promise<Turno[]> {
 }
 
 /**
+ * Solo el total de turnos del tenant, sin traer columnas. Usar en vez de
+ * `getTurnos(tenantId).length` cuando lo único que hace falta es el conteo
+ * (ej. paneles de actividad) — evita traer el historial completo por egress.
+ */
+export async function getTurnosCount(tenantId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("turnos")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+  if (error) {
+    console.error("Error al contar turnos:", error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
+/**
  * Suscripción real-time a los turnos del tenant. Reemplaza `onSnapshot`.
  *
  * Postgres Changes notifica fila por fila, pero los consumidores esperan la

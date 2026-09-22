@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnos, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
+import { getUsuarios, getTenantsFull, updateTenantConfig, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
 import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle, Activity } from "lucide-react"
@@ -60,13 +60,13 @@ export default function SuperAdminPage() {
       getUsuarios(),
       getTenantsFull(),
     ])
-    const turnosLists = await Promise.all(vets.map((v) => getTurnos(v.slug)))
+    const counts = await Promise.all(vets.map((v) => getTurnosCount(v.slug)))
     const porSlug: Record<string, number> = {}
-    vets.forEach((v, i) => { porSlug[v.slug] = turnosLists[i].length })
+    vets.forEach((v, i) => { porSlug[v.slug] = counts[i] })
     setUsuarios(users)
     setTenants(vets)
     setTurnosPorSlug(porSlug)
-    setTotalTurnos(turnosLists.reduce((acc, t) => acc + t.length, 0))
+    setTotalTurnos(counts.reduce((acc, c) => acc + c, 0))
     setLoading(false)
   }
 

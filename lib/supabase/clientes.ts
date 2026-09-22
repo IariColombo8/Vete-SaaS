@@ -65,11 +65,23 @@ export interface ClienteGlobal {
  * VetPanel. Nunca crea nada ni trae historia clínica: solo contacto +
  * mascotas básicas, y solo se usa cuando la persona escribe su DNI a mano en
  * el formulario de registro (no hay lookup automático de fondo).
+ *
+ * Pasa por `/api/clientes/buscar-global` (en vez de llamar la RPC directo
+ * desde el navegador) para que el rate-limit por IP del lado del servidor
+ * frene la enumeración de DNIs — la RPC no filtra por tenant a propósito.
  */
 export async function getClienteGlobalPorDNI(dni: string): Promise<ClienteGlobal | null> {
   if (!dni?.trim()) return null
-  const { data, error } = await supabase.rpc("buscar_cliente_global_publico", { p_dni: dni.trim() })
-  throwIfSupabaseError(error, "Error al buscar cliente global por DNI")
+  const res = await fetch("/api/clientes/buscar-global", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dni: dni.trim() }),
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok || !body?.ok) {
+    throw new Error(body?.error || "Error al buscar cliente global por DNI")
+  }
+  const data = body.data
   if (!data) return null
   return {
     nombre: data.nombre ?? "",
