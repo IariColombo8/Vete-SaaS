@@ -129,6 +129,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   const readOnly = useReadOnly();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [agregarMascotaOpen, setAgregarMascotaOpen] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailsCliente, setDetailsCliente] = useState<Cliente & { mascotas?: Mascota[]; historialDatos?: HistorialDato[] } | null>(null);
@@ -301,6 +302,17 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       domicilio: c.domicilio ?? "",
     });
     setEditDialogOpen(true);
+  };
+
+  /**
+   * "Agregar mascota" desde la ficha: reusa el diálogo de registro abriéndolo
+   * ya cargado con el DNI del cliente, así cae en el paso de formulario con
+   * sus datos y una fila de mascota vacía. Por eso el botón solo aparece si
+   * el cliente tiene DNI: es la clave con la que el diálogo lo encuentra.
+   */
+  const abrirAgregarMascota = () => {
+    setDetailsDialogOpen(false);
+    setAgregarMascotaOpen(true);
   };
 
   const openDetails = async (c: Cliente) => {
@@ -808,7 +820,20 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 )}
                 
                 <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
-                  <Label className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Mascotas vinculadas</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Mascotas vinculadas</Label>
+                    {detailsCliente?.dni?.trim() ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[11px]"
+                        onClick={abrirAgregarMascota}
+                      >
+                        <PawPrint className="h-3.5 w-3.5 mr-1" />
+                        Agregar mascota
+                      </Button>
+                    ) : null}
+                  </div>
                   {detailsCliente.mascotas && detailsCliente.mascotas.length > 0 ? (
                     <ul className="mt-2 space-y-2">
                       {detailsCliente.mascotas.map((m) => {
@@ -960,6 +985,20 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Controlado y sin trigger: lo abre "Agregar mascota" desde la ficha. */}
+      <RegistroClienteDialog
+        tenantId={tenantId}
+        modo="admin"
+        trigger={null}
+        open={agregarMascotaOpen}
+        onOpenChange={setAgregarMascotaOpen}
+        dniInicial={detailsCliente?.dni ?? undefined}
+        onExito={() => {
+          recargarTrasRegistro();
+          if (detailsCliente) openDetails(detailsCliente);
+        }}
+      />
 
       <Toaster />
     </div>

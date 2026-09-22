@@ -229,7 +229,11 @@ export function RegistroClienteDialog({
           } else {
             await createMascota(tenantId, clienteCreado.id, datos)
           }
-        } catch {
+        } catch (error) {
+          // Se sigue con las demás (el cliente ya quedó guardado), pero el
+          // error no se descarta: sin esto, una mascota que no entraba
+          // desaparecía sin dejar rastro de por qué.
+          console.error(`No se pudo guardar la mascota "${m.nombre}":`, error)
           mascotasConError++
         }
       }

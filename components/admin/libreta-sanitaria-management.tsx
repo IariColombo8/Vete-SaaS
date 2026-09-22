@@ -411,6 +411,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   const [detailTurnoHistoriaAsociada, setDetailTurnoHistoriaAsociada] = useState<Historia | null>(null);
   const [historialOpen, setHistorialOpen] = useState(false);
   const [showAllMascotasChips, setShowAllMascotasChips] = useState(false);
+  const [agregarMascotaOpen, setAgregarMascotaOpen] = useState(false);
   /** Tabs dentro de la ficha de la mascota: Historia Clínica (default) | Turnos */
   const [mascotaContentTab, setMascotaContentTab] = useState<"historia" | "turnos">("historia");
 
@@ -1636,7 +1637,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
 
           {/* Mascotas: chips horizontales (2 + N más si hay >3) */}
           {clienteExpandido.mascotas.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Sin mascotas registradas</p>
+            <div className="text-center py-4 space-y-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Sin mascotas registradas</p>
+              <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => setAgregarMascotaOpen(true)}>
+                <PawPrint className="h-3.5 w-3.5 mr-1" />
+                Agregar mascota
+              </Button>
+            </div>
           ) : (
             <div className="w-full space-y-3">
               <div className="flex items-center gap-2 flex-nowrap overflow-x-auto pb-1 min-h-[36px]">
@@ -1669,6 +1676,14 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     +{clienteExpandido.mascotas.length - 2} más
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setAgregarMascotaOpen(true)}
+                  className="flex items-center gap-1 shrink-0 rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <PawPrint className="h-3.5 w-3.5" />
+                  Agregar mascota
+                </button>
               </div>
               <div className="min-h-0">
                 {selectedMascotaId && (() => {
@@ -3116,6 +3131,19 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Controlado y sin trigger: lo abre "Agregar mascota" desde la ficha.
+          Arranca con el DNI del cliente abierto, así cae directo en el
+          formulario con sus datos y una fila de mascota vacía. */}
+      <RegistroClienteDialog
+        tenantId={tenantId}
+        modo="admin"
+        trigger={null}
+        open={agregarMascotaOpen}
+        onOpenChange={setAgregarMascotaOpen}
+        dniInicial={clienteExpandido?.cliente.dni ?? undefined}
+        onExito={recargarTrasRegistro}
+      />
 
       <Toaster />
     </div>
