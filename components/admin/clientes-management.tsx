@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -45,6 +45,10 @@ import type { Cliente, Mascota } from "@/lib/supabase/queries";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog";
+import { guardarBorrador, leerBorrador, borrarBorrador } from "@/lib/forms/borrador";
+import { useConfirmarCierre } from "@/hooks/useConfirmarCierre";
+import { ConfirmarDescarteDialog } from "@/components/ui/confirmar-descarte-dialog";
+import { RestaurarBorradorDialog } from "@/components/ui/restaurar-borrador-dialog";
 import {
   Users,
   Search,
@@ -130,10 +134,16 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [agregarMascotaOpen, setAgregarMascotaOpen] = useState(false);
+  /** DNI con el que se precarga el diálogo de registro al sumar una mascota. */
+  const [dniMascota, setDniMascota] = useState<string | undefined>(undefined);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailsCliente, setDetailsCliente] = useState<Cliente & { mascotas?: Mascota[]; historialDatos?: HistorialDato[] } | null>(null);
   const [form, setForm] = useState(emptyForm);
+  /** Borrador de "Agregar/editar cliente" encontrado en localStorage, distinto del que se acaba de cargar. */
+  const [borradorCliente, setBorradorCliente] = useState<{ valor: typeof emptyForm; guardadoEn: number } | null>(null);
+  const claveBorradorClienteRef = useRef<string | null>(null);
+  const snapshotFormRef = useRef<string>("");
   const { toast } = useToast();
 
   // Debounce búsqueda 300ms
@@ -286,22 +296,58 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
     });
   }, [clientes, searchTerm, mascotasByClienteId]);
 
+  /** Prepara la key de borrador y ofrece continuar uno pendiente distinto del valor recién cargado. */
+  const prepararBorradorCliente = (clave: string, base: typeof emptyForm) => {
+    claveBorradorClienteRef.current = clave;
+    snapshotFormRef.current = JSON.stringify(base);
+    const borrador = leerBorrador<typeof emptyForm>(clave);
+    setBorradorCliente(
+      borrador && JSON.stringify(borrador.valor) !== snapshotFormRef.current ? borrador : null
+    );
+  };
+
   const openAdd = () => {
     setEditingId(null);
     setForm(emptyForm);
+    prepararBorradorCliente(`cliente-editar:${tenantId}:nuevo`, emptyForm);
     setEditDialogOpen(true);
   };
 
   const openEdit = (c: Cliente) => {
     setEditingId(c.id ?? null);
-    setForm({
+    const base = {
       nombre: c.nombre ?? "",
       telefono: c.telefono ?? "",
       email: c.email ?? "",
       dni: c.dni ?? "",
       domicilio: c.domicilio ?? "",
-    });
+    };
+    setForm(base);
+    prepararBorradorCliente(`cliente-editar:${tenantId}:${c.id ?? "nuevo"}`, base);
     setEditDialogOpen(true);
+  };
+
+  // Autoguardado del formulario de cliente mientras se edita.
+  useEffect(() => {
+    const clave = claveBorradorClienteRef.current;
+    if (!editDialogOpen || !clave || borradorCliente) return;
+    const actual = JSON.stringify(form);
+    if (actual === snapshotFormRef.current) {
+      borrarBorrador(clave);
+      return;
+    }
+    guardarBorrador(clave, form);
+  }, [form, editDialogOpen, borradorCliente]);
+
+  const restaurarBorradorCliente = () => {
+    if (!borradorCliente) return;
+    setForm(borradorCliente.valor);
+    setBorradorCliente(null);
+  };
+
+  const descartarBorradorClientePendiente = () => {
+    if (claveBorradorClienteRef.current) borrarBorrador(claveBorradorClienteRef.current);
+    setBorradorCliente(null);
   };
 
   /**
@@ -310,8 +356,10 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
    * sus datos y una fila de mascota vacía. Por eso el botón solo aparece si
    * el cliente tiene DNI: es la clave con la que el diálogo lo encuentra.
    */
-  const abrirAgregarMascota = () => {
+  const abrirAgregarMascota = (dni: string) => {
+    setDniMascota(dni);
     setDetailsDialogOpen(false);
+    setEditDialogOpen(false);
     setAgregarMascotaOpen(true);
   };
 
@@ -337,14 +385,15 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
     }
   };
 
-  const handleSave = async () => {
+  /** Devuelve `true` si guardó con éxito (recién ahí se cierra el diálogo). */
+  const handleSave = async (): Promise<boolean> => {
     if (!form.nombre.trim() || !form.telefono.trim() || !form.email.trim()) {
       toast({
         title: "Campos requeridos",
         description: "Nombre, teléfono y email son obligatorios",
         variant: "destructive",
       });
-      return;
+      return false;
     }
     setSaving(true);
     try {
@@ -361,22 +410,46 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
           description: form.dni ? "Cliente registrado o actualizado según DNI" : "El cliente se registró correctamente",
         });
       }
+      if (claveBorradorClienteRef.current) borrarBorrador(claveBorradorClienteRef.current);
       setEditDialogOpen(false);
       setForm(emptyForm);
       setEditingId(null);
       await loadClientes();
       loadStats();
+      return true;
     } catch (error) {
       console.error("Error saving cliente:", error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el cliente",
+        description: "No se pudo guardar el cliente. Si fue por conexión, lo cargado queda guardado como borrador.",
         variant: "destructive",
       });
+      return false;
     } finally {
       setSaving(false);
     }
   };
+
+  const hayCambiosCliente =
+    editDialogOpen && !borradorCliente && JSON.stringify(form) !== snapshotFormRef.current;
+
+  const {
+    confirmando: confirmandoCierreCliente,
+    guardando: guardandoCierreCliente,
+    solicitarCierre: solicitarCierreCliente,
+    confirmarGuardar: confirmarGuardarCliente,
+    confirmarDescartar: confirmarDescartarCliente,
+    cancelarCierre: cancelarCierreCliente,
+  } = useConfirmarCierre({
+    hayCambios: hayCambiosCliente,
+    onGuardar: handleSave,
+    onDescartar: () => {
+      if (claveBorradorClienteRef.current) borrarBorrador(claveBorradorClienteRef.current);
+      setEditDialogOpen(false);
+      setForm(emptyForm);
+      setEditingId(null);
+    },
+  });
 
   if (loading) {
     return (
@@ -827,7 +900,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                         variant="outline"
                         size="sm"
                         className="h-7 text-[11px]"
-                        onClick={abrirAgregarMascota}
+                        onClick={() => abrirAgregarMascota(detailsCliente.dni ?? "")}
                       >
                         <PawPrint className="h-3.5 w-3.5 mr-1" />
                         Agregar mascota
@@ -888,7 +961,13 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       </Dialog>
 
       {/* Modal Agregar/Editar */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(v) => {
+          if (v) { setEditDialogOpen(true); return; }
+          if (solicitarCierreCliente()) setEditDialogOpen(false);
+        }}
+      >
         <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
           <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4">
             <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
@@ -964,11 +1043,30 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 className="border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
               />
             </div>
+
+            {/* Solo al editar uno existente: para un cliente nuevo todavía no
+                hay a quién colgarle la mascota — primero se guarda. */}
+            {editingId && form.dni.trim() ? (
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full text-[11px] sm:text-xs"
+                  onClick={() => abrirAgregarMascota(form.dni)}
+                >
+                  <PawPrint className="h-3.5 w-3.5 mr-1.5" />
+                  Agregar mascota
+                </Button>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                  Los cambios sin guardar de este formulario se descartan al abrir el registro de mascota.
+                </p>
+              </div>
+            ) : null}
           </div>
           <DialogFooter className="flex gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-slate-200 dark:border-slate-800">
             <Button
               variant="outline"
-              onClick={() => setEditDialogOpen(false)}
+              onClick={() => { if (solicitarCierreCliente()) setEditDialogOpen(false); }}
               className="flex-1 border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
             >
               Cancelar
@@ -993,11 +1091,30 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
         trigger={null}
         open={agregarMascotaOpen}
         onOpenChange={setAgregarMascotaOpen}
-        dniInicial={detailsCliente?.dni ?? undefined}
+        dniInicial={dniMascota}
         onExito={() => {
           recargarTrasRegistro();
-          if (detailsCliente) openDetails(detailsCliente);
+          // Si se entró desde la ficha, se vuelve a ella ya actualizada.
+          if (detailsCliente?.dni && detailsCliente.dni === dniMascota) {
+            openDetails(detailsCliente);
+          }
         }}
+      />
+
+      <ConfirmarDescarteDialog
+        open={confirmandoCierreCliente}
+        guardando={guardandoCierreCliente}
+        entidad="el cliente"
+        onGuardar={confirmarGuardarCliente}
+        onDescartar={confirmarDescartarCliente}
+        onCancelar={cancelarCierreCliente}
+      />
+
+      <RestaurarBorradorDialog
+        open={borradorCliente !== null}
+        guardadoEn={borradorCliente?.guardadoEn}
+        onRestaurar={restaurarBorradorCliente}
+        onDescartar={descartarBorradorClientePendiente}
       />
 
       <Toaster />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,10 @@ import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
 import { format } from "date-fns"
 import { UserPlus, PlusCircle, Trash2, Loader2, PartyPopper, Sparkles } from "lucide-react"
+import { guardarBorrador, leerBorrador, borrarBorrador } from "@/lib/forms/borrador"
+import { useConfirmarCierre } from "@/hooks/useConfirmarCierre"
+import { ConfirmarDescarteDialog } from "@/components/ui/confirmar-descarte-dialog"
+import { RestaurarBorradorDialog } from "@/components/ui/restaurar-borrador-dialog"
 
 /**
  * `publico` = lo usa la persona desde la página de la veterinaria ("Registrarme
@@ -73,6 +77,11 @@ const MASCOTA_VACIA: MascotaBorrador = {
   tieneChip: false, chipNumero: "",
 }
 
+interface FormularioBorrador {
+  cliente: typeof CLIENTE_VACIO
+  mascotas: MascotaBorrador[]
+}
+
 export function RegistroClienteDialog({
   tenantId, modo = "publico", trigger, dniInicial, onExito,
   open: openControlado, onOpenChange: onOpenChangeControlado,
@@ -91,6 +100,12 @@ export function RegistroClienteDialog({
   const [mascotas, setMascotas] = useState<MascotaBorrador[]>([])
   /** Id del cliente que se encontró por DNI en esta veterinaria (si lo había). */
   const [clienteExistenteId, setClienteExistenteId] = useState<string | null>(null)
+  /** Borrador encontrado en localStorage, distinto del estado base recién cargado: se le pregunta al usuario si quiere seguirlo. */
+  const [borradorPendiente, setBorradorPendiente] = useState<{ valor: FormularioBorrador; guardadoEn: number } | null>(null)
+  /** Key de localStorage del formulario actual (depende del DNI buscado); null hasta que se entra al paso "formulario". */
+  const claveBorradorRef = useRef<string | null>(null)
+  /** JSON del estado recién cargado (sin editar), para detectar si hubo cambios. */
+  const snapshotRef = useRef<string>("")
 
   const resetear = () => {
     setPaso("dni")
@@ -99,6 +114,9 @@ export function RegistroClienteDialog({
     setCliente(CLIENTE_VACIO)
     setMascotas([])
     setClienteExistenteId(null)
+    setBorradorPendiente(null)
+    claveBorradorRef.current = null
+    snapshotRef.current = ""
   }
 
   useEffect(() => {
@@ -117,49 +135,73 @@ export function RegistroClienteDialog({
     if (!dniLimpio) return
     setBuscando(true)
     try {
+      let base: FormularioBorrador
+      let recon: Reconocimiento
+      let existenteId: string | null = null
+
       const local = await getClienteByDNI(tenantId, dniLimpio)
       if (local?.id) {
         const mascotasLocales = await getMascotas(tenantId, local.id)
-        setCliente({
-          nombre: local.nombre, telefono: local.telefono, email: local.email,
-          domicilio: local.domicilio ?? "", dni: dniLimpio,
-        })
         // En admin el caso típico de un cliente que ya existe es justamente
         // "vengo a sumarle otra mascota": le dejamos la fila vacía lista.
         const filaExtra = esAdmin ? [{ ...MASCOTA_VACIA }] : []
-        setMascotas([...mascotasLocales.map((m) => ({
-          id: m.id, nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
-          edadValor: m.edadValor !== undefined ? String(m.edadValor) : "",
-          edadUnidad: m.edadUnidad ?? "meses",
-          peso: (m.peso ?? "").replace(/[^\d.,]/g, ""),
-          tieneChip: m.tieneChip ?? false,
-          chipNumero: m.chipNumero ?? "",
-        })), ...filaExtra])
-        setClienteExistenteId(local.id)
-        setReconocimiento("local")
-        setPaso("formulario")
-        return
+        base = {
+          cliente: {
+            nombre: local.nombre, telefono: local.telefono, email: local.email,
+            domicilio: local.domicilio ?? "", dni: dniLimpio,
+          },
+          mascotas: [...mascotasLocales.map((m) => ({
+            id: m.id, nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
+            edadValor: m.edadValor !== undefined ? String(m.edadValor) : "",
+            edadUnidad: m.edadUnidad ?? "meses",
+            peso: (m.peso ?? "").replace(/[^\d.,]/g, ""),
+            tieneChip: m.tieneChip ?? false,
+            chipNumero: m.chipNumero ?? "",
+          })), ...filaExtra],
+        }
+        recon = "local"
+        existenteId = local.id
+      } else {
+        const global = await getClienteGlobalPorDNI(dniLimpio)
+        if (global) {
+          base = {
+            cliente: {
+              nombre: global.nombre, telefono: global.telefono, email: global.email,
+              domicilio: global.domicilio, dni: dniLimpio,
+            },
+            mascotas: global.mascotas.map((m) => ({
+              nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
+              edadValor: "", edadUnidad: "meses" as UnidadEdad, peso: "",
+              tieneChip: false, chipNumero: "",
+            })),
+          }
+          recon = "global"
+        } else {
+          base = { cliente: { ...CLIENTE_VACIO, dni: dniLimpio }, mascotas: [] }
+          recon = "ninguno"
+        }
       }
 
-      const global = await getClienteGlobalPorDNI(dniLimpio)
-      if (global) {
-        setCliente({
-          nombre: global.nombre, telefono: global.telefono, email: global.email,
-          domicilio: global.domicilio, dni: dniLimpio,
-        })
-        setMascotas(global.mascotas.map((m) => ({
-          nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
-          edadValor: "", edadUnidad: "meses" as UnidadEdad, peso: "",
-          tieneChip: false, chipNumero: "",
-        })))
-        setClienteExistenteId(null)
-        setReconocimiento("global")
+      setClienteExistenteId(existenteId)
+      setReconocimiento(recon)
+
+      // La key incluye modo+DNI: un borrador de "sumarle una mascota a Juan"
+      // no se mezcla con el de "dar de alta a Juan desde cero" ni con el del
+      // registro público, aunque compartan DNI y navegador.
+      const clave = `registro-cliente:${tenantId}:${modo}:${dniLimpio}`
+      claveBorradorRef.current = clave
+      snapshotRef.current = JSON.stringify(base)
+
+      const borrador = leerBorrador<FormularioBorrador>(clave)
+      if (borrador && JSON.stringify(borrador.valor) !== snapshotRef.current) {
+        // Se muestra el estado base mientras se pregunta; si el usuario
+        // confirma, recién ahí se pisa con el borrador.
+        setBorradorPendiente(borrador)
       } else {
-        setClienteExistenteId(null)
-        setCliente({ ...CLIENTE_VACIO, dni: dniLimpio })
-        setMascotas([])
-        setReconocimiento("ninguno")
+        setBorradorPendiente(null)
       }
+      setCliente(base.cliente)
+      setMascotas(base.mascotas)
       setPaso("formulario")
     } finally {
       setBuscando(false)
@@ -171,12 +213,38 @@ export function RegistroClienteDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, dniInicial])
 
+  // Autoguardado del borrador mientras se edita. Se frena mientras hay un
+  // borradorPendiente sin decidir, para no pisarlo con el estado base recién
+  // cargado (que en ese momento es distinto al borrador por definición).
+  useEffect(() => {
+    const clave = claveBorradorRef.current
+    if (paso !== "formulario" || !clave || borradorPendiente) return
+    const actual = JSON.stringify({ cliente, mascotas } satisfies FormularioBorrador)
+    if (actual === snapshotRef.current) {
+      borrarBorrador(clave)
+      return
+    }
+    guardarBorrador(clave, { cliente, mascotas } satisfies FormularioBorrador)
+  }, [cliente, mascotas, paso, borradorPendiente])
+
+  const restaurarBorrador = () => {
+    if (!borradorPendiente) return
+    setCliente(borradorPendiente.valor.cliente)
+    setMascotas(borradorPendiente.valor.mascotas)
+    setBorradorPendiente(null)
+  }
+
+  const descartarBorradorPendiente = () => {
+    if (claveBorradorRef.current) borrarBorrador(claveBorradorRef.current)
+    setBorradorPendiente(null)
+  }
+
   const actualizarMascota = (i: number, campo: keyof MascotaBorrador, valor: string | boolean) => {
     setMascotas((prev) => prev.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m)))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  /** Devuelve `true` si guardó con éxito (recién ahí se cierra el diálogo). */
+  const guardarTodo = async (): Promise<boolean> => {
     if (!cliente.nombre.trim()) {
       toast({
         title: esAdmin ? "Falta el nombre del cliente" : "Falta tu nombre",
@@ -185,7 +253,7 @@ export function RegistroClienteDialog({
           : "Contanos como te llamas para registrarte.",
         variant: "destructive",
       })
-      return
+      return false
     }
 
     setLoading(true)
@@ -252,25 +320,62 @@ export function RegistroClienteDialog({
         title: tituloOk,
         description: mascotasConError > 0 ? detalleError : detalleOk,
       })
+      if (claveBorradorRef.current) borrarBorrador(claveBorradorRef.current)
       resetear()
       setOpen(false)
       onExito?.()
+      return true
     } catch (error) {
       console.error("Error en registro de cliente:", error)
       toast({
         title: "No pudimos completar el registro",
         description: esAdmin
-          ? "Intentá de nuevo en un momento. Si el problema sigue, revisá la conexión."
-          : "Intentá de nuevo en un momento. Si el problema sigue, contactanos por teléfono.",
+          ? "Intentá de nuevo en un momento. Si el problema sigue, revisá la conexión. Lo que cargaste queda guardado como borrador."
+          : "Intentá de nuevo en un momento. Si el problema sigue, contactanos por teléfono. Lo que cargaste queda guardado como borrador.",
         variant: "destructive",
       })
+      return false
     } finally {
       setLoading(false)
     }
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await guardarTodo()
+  }
+
+  const hayCambiosSinGuardar =
+    paso === "formulario" &&
+    !borradorPendiente &&
+    JSON.stringify({ cliente, mascotas } satisfies FormularioBorrador) !== snapshotRef.current
+
+  const {
+    confirmando: confirmandoCierre,
+    guardando: guardandoDesdeCierre,
+    solicitarCierre,
+    confirmarGuardar: confirmarGuardarYCerrar,
+    confirmarDescartar: confirmarDescartarYCerrar,
+    cancelarCierre,
+  } = useConfirmarCierre({
+    hayCambios: hayCambiosSinGuardar,
+    onGuardar: guardarTodo,
+    onDescartar: () => {
+      if (claveBorradorRef.current) borrarBorrador(claveBorradorRef.current)
+      resetear()
+      setOpen(false)
+    },
+  })
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetear() }}>
+    <>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (v) { setOpen(true); return }
+        if (solicitarCierre()) setOpen(false)
+      }}
+    >
       {trigger !== null && (
         <DialogTrigger asChild>
           {trigger ?? (
@@ -501,5 +606,22 @@ export function RegistroClienteDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    <ConfirmarDescarteDialog
+      open={confirmandoCierre}
+      guardando={guardandoDesdeCierre}
+      entidad={esAdmin ? "el cliente" : "tus datos"}
+      onGuardar={confirmarGuardarYCerrar}
+      onDescartar={confirmarDescartarYCerrar}
+      onCancelar={cancelarCierre}
+    />
+
+    <RestaurarBorradorDialog
+      open={borradorPendiente !== null}
+      guardadoEn={borradorPendiente?.guardadoEn}
+      onRestaurar={restaurarBorrador}
+      onDescartar={descartarBorradorPendiente}
+    />
+    </>
   )
 }

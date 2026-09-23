@@ -165,8 +165,22 @@ Qué se portó y qué se dejó afuera:
 |-----------|--------|
 | Catálogo, stock, ofertas/combos, venta por peso, vencimientos, importación Excel, auditoría de precios | Portado |
 | POS de venta, caja diaria, ventas, reportes | Portado (ver "Ventas, caja y remitos") |
-| Mercado Pago Point/QR, fiado, sync con distribuidora, offline PWA | Descartado |
+| Mercado Pago Point/QR, fiado, sync con distribuidora | Descartado |
+| Offline PWA | **Decisión revertida** — ver abajo |
 | Login por PIN (tabla `usuarios` propia) | Descartado — usa el auth del SaaS |
+
+**Offline / PWA — decisión revertida.** El "offline PWA" del kiosko se había
+descartado en el port. Se retoma, pero con otro alcance: no se porta el offline
+del POS (stock y correlativos de remito no toleran escrituras offline), sino una
+cola de sincronización para el panel, empezando por **Clientes y Mascotas** y
+extensible a Turnos e Historia Clínica. POS/Ventas/Caja quedan explícitamente
+fuera de alcance.
+
+El diseño completo — persistencia en IndexedDB, detección de conectividad
+dirigida por el fallo, uuid generado en el cliente, idempotencia por `op_id`,
+resolución de conflictos por campo apoyada en `historial_datos`, fases y riesgos
+— vive en **`planofline.md`**. Está en fase de planificación: no
+hay código todavía.
 
 Diferencias de diseño respecto del original:
 
