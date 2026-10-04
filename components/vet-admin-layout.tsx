@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { HelpCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,8 @@ import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
 import { getTrialStatus } from "@/lib/plans"
 import { ReadOnlyProvider } from "@/lib/auth/read-only-context"
 import { TrialExpiredBanner } from "@/components/admin/trial-expired-banner"
+import { TourPagina } from "@/components/admin/tour-pagina"
+import { TOURS } from "@/lib/ayuda/tours"
 
 interface Props {
   slug: string
@@ -109,6 +111,10 @@ export function VetAdminLayout({ slug, children }: Props) {
   }
 
   const section = sectionFromPath(pathname, slug)
+  // "Ayuda" arranca el tour de la pantalla actual; sin tour propio, el del Dashboard.
+  const destinoAyuda = section && TOURS[section]
+    ? `${pathname}?tour=1`
+    : `/${slug}/admin/Dashboard?tour=1`
 
   return (
     // `SidebarProvider` recuerda el estado en una cookie, así que el menú queda
@@ -138,7 +144,7 @@ export function VetAdminLayout({ slug, children }: Props) {
               variant="ghost"
               size="sm"
               className="gap-1.5 text-muted-foreground"
-              onClick={() => router.push(`/${slug}/admin/Dashboard?tour=1`)}
+              onClick={() => router.push(destinoAyuda)}
             >
               <HelpCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Ayuda</span>
@@ -148,6 +154,19 @@ export function VetAdminLayout({ slug, children }: Props) {
           {/* Sin `container mx-auto`: con el sidebar plegado el contenido tiene que
               aprovechar el ancho que se liberó, sobre todo el mostrador. */}
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
+
+          {/* useSearchParams pide un Suspense alrededor. `key` lo reinicia al
+              cambiar de sección, así cada pantalla arranca su propio tour. */}
+          {section && (
+            <Suspense fallback={null}>
+              <TourPagina
+                key={section}
+                slug={slug}
+                seccion={section}
+                automatico={section === "dashboard"}
+              />
+            </Suspense>
+          )}
         </SidebarInset>
       </SidebarProvider>
     </ReadOnlyProvider>

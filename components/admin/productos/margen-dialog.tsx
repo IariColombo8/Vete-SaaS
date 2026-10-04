@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { aplicarMargen, type ResultadoMargen } from "@/lib/supabase/productos"
 import { ordenarCategorias } from "@/lib/productos/categorias"
 import { cn } from "@/lib/utils"
@@ -226,7 +227,7 @@ export function MargenDialog({ tenantId, categorias, open, onOpenChange, onAplic
             ) : (
               <div className="space-y-3">
                 <div>
-                  <Label className="mb-1 block text-xs text-muted-foreground">% de ganancia</Label>
+                  <Label className="mb-1 gap-1.5 text-xs text-muted-foreground">% de ganancia <Ayuda tema="productos.margen" /></Label>
                   <Input
                     type="number" step="0.01" placeholder="Ej: 35"
                     value={porcentajeUnico}

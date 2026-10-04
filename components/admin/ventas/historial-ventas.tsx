@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Ban, Download, Loader2, MessageCircle, Receipt } from "lucide-react"
+import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { toast } from "sonner"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -49,10 +50,11 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio }: Props) {
 
   if (ventas.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-muted-foreground">
-        <Receipt className="mx-auto mb-3 h-8 w-8 opacity-40" />
-        No hay ventas en este período
-      </div>
+      <EstadoVacio
+        icono={<Receipt />}
+        titulo="No hay ventas en este período"
+        descripcion="Probá con un rango de fechas más amplio. Las ventas se cargan desde Vender y aparecen acá con su remito."
+      />
     )
   }
 

@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -199,7 +200,7 @@ export function SorteoDialog({ tenantId, sorteo, open, onOpenChange, onGuardar }
 
           {/* ── Mecánicas de chance ── */}
           <div className="space-y-3 rounded-lg border p-3">
-            <Label className="text-xs text-muted-foreground">¿Cómo se ganan las chances?</Label>
+            <Label className="gap-1.5 text-xs text-muted-foreground">¿Cómo se ganan las chances? <Ayuda tema="sorteos.chances" /></Label>
 
             <label className="flex items-center justify-between">
               <span className="text-sm">Ser cliente registrado</span>

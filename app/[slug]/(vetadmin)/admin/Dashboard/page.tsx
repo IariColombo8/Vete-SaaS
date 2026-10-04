@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
@@ -8,7 +8,7 @@ import { getTenantConfig, getTurnosDelMes } from "@/lib/supabase/queries"
 import type { TenantConfig } from "@/lib/supabase/queries"
 import { getPlanLimits, planAllows } from "@/lib/plans"
 import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
-import { DashboardTour } from "@/components/admin/dashboard-tour"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -167,9 +167,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Suspense fallback={null}>
-        <DashboardTour slug={slug} />
-      </Suspense>
       <div className="space-y-6">
         {/* Encabezado con plan */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -208,10 +205,11 @@ export default function DashboardPage() {
               }`}
             >
               <div>
-                <p className={`font-semibold ${alcanzado ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
+                <p className={`flex items-center gap-1.5 font-semibold ${alcanzado ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
                   {alcanzado
                     ? "Límite del plan alcanzado"
                     : `Turnos este mes: ${turnosMes} / ${maxTurnos}`}
+                  <Ayuda tema="dashboard.usoPlan" />
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {alcanzado

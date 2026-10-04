@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { formatCurrency } from "@/lib/format"
 import { MEDIOS_PAGO_SIMPLES, type MedioPago } from "@/lib/supabase/types"
 
@@ -54,7 +55,7 @@ export function MixtoPagos({ total, pagos, onCambiar }: Props) {
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/40 p-2.5">
-      <Label className="text-xs text-muted-foreground">Desglose del pago</Label>
+      <Label className="gap-1.5 text-xs text-muted-foreground">Desglose del pago <Ayuda tema="pos.mixto" /></Label>
 
       {pagos.map((pago) => (
         <div key={pago.id} className="flex items-center gap-1.5">

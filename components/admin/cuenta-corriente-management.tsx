@@ -5,6 +5,7 @@ import { Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Ayuda } from "@/components/ui/ayuda"
 import { TablaSaldos } from "./cuenta-corriente/tabla-saldos"
 import { DetalleClienteDialog } from "./cuenta-corriente/detalle-cliente-dialog"
 import { RegistrarCargoDialog } from "./cuenta-corriente/registrar-cargo-dialog"
@@ -41,8 +42,8 @@ export function CuentaCorrienteManagement({ tenantId }: Props) {
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">Cuenta corriente</h1>
-          <p className="text-sm text-muted-foreground">
-            Clientes con saldo pendiente y registro de cobros
+          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            Clientes con saldo pendiente y registro de cobros <Ayuda tema="ctacte.queEs" />
           </p>
         </div>
         <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setRegistrarCargoAbierto(true)}>

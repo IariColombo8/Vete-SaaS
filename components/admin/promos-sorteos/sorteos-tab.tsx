@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { Gift, Plus } from "lucide-react"
+import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -100,7 +101,16 @@ export function SorteosTab({ tenantId }: Props) {
       {cargando ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : sorteos.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Todavía no hay sorteos.</p>
+        <EstadoVacio
+          icono={<Gift />}
+          titulo="Todavía no hay sorteos"
+          descripcion="Armá un sorteo con fechas, premios y la forma en que tus clientes suman chances."
+          accion={
+            <Button variant="outline" onClick={abrirNuevo}>
+              <Plus className="mr-2 h-4 w-4" /> Crear el primero
+            </Button>
+          }
+        />
       ) : (
         <Table>
           <TableHeader>

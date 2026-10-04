@@ -1,6 +1,7 @@
 "use client"
 
 import { Loader2, Wallet } from "lucide-react"
+import { EstadoVacio } from "@/components/admin/estado-vacio"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -25,10 +26,11 @@ export function TablaSaldos({ clientes, cargando, onVerDetalle }: Props) {
 
   if (clientes.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-muted-foreground">
-        <Wallet className="mx-auto mb-3 h-8 w-8 opacity-40" />
-        Todavía no hay movimientos de cuenta corriente
-      </div>
+      <EstadoVacio
+        icono={<Wallet />}
+        titulo="Nadie te debe nada todavía"
+        descripcion="Cuando cobres una venta con el medio de pago Cta Cte, o registres un cobro pendiente desde el botón de arriba, el cliente aparece acá con su saldo."
+      />
     )
   }
 

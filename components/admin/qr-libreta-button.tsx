@@ -3,6 +3,7 @@
 import { forwardRef, useImperativeHandle, useState } from "react"
 import QRCode from "qrcode"
 import { Button } from "@/components/ui/button"
+import { Ayuda } from "@/components/ui/ayuda"
 import {
   Dialog,
   DialogContent,
@@ -86,7 +87,7 @@ export const QrLibretaButton = forwardRef<QrLibretaButtonRef, Props>(function Qr
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>QR de la libreta</DialogTitle>
+            <DialogTitle className="flex items-center gap-1.5">QR de la libreta <Ayuda tema="libreta.qr" /></DialogTitle>
             <DialogDescription>
               Escaneá o compartí este código para ver la libreta pública de la mascota.
             </DialogDescription>

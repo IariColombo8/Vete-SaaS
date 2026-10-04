@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Search, Tag, Pencil } from "lucide-react"
+import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -138,7 +139,11 @@ export function OfertasTab({ tenantId }: Props) {
       {cargando ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : conOferta.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Todavía no hay productos en oferta.</p>
+        <EstadoVacio
+          icono={<Tag />}
+          titulo="Todavía no hay productos en oferta"
+          descripcion="Buscá un producto en el buscador de arriba para ponerle un precio de oferta o un combo por cantidad."
+        />
       ) : (
         <Table>
           <TableHeader>

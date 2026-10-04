@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Textarea } from "@/components/ui/textarea"
 import { abrirCaja, cerrarCaja, getResumenCaja } from "@/lib/supabase/ventas"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -35,7 +36,7 @@ export function CajaBar({ tenantId, caja, onCambio }: Props) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 rounded-lg border bg-card px-4 py-2.5">
+      <div data-tour="caja-bar" className="flex items-center justify-between gap-3 rounded-lg border bg-card px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <Wallet
             className={`h-4 w-4 shrink-0 ${caja ? "text-emerald-600" : "text-muted-foreground"}`}
@@ -50,8 +51,9 @@ export function CajaBar({ tenantId, caja, onCambio }: Props) {
               </span>
             </div>
           ) : (
-            <span className="text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               Sin caja abierta — las ventas se registran igual, pero no entran en ningún arqueo
+              <Ayuda tema="pos.sinCaja" />
             </span>
           )}
         </div>
@@ -131,7 +133,7 @@ function AbrirCajaDialog({
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="saldo-inicial">Saldo inicial</Label>
+          <Label htmlFor="saldo-inicial">Saldo inicial <Ayuda tema="caja.saldoInicial" /></Label>
           <Input
             id="saldo-inicial"
             type="number"
@@ -222,7 +224,7 @@ function CerrarCajaDialog({
 
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="declarado">Efectivo contado</Label>
+            <Label htmlFor="declarado">Efectivo contado <Ayuda tema="caja.contado" /></Label>
             <Input
               id="declarado"
               type="number"
@@ -237,8 +239,8 @@ function CerrarCajaDialog({
           </div>
 
           {esperado !== null && (
-            <p className="text-sm text-muted-foreground">
-              Esperado: {formatCurrency(esperado)}
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              Esperado: {formatCurrency(esperado)} <Ayuda tema="caja.esperado" />
             </p>
           )}
 

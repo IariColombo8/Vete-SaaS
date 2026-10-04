@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Switch } from "@/components/ui/switch"
 import { precioFinal, precioLinea } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
@@ -131,7 +132,7 @@ export function OfertaDialog({ producto, open, onOpenChange, onGuardar }: Props)
               {esCombo ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="mb-1 block text-xs text-muted-foreground">Cada cuántas unidades</Label>
+                    <Label className="mb-1 gap-1.5 text-xs text-muted-foreground">Cada cuántas unidades <Ayuda tema="productos.combo" /></Label>
                     <Input type="number" inputMode="numeric" min={2} autoFocus
                       value={cantidad} onChange={(e) => setCantidad(e.target.value)} placeholder="Ej: 3" />
                   </div>

@@ -10,6 +10,7 @@ import { uploadFotoTenant, deleteFotoTenant } from "@/lib/supabase/storage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -914,7 +915,7 @@ export default function ConfiguracionPage() {
             {/* ── ANTICIPACION MINIMA ── */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Anticipacion minima para turnos</CardTitle>
+                <CardTitle className="flex items-center gap-1.5 text-base">Anticipación mínima para turnos <Ayuda tema="config.anticipacion" /></CardTitle>
                 <CardDescription>
                   Horas minimas de anticipacion para sacar turno el mismo dia.
                 </CardDescription>
@@ -1094,23 +1095,23 @@ export default function ConfiguracionPage() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pl-1">
                         <div className="space-y-1">
-                          <Label className="text-xs">Duracion (min)</Label>
+                          <Label className="gap-1.5 text-xs">Duración (min) <Ayuda tema="config.duracion" /></Label>
                           <Input type="number" min={5} step={5} value={s.duracionMin ?? 60} onChange={e => updateServicioTurnoDuracion(i, e.target.value)} placeholder="60" className="h-9 font-mono" />
                           <p className="text-[10px] text-muted-foreground">Tambien define cada cuanto se ofrece un horario (ej: 15 min = turnos cada 15 min).</p>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Cupo simultaneo</Label>
+                          <Label className="gap-1.5 text-xs">Cupo simultáneo <Ayuda tema="config.cupo" /></Label>
                           <Input type="number" min={1} step={1} value={s.cupoSimultaneo ?? 1} onChange={e => updateServicioTurnoNumero(i, "cupoSimultaneo", e.target.value)} placeholder="1" className="h-9 font-mono" />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Anticipacion minima (hs)</Label>
+                          <Label className="gap-1.5 text-xs">Anticipación mínima (hs) <Ayuda tema="config.anticipacion" /></Label>
                           <Input type="number" min={0} step={1} value={s.anticipacionHoras ?? ""} onChange={e => updateServicioTurnoNumero(i, "anticipacionHoras", e.target.value)} placeholder={`General: ${minHoras}`} className="h-9 font-mono" />
                         </div>
                       </div>
 
                       <div className="pl-1 space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs">Horarios propios (opcional)</Label>
+                          <Label className="gap-1.5 text-xs">Horarios propios (opcional) <Ayuda tema="config.horariosPropios" /></Label>
                           <Button variant="outline" size="sm" type="button" className="h-7 text-xs" onClick={() => addServicioHorario(i)}>
                             <Plus className="h-3 w-3 mr-1" />
                             Agregar bloque

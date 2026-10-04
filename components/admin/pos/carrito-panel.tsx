@@ -6,6 +6,7 @@ import { ChevronDown, Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Separator } from "@/components/ui/separator"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ClienteSelector } from "./cliente-selector"
@@ -299,8 +300,8 @@ export function CarritoPanel({
         )}
 
         <div>
-          <Label htmlFor="descuento" className="mb-1.5 block text-xs text-muted-foreground">
-            Descuento
+          <Label htmlFor="descuento" className="mb-1.5 gap-1.5 text-xs text-muted-foreground">
+            Descuento <Ayuda tema="pos.descuento" />
           </Label>
           <div className="flex gap-1.5">
             <Input

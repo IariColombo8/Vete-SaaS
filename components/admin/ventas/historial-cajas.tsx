@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Download, Loader2, Wallet } from "lucide-react"
+import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { toast } from "sonner"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -48,10 +49,11 @@ export function HistorialCajas({ tenantId, cajas, cargando, emisor }: Props) {
 
   if (cajas.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-muted-foreground">
-        <Wallet className="mx-auto mb-3 h-8 w-8 opacity-40" />
-        Todavía no se abrió ninguna caja
-      </div>
+      <EstadoVacio
+        icono={<Wallet />}
+        titulo="Todavía no se abrió ninguna caja"
+        descripcion="Abrí la caja al empezar el turno con el botón Abrir caja. Cuando la cierres, el arqueo queda guardado acá."
+      />
     )
   }
 

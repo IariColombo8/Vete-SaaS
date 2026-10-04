@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Trash2, Pencil, Tag } from "lucide-react"
+import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -101,7 +102,16 @@ export function PromocionesTab({ tenantId }: Props) {
       {cargando ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : promociones.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Todavía no hay promociones.</p>
+        <EstadoVacio
+          icono={<Tag />}
+          titulo="Todavía no hay promociones"
+          descripcion="Una promoción junta varios productos con un precio final, por ejemplo alimento + antiparasitario. Aparece en el mostrador lista para agregar al carrito."
+          accion={
+            <Button variant="outline" onClick={abrirNueva}>
+              <Plus className="mr-2 h-4 w-4" /> Crear la primera
+            </Button>
+          }
+        />
       ) : (
         <Table>
           <TableHeader>

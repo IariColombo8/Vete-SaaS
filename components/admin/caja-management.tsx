@@ -7,6 +7,8 @@ import {
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Ayuda } from "@/components/ui/ayuda"
+import type { TemaAyuda } from "@/lib/ayuda/textos"
 import { cn } from "@/lib/utils"
 import { CajaBar } from "./pos/caja-bar"
 import { HistorialCajas } from "./ventas/historial-cajas"
@@ -110,8 +112,8 @@ export function CajaManagement({ tenantId }: Props) {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Caja</h1>
-            <p className="text-sm text-muted-foreground">
-              Apertura, arqueo y cierre del turno de mostrador
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              Apertura, arqueo y cierre del turno de mostrador <Ayuda tema="caja.arqueo" />
             </p>
           </div>
         </div>
@@ -151,7 +153,7 @@ export function CajaManagement({ tenantId }: Props) {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : caja && resumen ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-tour="caja-resumen" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {MEDIOS_PAGO.map(({ id, label }) => {
             const total = resumen.porMedioPago.find((m) => m.medio === id)?.total ?? 0
             const Icono = ICONO_MEDIO[id]
@@ -176,6 +178,7 @@ export function CajaManagement({ tenantId }: Props) {
             titulo="Debería haber en caja"
             valor={formatCurrency(resumen.saldoEsperado)}
             nota={`${resumen.cantidadVentas} ventas · Apertura + efectivo`}
+            ayuda="caja.esperado"
             destacada
           />
         </div>
@@ -214,7 +217,7 @@ export function CajaManagement({ tenantId }: Props) {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-t-4 border-t-sky-500">
+        <Card data-tour="caja-historial" className="border-t-4 border-t-sky-500">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Cierres anteriores</CardTitle>
             <CardDescription>Últimas 30 cajas, con la diferencia de arqueo</CardDescription>
@@ -233,12 +236,14 @@ function Tarjeta({
   titulo,
   valor,
   nota,
+  ayuda,
   destacada = false,
 }: {
   icono: React.ReactNode
   titulo: string
   valor: string
   nota: string
+  ayuda?: TemaAyuda
   destacada?: boolean
 }) {
   return (
@@ -246,6 +251,7 @@ function Tarjeta({
       <CardContent className="p-4">
         <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
           {icono} {titulo}
+          {ayuda && <Ayuda tema={ayuda} />}
         </div>
         <p
           className={`text-2xl font-bold tabular-nums ${

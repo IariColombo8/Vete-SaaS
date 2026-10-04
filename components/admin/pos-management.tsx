@@ -360,12 +360,13 @@ export function PosManagement({ tenantId }: Props) {
           variant="outline"
           size="sm"
           className="w-fit"
+          data-tour="pos-ofertas"
           onClick={() => setOfertasPromosAbierto(true)}
         >
           <Tag className="mr-1.5 h-4 w-4" />
           Ofertas/Promociones
         </Button>
-        <div className="min-h-0 flex-1">
+        <div data-tour="pos-buscador" className="min-h-0 flex-1">
           <BuscadorProductos
             tenantId={tenantId}
             carrito={carrito}
@@ -384,6 +385,7 @@ export function PosManagement({ tenantId }: Props) {
           para que la fila de resultados (descripción, stock, precio) respire. */}
       <Button
         onClick={() => setCarritoAbierto(true)}
+        data-tour="pos-carrito"
         className="fixed bottom-5 right-5 z-40 h-14 gap-2 rounded-full bg-emerald-600 px-5 shadow-lg hover:bg-emerald-700"
       >
         <ShoppingCart className="h-5 w-5" />

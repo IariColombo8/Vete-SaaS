@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Ayuda } from "@/components/ui/ayuda"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -106,7 +107,7 @@ export function EquipoManagement({ tenantId }: { tenantId: string }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Rol</Label>
+            <Label className="gap-1.5 text-xs">Rol <Ayuda tema="config.roles" /></Label>
             <div className="grid grid-cols-2 gap-2">
               {ROLES.map((r) => (
                 <button
