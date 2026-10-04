@@ -61,7 +61,9 @@ export const metadata: Metadata = {
     apple: "/logo.png",
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"),
-  alternates: { canonical: "/" },
+  // Sin `alternates.canonical` acá: lo heredaban TODAS las páginas que no
+  // definen el suyo (reservar turno, productos de cada veterinaria, login…) y
+  // Google las trataba como copias de la landing. Cada página declara el suyo.
 };
 
 export default function RootLayout({

@@ -5,29 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from "motion/react"
 import { track } from "@vercel/analytics"
 import { Plus } from "lucide-react"
 import { Reveal } from "@/components/landing/motion"
-
-const FAQS = [
-  {
-    q: "¿Puedo empezar gratis?",
-    a: "Sí. El plan Básico es gratuito e incluye hasta 10 turnos por mes, tu página pública y la gestión de turnos y clientes. No pedimos tarjeta para empezar.",
-  },
-  {
-    q: "¿Necesito instalar algo o saber de tecnología?",
-    a: "No. VetPanel funciona desde el navegador, en cualquier celular o computadora. Te registrás con Google y en minutos ya tenés tu clínica online con un asistente que te guía.",
-  },
-  {
-    q: "¿Mis clientes cómo reservan?",
-    a: "Compartís tu link propio (por WhatsApp, Instagram o donde quieras). Tus clientes entran, eligen mascota, servicio y horario disponible, y listo. Vos lo ves al instante en tu panel.",
-  },
-  {
-    q: "¿Puedo cambiar de plan cuando quiera?",
-    a: "Sí. Subís o bajás de plan en cualquier momento. El cambio se refleja de inmediato en los límites y funciones disponibles.",
-  },
-  {
-    q: "¿Mis datos y los de mis pacientes están seguros?",
-    a: "Sí. La información viaja cifrada y se guarda en infraestructura de nivel empresarial, con accesos por roles para tu equipo. Cada clínica ve únicamente sus propios datos.",
-  },
-]
+import { FAQS } from "@/lib/landing/faqs"
 
 function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
   const [open, setOpen] = useState(false)

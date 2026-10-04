@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import dynamic from "next/dynamic"
 import { Hero } from "@/components/landing/hero"
 import { TrustMarquee } from "@/components/landing/trust-marquee"
@@ -5,6 +6,37 @@ import { ProblemSolution } from "@/components/landing/problem-solution"
 import { FeaturesBento } from "@/components/landing/features-bento"
 import { Testimonials } from "@/components/landing/testimonials"
 import { SaasFooter } from "@/components/landing/footer"
+import { SITIO } from "@/lib/seo/sitio"
+import { datosEstructuradosLanding, serializarJsonLd } from "@/lib/seo/datos-estructurados"
+
+export const metadata: Metadata = {
+  title: { absolute: SITIO.titulo },
+  description: SITIO.descripcion,
+  keywords: [
+    "software para veterinarias",
+    "sistema de gestión veterinaria",
+    "turnos online veterinaria",
+    "historia clínica veterinaria digital",
+    "libreta sanitaria digital",
+    "programa para veterinaria Argentina",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    url: "/",
+    siteName: SITIO.nombre,
+    title: SITIO.titulo,
+    description: SITIO.descripcion,
+    images: [{ url: SITIO.imagen, width: 1200, height: 630, alt: "VetPanel — software de gestión para veterinarias" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITIO.titulo,
+    description: SITIO.descripcion,
+    images: [SITIO.imagen],
+  },
+}
 
 // Secciones interactivas below-the-fold: SSR (ssr:true por defecto, contenido en
 // el HTML) pero con su JS en chunks separados, para no bloquear la hidratación
@@ -25,6 +57,11 @@ const FinalCta = dynamic(() =>
 export default function SaasLandingPage() {
   return (
     <main className="bg-cream">
+      <script
+        type="application/ld+json"
+        // Generado en el servidor desde datos propios, escapado en serializarJsonLd.
+        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosLanding()) }}
+      />
       <Hero />
       <TrustMarquee />
       <ProblemSolution />
