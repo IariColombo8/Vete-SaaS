@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getLibretaPublica } from "@/lib/supabase/queries"
 import { PawPrint, Stethoscope } from "lucide-react"
+import { SERVITEC } from "@/lib/marca"
 
 interface Props {
   params: Promise<{ slug: string; token: string }>
@@ -85,7 +86,10 @@ export default async function LibretaPublicaPage({ params }: Props) {
 
           <div className="px-6 pb-6">
             <p className="text-[10px] text-slate-400 text-center">
-              Generado el {new Date(generadoEl).toLocaleDateString("es-AR")} · VetPanel
+              Generado el {new Date(generadoEl).toLocaleDateString("es-AR")} · VetPanel · Desarrollado por{" "}
+              <a href={SERVITEC.url} target="_blank" rel="noopener noreferrer" className="font-semibold hover:text-slate-600 hover:underline">
+                {SERVITEC.nombre}
+              </a>
             </p>
           </div>
         </div>

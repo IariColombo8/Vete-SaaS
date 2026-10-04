@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Paw } from "@/components/landing/pet-art"
+import { SERVITEC } from "@/lib/marca"
 
 export function SaasFooter() {
   return (
@@ -28,9 +29,20 @@ export function SaasFooter() {
               Iniciar Sesión
             </Link>
           </div>
-          <p className="text-xs text-ink-muted/70">
-            © {new Date().getFullYear()} VetPanel · Hecho con cariño para las mascotas 🐾
-          </p>
+          <div className="text-center text-xs text-ink-muted/70 md:text-right">
+            <p>© {new Date().getFullYear()} VetPanel · Hecho con cariño para las mascotas 🐾</p>
+            <p className="mt-1">
+              Desarrollado por{" "}
+              <a
+                href={SERVITEC.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-ink-muted hover:text-coral transition-colors"
+              >
+                {SERVITEC.nombre}
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

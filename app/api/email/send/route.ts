@@ -4,6 +4,7 @@ import { getGmailCredentialsConFallback, getEmailJsCredentials } from "@/lib/sup
 import { enviarEmailGmail } from "@/lib/google/gmail"
 import { enviarEmailJs } from "@/lib/email/emailjs"
 import { generarLinkGoogleCalendar } from "@/lib/email/google-calendar-link"
+import { SERVITEC } from "@/lib/marca"
 
 /**
  * Envío de emails server-side. Dos proveedores posibles, elegidos por tenant:
@@ -153,6 +154,7 @@ function buildConfirmacionHtml(data: TurnoEmailData, calendarLink: string): stri
       <div style="text-align:center;margin-top:24px;">
         <p style="color:#94a3b8;font-size:12px;margin:0;">
           🐾 Hecho desde <a href="https://vetpanel.com.ar" target="_blank" rel="noopener" style="color:#0f766e;font-weight:600;text-decoration:none;">VetPanel</a>
+          · Desarrollado por <a href="${SERVITEC.url}" target="_blank" rel="noopener" style="color:#475569;font-weight:600;text-decoration:none;">${SERVITEC.nombre}</a>
         </p>
       </div>
     </div>

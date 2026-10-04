@@ -1,4 +1,5 @@
 import { SlugProvider } from "@/context/slug-context"
+import { PieVetPanel } from "@/components/public/pie-vetpanel"
 import type React from "react"
 
 interface Props {
@@ -8,5 +9,10 @@ interface Props {
 
 export default async function SlugLayout({ params, children }: Props) {
   const { slug } = await params
-  return <SlugProvider slug={slug}>{children}</SlugProvider>
+  return (
+    <SlugProvider slug={slug}>
+      {children}
+      <PieVetPanel slug={slug} />
+    </SlugProvider>
+  )
 }

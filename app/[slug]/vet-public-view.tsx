@@ -25,6 +25,7 @@ import { SorteoBanner, SorteoTeaser } from "@/components/public/sorteo-banner"
 import { SorteosHistorial } from "@/components/public/sorteos-historial"
 import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog"
 import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
+import { SERVITEC } from "@/lib/marca"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
 
@@ -947,12 +948,12 @@ export default function VetPublicPage() {
                 detras de VetPanel: diseño, software y soporte tecnico a medida.
               </p>
               <a
-                href="https://servitec-cdelu.vercel.app/"
+                href={SERVITEC.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
               >
-                servitec-cdelu.vercel.app
+                {SERVITEC.dominio}
                 <ArrowRight className="h-3.5 w-3.5" />
               </a>
             </div>
@@ -967,7 +968,7 @@ export default function VetPublicPage() {
               <Link href="/" className="text-emerald-500 font-semibold hover:text-emerald-400 transition-colors">VetPanel</Link>
             </p>
             <a
-              href="https://servitec-cdelu.vercel.app/"
+              href={SERVITEC.url}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs font-extralight uppercase tracking-[0.4em] text-slate-500

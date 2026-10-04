@@ -1,7 +1,8 @@
 import { AlertTriangle, MessageCircle } from "lucide-react"
+import { SERVITEC } from "@/lib/marca"
 
 const WHATSAPP_SERVITEC = "https://wa.me/5493442646670"
-const LINKTREE_SERVITEC = "https://linktr.ee/serviteccdelu"
+const WEB_SERVITEC = SERVITEC.url
 
 export function TrialExpiredBanner() {
   return (
@@ -22,7 +23,7 @@ export function TrialExpiredBanner() {
           WhatsApp
         </a>
         <a
-          href={LINKTREE_SERVITEC}
+          href={WEB_SERVITEC}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-md border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40"
