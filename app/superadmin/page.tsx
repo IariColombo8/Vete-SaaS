@@ -1,79 +1,63 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
+import { AlertTriangle, RefreshCw, Search, Shield } from "lucide-react"
 import { getUsuarios, getTenantsFull, updateTenantConfig, deleteTenant, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
-import { Shield, Users, CalendarDays, Stethoscope, ExternalLink, RefreshCw, PauseCircle, PlayCircle, Activity, Pencil, Trash2, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import {
-  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
-} from "@/components/ui/alert-dialog"
-import Link from "next/link"
-import type React from "react"
+  filtrarTenants, filtrarUsuarios, resumenPlataforma,
+  type EstadoFiltro, type PlanFiltro, type RolFiltro,
+} from "@/lib/superadmin/resumen"
+import { Indicadores } from "@/components/superadmin/indicadores"
+import { TablaVeterinarias } from "@/components/superadmin/tabla-veterinarias"
+import { TablaUsuarios } from "@/components/superadmin/tabla-usuarios"
+import { NOMBRE_PLAN } from "@/components/superadmin/etiquetas"
+import { ConfirmarAccionDialog, type AccionPendiente } from "@/components/superadmin/confirmar-accion-dialog"
+import {
+  ActividadDialog, EditarTenantDialog, EliminarTenantDialog,
+  type ActividadTenant, type FormEdicion,
+} from "@/components/superadmin/dialogos-tenant"
 
-interface ActividadTenant {
-  turnos: number
-  ventas: number
-  productos: number
-  movimientosStock: number
+type Plan = NonNullable<TenantFull["plan"]>
+
+const DIAS_EXTENSION_TRIAL = 10
+const FORM_VACIO: FormEdicion = { nombre: "", telefono: "", email: "", direccion: "", ciudad: "" }
+
+function mensajeError(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback
 }
-
-function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number | string; color: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
-      <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg mb-4 ${color}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <p className="text-3xl font-extrabold">{value}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{label}</p>
-    </div>
-  )
-}
-
-const planLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  basico:  { label: "Básico",  variant: "secondary" },
-  plus:    { label: "Plus",    variant: "default" },
-  pro:     { label: "Pro",     variant: "destructive" },
-}
-
-const roleLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  superadmin: { label: "Super Admin", variant: "destructive" },
-  veterinario: { label: "Veterinario", variant: "default" },
-  usuario: { label: "Usuario", variant: "secondary" },
-}
-
-type EstadoFiltro = "todas" | "activas" | "pausadas"
-type PlanFiltro = "todos" | TenantFull["plan"]
-
-const camposEdicion = ["nombre", "telefono", "email", "direccion", "ciudad"] as const
-type CamposEdicion = Record<(typeof camposEdicion)[number], string>
 
 export default function SuperAdminPage() {
   const [usuarios, setUsuarios]       = useState<Usuario[]>([])
   const [tenants, setTenants]         = useState<TenantFull[]>([])
-  const [totalTurnos, setTotalTurnos] = useState(0)
   const [turnosPorSlug, setTurnosPorSlug] = useState<Record<string, number>>({})
   const [loading, setLoading]         = useState(true)
-  const [updating, setUpdating]       = useState<string | null>(null)
+  const [errorCarga, setErrorCarga]   = useState<string | null>(null)
+
+  // slug con una operación en curso: bloquea los botones de esa fila.
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const [accion, setAccion] = useState<AccionPendiente | null>(null)
+  const [ejecutandoAccion, setEjecutandoAccion] = useState(false)
+
   const [actividadTenant, setActividadTenant] = useState<TenantFull | null>(null)
   const [actividad, setActividad]     = useState<ActividadTenant | null>(null)
   const [actividadLoading, setActividadLoading] = useState(false)
 
-  // Filtros del listado de veterinarias
+  // Filtros
   const [busqueda, setBusqueda]         = useState("")
   const [filtroEstado, setFiltroEstado] = useState<EstadoFiltro>("todas")
   const [filtroPlan, setFiltroPlan]     = useState<PlanFiltro>("todos")
+  const [busquedaUsuario, setBusquedaUsuario] = useState("")
+  const [filtroRol, setFiltroRol]       = useState<RolFiltro>("todos")
 
   // Edición de datos del tenant
   const [editTenant, setEditTenant] = useState<TenantFull | null>(null)
-  const [editForm, setEditForm]     = useState<CamposEdicion>({ nombre: "", telefono: "", email: "", direccion: "", ciudad: "" })
+  const [editForm, setEditForm]     = useState<FormEdicion>(FORM_VACIO)
   const [editSaving, setEditSaving] = useState(false)
 
   // Eliminación de tenant (irreversible)
@@ -83,189 +67,278 @@ export default function SuperAdminPage() {
 
   const load = async () => {
     setLoading(true)
-    const [users, vets] = await Promise.all([
-      getUsuarios(),
-      getTenantsFull(),
-    ])
-    const counts = await Promise.all(vets.map((v) => getTurnosCount(v.slug)))
-    const porSlug: Record<string, number> = {}
-    vets.forEach((v, i) => { porSlug[v.slug] = counts[i] })
-    setUsuarios(users)
-    setTenants(vets)
-    setTurnosPorSlug(porSlug)
-    setTotalTurnos(counts.reduce((acc, c) => acc + c, 0))
-    setLoading(false)
+    setErrorCarga(null)
+    try {
+      const [users, vets] = await Promise.all([getUsuarios(), getTenantsFull()])
+      const counts = await Promise.all(vets.map((v) => getTurnosCount(v.slug)))
+      setUsuarios(users)
+      setTenants(vets)
+      setTurnosPorSlug(Object.fromEntries(vets.map((v, i) => [v.slug, counts[i]])))
+    } catch (error) {
+      console.error("Error al cargar el panel superadmin:", error)
+      setErrorCarga(mensajeError(error, "No se pudieron cargar los datos"))
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])
 
-  const superadmins = usuarios.filter((u) => u.role === "superadmin")
+  const resumen = useMemo(() => resumenPlataforma(tenants, usuarios), [tenants, usuarios])
+  const totalTurnos = useMemo(
+    () => Object.values(turnosPorSlug).reduce((acc, c) => acc + c, 0),
+    [turnosPorSlug],
+  )
+  const tenantsVisibles = useMemo(
+    () => filtrarTenants(tenants, { busqueda, estado: filtroEstado, plan: filtroPlan }),
+    [tenants, busqueda, filtroEstado, filtroPlan],
+  )
+  const usuariosVisibles = useMemo(
+    () => filtrarUsuarios(usuarios, busquedaUsuario, filtroRol),
+    [usuarios, busquedaUsuario, filtroRol],
+  )
 
-  async function handlePlanChange(tenantId: string, plan: TenantFull["plan"]) {
-    setUpdating(tenantId + "-plan")
-    await updateTenantConfig(tenantId, { plan })
-    setTenants(prev => prev.map(t => t.slug === tenantId ? { ...t, plan } : t))
-    setUpdating(null)
+  /**
+   * Corre un cambio sobre una veterinaria y avisa cómo salió. Antes un error de
+   * la base dejaba el spinner girando para siempre y sin ningún mensaje.
+   */
+  async function ejecutar(
+    slug: string,
+    cambios: Partial<TenantFull>,
+    mensajeOk: string,
+  ): Promise<void> {
+    setOcupado(slug)
+    try {
+      await updateTenantConfig(slug, cambios)
+      setTenants((prev) => prev.map((t) => (t.slug === slug ? { ...t, ...cambios } : t)))
+      toast.success(mensajeOk)
+    } catch (error) {
+      console.error("Error al actualizar veterinaria:", error)
+      toast.error(mensajeError(error, "No se pudo guardar el cambio"))
+    } finally {
+      setOcupado(null)
+    }
   }
 
-  async function handleTogglePause(tenant: TenantFull) {
-    const newStatus = tenant.status === "pausado" ? "activo" : "pausado"
-    setUpdating(tenant.slug + "-status")
-    await updateTenantConfig(tenant.slug, { status: newStatus })
-    setTenants(prev => prev.map(t => t.slug === tenant.slug ? { ...t, status: newStatus } : t))
-    setUpdating(null)
+  async function confirmarAccion() {
+    if (!accion) return
+    setEjecutandoAccion(true)
+    try {
+      await accion.ejecutar()
+    } finally {
+      setEjecutandoAccion(false)
+      setAccion(null)
+    }
   }
 
-  async function handleExtenderTrial(tenant: TenantFull) {
-    const base = tenant.trialExpiresAt && new Date(tenant.trialExpiresAt) > new Date()
-      ? new Date(tenant.trialExpiresAt)
+  function pedirCambioPlan(t: TenantFull, plan: Plan) {
+    const actual = t.plan ?? "basico"
+    if (plan === actual) return
+    const nombre = t.nombre ?? t.slug
+    setAccion({
+      titulo: `Cambiar el plan de ${nombre}`,
+      descripcion: (
+        <p>
+          Pasa de <strong>{NOMBRE_PLAN[actual]}</strong> a <strong>{NOMBRE_PLAN[plan]}</strong>.
+          Las secciones que no incluya el plan nuevo dejan de estar disponibles en su panel.
+        </p>
+      ),
+      confirmar: `Pasar a ${NOMBRE_PLAN[plan]}`,
+      ejecutar: () => ejecutar(t.slug, { plan }, `${nombre} ahora tiene el plan ${NOMBRE_PLAN[plan]}`),
+    })
+  }
+
+  function pedirPausa(t: TenantFull) {
+    const nombre = t.nombre ?? t.slug
+    const pausada = t.status === "pausado"
+    setAccion(
+      pausada
+        ? {
+            titulo: `Reactivar ${nombre}`,
+            descripcion: <p>Vuelve a recibir turnos online desde su página de reservas.</p>,
+            confirmar: "Reactivar",
+            ejecutar: () => ejecutar(t.slug, { status: "activo" }, `${nombre} está activa otra vez`),
+          }
+        : {
+            titulo: `Pausar ${nombre}`,
+            descripcion: (
+              <p>
+                Deja de recibir turnos online: su página de reservas muestra &quot;Servicio pausado&quot;.
+                El panel sigue funcionando y los datos no se tocan.
+              </p>
+            ),
+            confirmar: "Pausar",
+            peligrosa: true,
+            ejecutar: () => ejecutar(t.slug, { status: "pausado" }, `${nombre} quedó pausada`),
+          },
+    )
+  }
+
+  function extenderTrial(t: TenantFull) {
+    const base = t.trialExpiresAt && new Date(t.trialExpiresAt) > new Date()
+      ? new Date(t.trialExpiresAt)
       : new Date()
-    const nuevoVencimiento = new Date(base.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString()
-    setUpdating(tenant.slug + "-trial")
-    await updateTenantConfig(tenant.slug, { trialExpiresAt: nuevoVencimiento })
-    setTenants(prev => prev.map(t => t.slug === tenant.slug ? { ...t, trialExpiresAt: nuevoVencimiento } : t))
-    setUpdating(null)
+    const nuevoVencimiento = new Date(base.getTime() + DIAS_EXTENSION_TRIAL * 24 * 60 * 60 * 1000)
+    ejecutar(
+      t.slug,
+      { trialExpiresAt: nuevoVencimiento.toISOString() },
+      `Prueba de ${t.nombre ?? t.slug} extendida hasta el ${nuevoVencimiento.toLocaleDateString("es-AR")}`,
+    )
   }
 
-  async function handleQuitarTrial(tenant: TenantFull) {
-    setUpdating(tenant.slug + "-trial")
-    await updateTenantConfig(tenant.slug, { trialExpiresAt: null })
-    setTenants(prev => prev.map(t => t.slug === tenant.slug ? { ...t, trialExpiresAt: null } : t))
-    setUpdating(null)
+  function pedirQuitarTrial(t: TenantFull) {
+    const nombre = t.nombre ?? t.slug
+    setAccion({
+      titulo: `Quitar la prueba de ${nombre}`,
+      descripcion: (
+        <p>
+          Deja de tener fecha de vencimiento y sigue con el plan{" "}
+          <strong>{NOMBRE_PLAN[t.plan ?? "basico"]}</strong> sin límite de tiempo. Usalo cuando
+          ya está pagando. Revisá que el plan sea el que contrató.
+        </p>
+      ),
+      confirmar: "Quitar prueba",
+      ejecutar: () => ejecutar(t.slug, { trialExpiresAt: null }, `${nombre} ya no tiene período de prueba`),
+    })
   }
 
-  async function handleVerActividad(tenant: TenantFull) {
-    setActividadTenant(tenant)
+  async function verActividad(t: TenantFull) {
+    setActividadTenant(t)
     setActividad(null)
     setActividadLoading(true)
-    const [ventasPagina, productosPagina, movimientosStock] = await Promise.all([
-      getVentas(tenant.slug, { porPagina: 1 }),
-      getProductos(tenant.slug, { porPagina: 1, incluirInactivos: true }),
-      getMovimientosCount(tenant.slug),
-    ])
-    setActividad({
-      turnos: turnosPorSlug[tenant.slug] ?? 0,
-      ventas: ventasPagina.total,
-      productos: productosPagina.total,
-      movimientosStock,
-    })
-    setActividadLoading(false)
+    try {
+      const [ventasPagina, productosPagina, movimientosStock] = await Promise.all([
+        getVentas(t.slug, { porPagina: 1 }),
+        getProductos(t.slug, { porPagina: 1, incluirInactivos: true }),
+        getMovimientosCount(t.slug),
+      ])
+      setActividad({
+        turnos: turnosPorSlug[t.slug] ?? 0,
+        ventas: ventasPagina.total,
+        productos: productosPagina.total,
+        movimientosStock,
+      })
+    } catch (error) {
+      console.error("Error al cargar actividad:", error)
+      toast.error(mensajeError(error, "No se pudo cargar la actividad"))
+      setActividadTenant(null)
+    } finally {
+      setActividadLoading(false)
+    }
   }
 
-  function abrirEdicion(tenant: TenantFull) {
-    setEditTenant(tenant)
+  function abrirEdicion(t: TenantFull) {
+    setEditTenant(t)
     setEditForm({
-      nombre: tenant.nombre ?? "",
-      telefono: tenant.telefono ?? "",
-      email: tenant.email ?? "",
-      direccion: tenant.direccion ?? "",
-      ciudad: tenant.ciudad ?? "",
+      nombre: t.nombre ?? "",
+      telefono: t.telefono ?? "",
+      email: t.email ?? "",
+      direccion: t.direccion ?? "",
+      ciudad: t.ciudad ?? "",
     })
   }
 
-  async function handleGuardarEdicion() {
+  async function guardarEdicion() {
     if (!editTenant) return
     setEditSaving(true)
     try {
       await updateTenantConfig(editTenant.slug, editForm)
-      setTenants(prev => prev.map(t => t.slug === editTenant.slug ? { ...t, ...editForm } : t))
+      setTenants((prev) => prev.map((t) => (t.slug === editTenant.slug ? { ...t, ...editForm } : t)))
+      toast.success("Datos guardados")
       setEditTenant(null)
     } catch (error) {
       console.error("Error al editar veterinaria:", error)
+      toast.error(mensajeError(error, "No se pudieron guardar los datos"))
     } finally {
       setEditSaving(false)
     }
   }
 
-  async function handleConfirmarEliminar() {
+  async function confirmarEliminar() {
     if (!deleteTarget || deleteConfirm !== deleteTarget.slug) return
     setDeleting(true)
     try {
       await deleteTenant(deleteTarget.slug)
-      setTenants(prev => prev.filter(t => t.slug !== deleteTarget.slug))
+      setTenants((prev) => prev.filter((t) => t.slug !== deleteTarget.slug))
+      toast.success(`${deleteTarget.nombre ?? deleteTarget.slug} fue eliminada`)
       setDeleteTarget(null)
       setDeleteConfirm("")
     } catch (error) {
       console.error("Error al eliminar veterinaria:", error)
+      toast.error(mensajeError(error, "No se pudo eliminar la veterinaria"))
     } finally {
       setDeleting(false)
     }
   }
 
-  // Activas primero, pausadas al final; dentro de cada grupo, alfabético.
-  // Filtros de búsqueda/estado/plan se aplican antes de ordenar.
-  const tenantsVisibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    return tenants
-      .filter((t) => {
-        if (filtroEstado === "activas" && t.status === "pausado") return false
-        if (filtroEstado === "pausadas" && t.status !== "pausado") return false
-        if (filtroPlan !== "todos" && (t.plan ?? "basico") !== filtroPlan) return false
-        if (q && !(t.nombre ?? t.slug).toLowerCase().includes(q) && !t.slug.toLowerCase().includes(q)) return false
-        return true
-      })
-      .sort((a, b) => {
-        const aPausada = a.status === "pausado"
-        const bPausada = b.status === "pausado"
-        if (aPausada !== bPausada) return aPausada ? 1 : -1
-        return (a.nombre ?? a.slug).localeCompare(b.nombre ?? b.slug)
-      })
-  }, [tenants, busqueda, filtroEstado, filtroPlan])
+  const hayFiltros = busqueda !== "" || filtroEstado !== "todas" || filtroPlan !== "todos"
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="border-b bg-card">
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
+      <header className="border-b bg-card">
+        <div className="container mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-md shadow-violet-500/20">
+              <Shield className="size-6 text-white" />
+            </div>
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-md">
-                  <Shield className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl font-extrabold">Panel Super Admin</h1>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Control global de todas las veterinarias y usuarios de la plataforma.
+              <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Panel Super Admin</h1>
+              <p className="text-sm text-muted-foreground">
+                Todas las veterinarias y usuarios de la plataforma, en un solo lugar.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Actualizar
-            </Button>
           </div>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="self-start sm:self-auto">
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          <StatCard icon={Users}       label="Usuarios registrados" value={loading ? "—" : usuarios.length}  color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
-          <StatCard icon={Stethoscope} label="Veterinarias activas"  value={loading ? "—" : tenants.length}   color="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />
-          <StatCard icon={CalendarDays} label="Turnos totales"       value={loading ? "—" : totalTurnos}       color="bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" />
-          <StatCard icon={Shield}      label="Super Admins"          value={loading ? "—" : superadmins.length} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
-        </div>
+      <main className="container mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+        {errorCarga && (
+          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">No se pudieron cargar los datos</p>
+                <p className="text-xs opacity-80">{errorCarga}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={load}>Reintentar</Button>
+          </div>
+        )}
+
+        <Indicadores resumen={resumen} totalTurnos={totalTurnos} cargando={loading} />
 
         {/* Veterinarias */}
-        <section className="mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">Veterinarias registradas</h2>
-            <Badge variant="secondary">{tenantsVisibles.length} de {tenants.length}</Badge>
+        <section aria-labelledby="titulo-veterinarias" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="titulo-veterinarias" className="text-lg font-bold">Veterinarias</h2>
+              <p className="text-xs text-muted-foreground">
+                Activas primero. Cambiar el plan, pausar o quitar la prueba pide confirmación.
+              </p>
+            </div>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {hayFiltros ? `${tenantsVisibles.length} de ${tenants.length}` : `${tenants.length} en total`}
+            </span>
           </div>
 
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nombre o slug..."
+                placeholder="Buscar por nombre o slug…"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-8 h-9"
+                className="h-9 pl-8"
+                aria-label="Buscar veterinarias"
               />
             </div>
             <Select value={filtroEstado} onValueChange={(v) => setFiltroEstado(v as EstadoFiltro)}>
-              <SelectTrigger className="h-9 w-full sm:w-40">
+              <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filtrar por estado">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -275,407 +348,104 @@ export default function SuperAdminPage() {
               </SelectContent>
             </Select>
             <Select value={filtroPlan} onValueChange={(v) => setFiltroPlan(v as PlanFiltro)}>
-              <SelectTrigger className="h-9 w-full sm:w-40">
+              <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filtrar por plan">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los planes</SelectItem>
-                <SelectItem value="basico">Básico</SelectItem>
-                <SelectItem value="plus">Plus</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
+                {(Object.keys(NOMBRE_PLAN) as Plan[]).map((p) => (
+                  <SelectItem key={p} value={p}>{NOMBRE_PLAN[p]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="rounded-xl border overflow-hidden">
-            {loading ? (
-              <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Cargando...
-              </div>
-            ) : tenants.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Stethoscope className="h-10 w-10 mb-3 opacity-30" />
-                <p className="text-sm">No hay veterinarias registradas aún.</p>
-              </div>
-            ) : tenantsVisibles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Search className="h-10 w-10 mb-3 opacity-30" />
-                <p className="text-sm">Ningún resultado con esos filtros.</p>
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Veterinaria</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Plan</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Turnos</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Estado</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Trial</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {tenantsVisibles.map((t) => {
-                    const isPaused = t.status === "pausado"
-                    const isUpdatingThis = updating?.startsWith(t.slug)
-                    return (
-                      <tr key={t.slug} className={`hover:bg-muted/30 transition-colors ${isPaused ? "opacity-60" : ""}`}>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{t.nombre ?? t.slug}</div>
-                          <div className="text-xs text-muted-foreground font-mono">/{t.slug}</div>
-                          {t.ciudad && (
-                            <div className="text-xs text-muted-foreground">{t.ciudad}</div>
-                          )}
-                        </td>
-
-                        {/* Plan selector */}
-                        <td className="px-4 py-3">
-                          <Select
-                            value={t.plan ?? "basico"}
-                            onValueChange={(val) => handlePlanChange(t.slug, val as TenantFull["plan"])}
-                            disabled={isUpdatingThis}
-                          >
-                            <SelectTrigger className="h-7 w-28 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="basico">Básico</SelectItem>
-                              <SelectItem value="plus">Plus</SelectItem>
-                              <SelectItem value="pro">Pro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-
-                        {/* Turnos */}
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-sm">
-                            {loading ? "—" : (turnosPorSlug[t.slug] ?? 0)}
-                          </span>
-                        </td>
-
-                        {/* Estado */}
-                        <td className="px-4 py-3">
-                          <Badge variant={isPaused ? "destructive" : "secondary"}>
-                            {isPaused ? "Pausada" : "Activa"}
-                          </Badge>
-                        </td>
-
-                        {/* Trial */}
-                        <td className="px-4 py-3">
-                          {t.trialExpiresAt ? (
-                            <div className="flex flex-col gap-1">
-                              <span className={`text-xs font-mono ${new Date(t.trialExpiresAt) < new Date() ? "text-destructive" : "text-muted-foreground"}`}>
-                                {new Date(t.trialExpiresAt).toLocaleDateString("es-AR")}
-                                {t.createdAt && (
-                                  <span className="text-muted-foreground/70">
-                                    {" "}· creada {new Date(t.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                                  </span>
-                                )}
-                              </span>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost" size="sm" className="text-[10px] h-6 px-1.5"
-                                  onClick={() => handleExtenderTrial(t)}
-                                  disabled={updating?.startsWith(t.slug)}
-                                >
-                                  +10 días
-                                </Button>
-                                <Button
-                                  variant="ghost" size="sm" className="text-[10px] h-6 px-1.5 text-emerald-600"
-                                  onClick={() => handleQuitarTrial(t)}
-                                  disabled={updating?.startsWith(t.slug)}
-                                >
-                                  Quitar trial
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              —
-                              {t.createdAt && (
-                                <span className="text-muted-foreground/70">
-                                  {" "}· creada {new Date(t.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              )}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Acciones */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-7"
-                              onClick={() => handleVerActividad(t)}
-                            >
-                              <Activity className="h-3 w-3 mr-1" />
-                              Actividad
-                            </Button>
-                            <Button
-                              variant={isPaused ? "outline" : "ghost"}
-                              size="sm"
-                              className={`text-xs h-7 ${isPaused ? "text-emerald-600 border-emerald-300" : "text-orange-600 hover:text-orange-700"}`}
-                              onClick={() => handleTogglePause(t)}
-                              disabled={isUpdatingThis}
-                            >
-                              {isUpdatingThis && updating?.endsWith("-status") ? (
-                                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                              ) : isPaused ? (
-                                <PlayCircle className="h-3 w-3 mr-1" />
-                              ) : (
-                                <PauseCircle className="h-3 w-3 mr-1" />
-                              )}
-                              {isPaused ? "Reactivar" : "Pausar"}
-                            </Button>
-                            <Link href={`/${t.slug}/admin`} target="_blank">
-                              <Button variant="ghost" size="sm" className="text-xs h-7">
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                Ver panel
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-7"
-                              onClick={() => abrirEdicion(t)}
-                            >
-                              <Pencil className="h-3 w-3 mr-1" />
-                              Editar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-7 text-destructive hover:text-destructive"
-                              onClick={() => { setDeleteTarget(t); setDeleteConfirm("") }}
-                            >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Eliminar
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            {hayFiltros && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9"
+                onClick={() => { setBusqueda(""); setFiltroEstado("todas"); setFiltroPlan("todos") }}
+              >
+                Limpiar
+              </Button>
             )}
           </div>
+
+          <TablaVeterinarias
+            tenants={tenantsVisibles}
+            hayTenants={tenants.length > 0}
+            cargando={loading}
+            turnosPorSlug={turnosPorSlug}
+            ocupado={ocupado}
+            onCambiarPlan={pedirCambioPlan}
+            onPausar={pedirPausa}
+            onExtenderTrial={extenderTrial}
+            onQuitarTrial={pedirQuitarTrial}
+            onActividad={verActividad}
+            onEditar={abrirEdicion}
+            onEliminar={(t) => { setDeleteTarget(t); setDeleteConfirm("") }}
+          />
         </section>
 
-        {/* Todos los usuarios */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">Todos los usuarios</h2>
-            <Badge variant="secondary">{usuarios.length} total</Badge>
+        {/* Usuarios */}
+        <section aria-labelledby="titulo-usuarios" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="titulo-usuarios" className="text-lg font-bold">Usuarios</h2>
+              <p className="text-xs text-muted-foreground">
+                Para dar acceso a alguien al panel, invitalo desde Configuración → Equipo de su
+                veterinaria, o editá <code className="rounded bg-muted px-1 py-0.5">usuarios.role</code> en Supabase.
+              </p>
+            </div>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {usuariosVisibles.length === usuarios.length
+                ? `${usuarios.length} en total`
+                : `${usuariosVisibles.length} de ${usuarios.length}`}
+            </span>
           </div>
-          <div className="rounded-xl border overflow-hidden">
-            {loading ? (
-              <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Cargando...
-              </div>
-            ) : usuarios.length === 0 ? (
-              <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
-                Sin usuarios registrados.
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Usuario</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Email</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Veterinaria</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Rol</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {usuarios.map((u) => {
-                    const r = u.role || (u.isAdmin ? "veterinario" : "usuario")
-                    const rl = roleLabel[r] ?? roleLabel["usuario"]
-                    const tenantVet = u.tenantId
-                      ? tenants.find(t => t.slug === u.tenantId)
-                      : null
-                    return (
-                      <tr key={u.uid} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {u.photoURL ? (
-                              <img src={u.photoURL} alt="" className="h-7 w-7 rounded-full object-cover" />
-                            ) : (
-                              <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                                {(u.displayName ?? u.email ?? "?")[0].toUpperCase()}
-                              </div>
-                            )}
-                            <span className="font-medium">{u.displayName ?? "Sin nombre"}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                        <td className="px-4 py-3">
-                          {u.tenantId ? (
-                            <Link href={`/${u.tenantId}/admin`} target="_blank" className="group">
-                              <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 group-hover:underline">
-                                {tenantVet?.nombre ?? u.tenantId}
-                              </span>
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={rl.variant}>{rl.label}</Badge>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            Para cambiar el rol de un usuario, editá el campo <code className="bg-muted px-1 py-0.5 rounded">role</code> en Firestore → colección <code className="bg-muted px-1 py-0.5 rounded">usuarios</code>.
-          </p>
+          <TablaUsuarios
+            usuarios={usuariosVisibles}
+            totalUsuarios={usuarios.length}
+            tenants={tenants}
+            cargando={loading}
+            busqueda={busquedaUsuario}
+            rol={filtroRol}
+            onBusqueda={setBusquedaUsuario}
+            onRol={setFiltroRol}
+          />
         </section>
-      </div>
+      </main>
 
-      {/* Modal de actividad */}
-      <Dialog open={!!actividadTenant} onOpenChange={(open) => { if (!open) setActividadTenant(null) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Actividad de {actividadTenant?.nombre ?? actividadTenant?.slug}</DialogTitle>
-            <DialogDescription>
-              Movimientos registrados por esta veterinaria en la plataforma.
-            </DialogDescription>
-          </DialogHeader>
-          {actividadLoading ? (
-            <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Cargando...
-            </div>
-          ) : actividad ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border p-4">
-                <p className="text-2xl font-extrabold">{actividad.turnos}</p>
-                <p className="text-xs text-muted-foreground mt-1">Turnos creados</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-2xl font-extrabold">{actividad.ventas}</p>
-                <p className="text-xs text-muted-foreground mt-1">Ventas registradas</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-2xl font-extrabold">{actividad.productos}</p>
-                <p className="text-xs text-muted-foreground mt-1">Productos cargados</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-2xl font-extrabold">{actividad.movimientosStock}</p>
-                <p className="text-xs text-muted-foreground mt-1">Movimientos de stock</p>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <ConfirmarAccionDialog
+        accion={accion}
+        ejecutando={ejecutandoAccion}
+        onCancelar={() => setAccion(null)}
+        onConfirmar={confirmarAccion}
+      />
 
-      {/* Modal de edición de datos del tenant */}
-      <Dialog open={!!editTenant} onOpenChange={(open) => { if (!open) setEditTenant(null) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar {editTenant?.nombre ?? editTenant?.slug}</DialogTitle>
-            <DialogDescription>
-              Datos de contacto y presentación. El slug (<code className="bg-muted px-1 py-0.5 rounded">/{editTenant?.slug}</code>) no se cambia desde acá.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-nombre">Nombre</Label>
-              <Input
-                id="edit-nombre"
-                value={editForm.nombre}
-                onChange={(e) => setEditForm(prev => ({ ...prev, nombre: e.target.value }))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-telefono">Teléfono</Label>
-              <Input
-                id="edit-telefono"
-                value={editForm.telefono}
-                onChange={(e) => setEditForm(prev => ({ ...prev, telefono: e.target.value }))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-direccion">Dirección</Label>
-              <Input
-                id="edit-direccion"
-                value={editForm.direccion}
-                onChange={(e) => setEditForm(prev => ({ ...prev, direccion: e.target.value }))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-ciudad">Ciudad</Label>
-              <Input
-                id="edit-ciudad"
-                value={editForm.ciudad}
-                onChange={(e) => setEditForm(prev => ({ ...prev, ciudad: e.target.value }))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTenant(null)} disabled={editSaving}>
-              Cancelar
-            </Button>
-            <Button onClick={handleGuardarEdicion} disabled={editSaving}>
-              {editSaving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Guardar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ActividadDialog
+        tenant={actividadTenant}
+        actividad={actividad}
+        cargando={actividadLoading}
+        onCerrar={() => setActividadTenant(null)}
+      />
 
-      {/* Confirmación de eliminación (irreversible) */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteConfirm("") } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar {deleteTarget?.nombre ?? deleteTarget?.slug}</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  Esto borra <strong>para siempre</strong> la veterinaria y todo lo que tiene
-                  cargado: clientes, mascotas, historias clínicas, turnos, productos y ventas.
-                  No se puede deshacer.
-                </p>
-                <p>
-                  Para confirmar, escribí el slug exacto:{" "}
-                  <code className="bg-muted px-1 py-0.5 rounded">{deleteTarget?.slug}</code>
-                </p>
-                <Input
-                  value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
-                  placeholder={deleteTarget?.slug}
-                  autoComplete="off"
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmarEliminar}
-              disabled={deleting || deleteConfirm !== deleteTarget?.slug}
-            >
-              {deleting ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Eliminar definitivamente
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <EditarTenantDialog
+        tenant={editTenant}
+        form={editForm}
+        guardando={editSaving}
+        onCambiar={(campo, valor) => setEditForm((prev) => ({ ...prev, [campo]: valor }))}
+        onCerrar={() => setEditTenant(null)}
+        onGuardar={guardarEdicion}
+      />
+
+      <EliminarTenantDialog
+        tenant={deleteTarget}
+        confirmacion={deleteConfirm}
+        eliminando={deleting}
+        onConfirmacion={setDeleteConfirm}
+        onCerrar={() => { setDeleteTarget(null); setDeleteConfirm("") }}
+        onEliminar={confirmarEliminar}
+      />
     </div>
   )
 }
