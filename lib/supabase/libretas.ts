@@ -3,6 +3,7 @@ import { throwIfSupabaseError } from "./assert"
 import { getMascotas, updateMascota } from "./mascotas"
 import { getHistorias } from "./historias"
 import type { LibretaPublica } from "./types"
+import { resumenHistoriasPublicas } from "@/lib/libreta/resumen-publico"
 
 /** Libreta pública por QR. Mismas firmas que la versión Firestore. */
 
@@ -29,15 +30,7 @@ export async function generarLibretaPublica(
     ).replace(/-/g, "")
 
   const historias = await getHistorias(tenantId, clienteId, mascotaId)
-  const historiasResumen = historias
-    .filter((h) => h.tipoVisita !== "turno_programado")
-    .slice(0, 30)
-    .map((h) => ({
-      fecha: h.fechaAtencion ?? "",
-      motivo: h.motivo ?? "Consulta",
-      diagnostico: h.diagnostico,
-      tratamiento: h.tratamiento,
-    }))
+  const historiasResumen = resumenHistoriasPublicas(historias)
 
   const snapshot: LibretaPublica = {
     token,
