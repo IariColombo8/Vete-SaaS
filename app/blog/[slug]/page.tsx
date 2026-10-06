@@ -4,6 +4,9 @@ import { notFound } from "next/navigation"
 import ReactMarkdown from "react-markdown"
 import { getPost, getAllSlugs } from "@/lib/blog/posts"
 import { ArrowLeft } from "lucide-react"
+import { datosEstructuradosArticulo } from "@/lib/seo/articulo"
+import { serializarJsonLd } from "@/lib/seo/datos-estructurados"
+import { APP_URL as BASE_URL } from "@/lib/seo/sitio"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 
@@ -40,6 +43,11 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <main className="bg-slate-950 min-h-screen py-12 sm:py-16">
+      <script
+        type="application/ld+json"
+        // Generado en el servidor desde el frontmatter, escapado en serializarJsonLd.
+        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosArticulo(post, BASE_URL)) }}
+      />
       <article className="container max-w-2xl mx-auto px-4 sm:px-6">
         <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-emerald-400 mb-8">
           <ArrowLeft className="h-4 w-4" /> Volver al blog

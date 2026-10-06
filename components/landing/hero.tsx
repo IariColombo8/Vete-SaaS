@@ -36,14 +36,16 @@ export function Hero() {
           {/* Columna texto — HTML estático, visible al instante (above-the-fold).
               Sin parallax sobre el LCP: evita un layer que difiera su paint. */}
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-coral/20 bg-coral-soft px-4 py-1.5 mb-7">
-              <Paw className="h-3.5 w-3.5 text-coral" />
-              <span className="text-xs font-semibold text-coral tracking-wide uppercase">
-                Software de gestión veterinaria
-              </span>
-            </div>
-
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-[4.25rem] font-semibold text-ink leading-[1.04] tracking-tight mb-6">
+            {/* El cartelito va dentro del H1: es lo que dice QUÉ es el producto
+                ("software para veterinarias"), que es lo que Google lee del título. */}
+            <h1>
+              <span className="flex w-fit items-center gap-2 rounded-full border border-coral/20 bg-coral-soft px-4 py-1.5 mb-7">
+                <Paw className="h-3.5 w-3.5 text-coral" />
+                <span className="font-sans text-xs font-semibold text-coral tracking-wide uppercase">
+                  Software para veterinarias
+                </span>
+              </span>{" "}
+              <span className="block font-display text-5xl sm:text-6xl lg:text-[4.25rem] font-semibold text-ink leading-[1.04] tracking-tight mb-6">
               Menos papeleo.{" "}
               <span className="relative whitespace-nowrap text-coral">
                 Más patitas
@@ -52,6 +54,7 @@ export function Hero() {
                 </svg>
               </span>{" "}
               felices.
+              </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-ink-muted leading-relaxed mb-9 max-w-xl">

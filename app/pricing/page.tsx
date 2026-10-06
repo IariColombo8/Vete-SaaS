@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   description:
     "Planes simples y transparentes para tu veterinaria. Empezá gratis con el plan Básico o escalá a Plus y Pro con turnos ilimitados, WhatsApp, libreta en PDF y más.",
   alternates: { canonical: "/pricing" },
+  // Precios todavía no definitivos: fuera de Google (y del sitemap) hasta que lo
+  // sean. `follow` deja que siga los links a /registro.
+  robots: { index: false, follow: true },
   openGraph: {
     type: "website",
     locale: "es_AR",
