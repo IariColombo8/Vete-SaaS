@@ -19,6 +19,14 @@ describe("datosEstructuradosLanding", () => {
     expect(preguntas).toEqual(FAQS.map((f) => f.q))
   })
 
+  it("vincula a ServiTec con su perfil de Google Maps", () => {
+    const org = nodos().find((n) => n["@type"] === "Organization")!
+    expect(org.parentOrganization).toMatchObject({
+      name: "ServiTec",
+      sameAs: ["https://maps.app.goo.gl/HqguXzHvLLCMghW8A"],
+    })
+  })
+
   // Reseñas sin respaldo verificable pueden traer una penalización manual de Google.
   it("no publica valoraciones ni reseñas", () => {
     const texto = JSON.stringify(datosEstructuradosLanding())

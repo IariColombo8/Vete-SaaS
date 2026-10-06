@@ -22,6 +22,7 @@ export function datosEstructuradosLanding(): Record<string, unknown> {
       "@type": "Organization",
       name: SERVITEC.nombre,
       url: SERVITEC.url,
+      sameAs: [SERVITEC.mapsUrl],
     },
   }
 
