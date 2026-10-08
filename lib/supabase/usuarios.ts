@@ -63,15 +63,16 @@ export interface FirmaVeterinario {
 }
 
 /**
- * Firma de un veterinario para el comprobante, sin depender de sesión ni de
- * que sea el propio usuario. `usuarios_self_read` (RLS) solo deja leer la
- * fila propia, así que esto pasa por un RPC `security definer` en vez de un
- * `select` directo — necesario tanto para "Mi Historia" (sin sesión) como
- * para reimprimir la orden de un veterinario distinto al que está logueado.
+ * Firma de un profesional EN UN TENANT para el comprobante, sin depender de
+ * sesión ni de que sea el propio usuario. La firma es por (usuario, tenant)
+ * —tabla `firmas_profesionales`, migración 046—: una cuenta que opera en dos
+ * veterinarias tiene una firma distinta en cada una. Pasa por un RPC
+ * `security definer` porque se necesita tanto en "Mi Historia" (sin sesión)
+ * como para reimprimir la orden de otro veterinario.
  */
-export async function getFirmaVeterinarioPublico(uid: string): Promise<FirmaVeterinario | null> {
+export async function getFirmaProfesional(uid: string, tenantId: string): Promise<FirmaVeterinario | null> {
   const { data, error } = await supabase
-    .rpc("obtener_firma_veterinario_publico", { p_usuario_id: uid })
+    .rpc("obtener_firma_profesional", { p_usuario_id: uid, p_tenant_id: tenantId })
     .maybeSingle()
   if (error) {
     // No tragarse el error: si el RPC falla (falta la migración, permiso,
@@ -105,7 +106,7 @@ export function firmaCompleta(firma: FirmaVeterinario | null): boolean {
  * sale con el nombre de esa cuenta como "Médico Veterinario" y sin matrícula.
  */
 export async function resolverFirmaComprobante(uid: string | undefined, tenantId: string): Promise<FirmaVeterinario | null> {
-  const propia = uid ? await getFirmaVeterinarioPublico(uid) : null
+  const propia = uid ? await getFirmaProfesional(uid, tenantId) : null
   if (firmaCompleta(propia)) return propia
   const { data, error } = await supabase
     .rpc("obtener_firma_veterinario_tenant", { p_tenant_id: tenantId })
@@ -118,24 +119,28 @@ export async function resolverFirmaComprobante(uid: string | undefined, tenantId
 }
 
 /**
- * Firma digital del profesional para el comprobante/orden veterinaria.
- * Actualiza la propia fila (RLS `usuarios_self_update`): cada veterinario
- * carga la suya, no la de otro.
+ * Firma digital del profesional en ESTE tenant, para el comprobante/orden
+ * veterinaria. Upsert sobre la fila (usuario, tenant) propia (RLS
+ * `firmas_self_*`): cada uno carga la suya, y cambiarla en una veterinaria
+ * no toca la de las otras.
  */
 export async function actualizarFirmaVeterinario(
   uid: string,
+  tenantId: string,
   datos: Pick<Usuario, "firmaUrl" | "selloUrl" | "nombreProfesional" | "matricula" | "especialidad">,
 ): Promise<void> {
   const { error } = await supabase
-    .from("usuarios")
-    .update({
+    .from("firmas_profesionales")
+    .upsert({
+      usuario_id: uid,
+      tenant_id: tenantId,
       firma_url: datos.firmaUrl ?? null,
       sello_url: datos.selloUrl ?? null,
       nombre_profesional: datos.nombreProfesional ?? null,
       matricula: datos.matricula ?? null,
       especialidad: datos.especialidad || "Médico Veterinario",
+      updated_at: new Date().toISOString(),
     })
-    .eq("id", uid)
   if (error) throw new Error(`No se pudo guardar la firma: ${error.message}`)
 }
 

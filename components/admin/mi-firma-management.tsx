@@ -7,14 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
-import { getUsuarioById, actualizarFirmaVeterinario } from "@/lib/supabase/usuarios"
+import { getFirmaProfesional, actualizarFirmaVeterinario } from "@/lib/supabase/usuarios"
 import { uploadFotoTenant, deleteFotoTenant } from "@/lib/supabase/storage"
 import { Loader2, Save, Upload, Trash2, PenTool, Stamp } from "lucide-react"
 
 /**
- * Firma digital del profesional: es del usuario, no del tenant. Cada
- * veterinario carga la suya acá y solo puede editar su propia fila (RLS
- * `usuarios_self_update`). Se usa en el comprobante/orden veterinaria que se
+ * Firma digital del profesional en ESTE tenant: es por (usuario, tenant),
+ * así una cuenta que opera en varias veterinarias tiene una firma en cada
+ * una (tabla `firmas_profesionales`, RLS `firmas_self_*`). Se usa en el comprobante/orden veterinaria que se
  * genera al cargar una vacuna, medicamento o desparasitación.
  */
 export function MiFirmaManagement({ tenantId }: { tenantId: string }) {
@@ -35,23 +35,23 @@ export function MiFirmaManagement({ tenantId }: { tenantId: string }) {
 
   useEffect(() => {
     if (!user) return
-    getUsuarioById(user.id).then((u) => {
-      if (u) {
-        setNombreProfesional(u.nombreProfesional || u.displayName || "")
-        setEspecialidad(u.especialidad || "Médico Veterinario")
-        setMatricula(u.matricula || "")
-        setFirmaUrl(u.firmaUrl || null)
-        setSelloUrl(u.selloUrl || null)
+    getFirmaProfesional(user.id, tenantId).then((f) => {
+      if (f) {
+        setNombreProfesional(f.nombre || "")
+        setEspecialidad(f.especialidad || "Médico Veterinario")
+        setMatricula(f.matricula || "")
+        setFirmaUrl(f.firmaUrl || null)
+        setSelloUrl(f.selloUrl || null)
       }
       setLoadingData(false)
     })
-  }, [user])
+  }, [user, tenantId])
 
   const guardarDatos = async () => {
     if (!user) return
     setSaving(true)
     try {
-      await actualizarFirmaVeterinario(user.id, {
+      await actualizarFirmaVeterinario(user.id, tenantId, {
         nombreProfesional: nombreProfesional.trim(),
         especialidad: especialidad.trim() || "Médico Veterinario",
         matricula: matricula.trim(),
@@ -79,7 +79,7 @@ export function MiFirmaManagement({ tenantId }: { tenantId: string }) {
     try {
       const url = await uploadFotoTenant(tenantId, `firmas/${user.id}`, file)
       setUrl(url)
-      await actualizarFirmaVeterinario(user.id, {
+      await actualizarFirmaVeterinario(user.id, tenantId, {
         nombreProfesional: nombreProfesional.trim(),
         especialidad: especialidad.trim() || "Médico Veterinario",
         matricula: matricula.trim(),
@@ -158,7 +158,7 @@ export function MiFirmaManagement({ tenantId }: { tenantId: string }) {
                 <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive block" onClick={async () => {
                   await deleteFotoTenant(firmaUrl)
                   setFirmaUrl(null)
-                  if (user) await actualizarFirmaVeterinario(user.id, { nombreProfesional, especialidad, matricula, firmaUrl: null, selloUrl })
+                  if (user) await actualizarFirmaVeterinario(user.id, tenantId, { nombreProfesional, especialidad, matricula, firmaUrl: null, selloUrl })
                   toast({ title: "Firma eliminada" })
                 }}>
                   <Trash2 className="mr-2 h-3.5 w-3.5" /> Eliminar firma
@@ -202,7 +202,7 @@ export function MiFirmaManagement({ tenantId }: { tenantId: string }) {
                 <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive block" onClick={async () => {
                   await deleteFotoTenant(selloUrl)
                   setSelloUrl(null)
-                  if (user) await actualizarFirmaVeterinario(user.id, { nombreProfesional, especialidad, matricula, firmaUrl, selloUrl: null })
+                  if (user) await actualizarFirmaVeterinario(user.id, tenantId, { nombreProfesional, especialidad, matricula, firmaUrl, selloUrl: null })
                   toast({ title: "Sello eliminado" })
                 }}>
                   <Trash2 className="mr-2 h-3.5 w-3.5" /> Eliminar sello
