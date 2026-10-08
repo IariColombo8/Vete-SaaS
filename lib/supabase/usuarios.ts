@@ -81,7 +81,10 @@ export async function getFirmaVeterinarioPublico(uid: string): Promise<FirmaVete
     return null
   }
   if (!data) return null
-  const f = data as Fila
+  return mapFirma(data as Fila)
+}
+
+function mapFirma(f: Fila): FirmaVeterinario {
   return {
     nombre: (f.nombre_profesional as string) || (f.display_name as string) || null,
     especialidad: (f.especialidad as string) || "Médico Veterinario",
@@ -89,6 +92,29 @@ export async function getFirmaVeterinarioPublico(uid: string): Promise<FirmaVete
     firmaUrl: (f.firma_url as string) ?? null,
     selloUrl: (f.sello_url as string) ?? null,
   }
+}
+
+export function firmaCompleta(firma: FirmaVeterinario | null): boolean {
+  return !!firma && !!firma.nombre?.trim() && !!firma.matricula?.trim() && !!firma.firmaUrl
+}
+
+/**
+ * Firma para el comprobante: la del usuario indicado si la tiene completa;
+ * si no, la de un veterinario del tenant que sí la tenga (RPC 045). Así una
+ * orden generada desde una cuenta sin "Mi Firma" (soporte, un empleado) no
+ * sale con el nombre de esa cuenta como "Médico Veterinario" y sin matrícula.
+ */
+export async function resolverFirmaComprobante(uid: string | undefined, tenantId: string): Promise<FirmaVeterinario | null> {
+  const propia = uid ? await getFirmaVeterinarioPublico(uid) : null
+  if (firmaCompleta(propia)) return propia
+  const { data, error } = await supabase
+    .rpc("obtener_firma_veterinario_tenant", { p_tenant_id: tenantId })
+    .maybeSingle()
+  if (error) {
+    console.error("Error obteniendo la firma del veterinario del tenant:", error.message, error.details, error.hint)
+    return propia
+  }
+  return data ? mapFirma(data as Fila) : propia
 }
 
 /**

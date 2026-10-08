@@ -30,7 +30,7 @@ import { getHistoriasPublico } from "@/lib/supabase/historias"
 import { getTurnosPorMascotaPublico } from "@/lib/supabase/turnos"
 import { getSorteoActivo } from "@/lib/supabase/sorteos"
 import { getTenantConfig } from "@/lib/supabase/tenants"
-import { getFirmaVeterinarioPublico } from "@/lib/supabase/usuarios"
+import { resolverFirmaComprobante } from "@/lib/supabase/usuarios"
 import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
@@ -277,7 +277,7 @@ export default function PerfilMascotaPage() {
     if (aplicaciones.length === 0 && !esOrdenLibre) return
     setDescargandoOrdenId(h.id)
     try {
-      const firma = h.creadoPor ? await getFirmaVeterinarioPublico(h.creadoPor) : null
+      const firma = await resolverFirmaComprobante(h.creadoPor, slug)
       await generarComprobanteVeterinario({
         emisor: {
           nombre: veterinaria.nombre,

@@ -77,7 +77,7 @@ import { esConsumidorFinal } from "@/lib/clientes/consumidor-final";
 import { MEDIOS_PAGO, type MedioPago } from "@/lib/supabase/types";
 import { formatCurrency } from "@/lib/format";
 import { useRouter } from "next/navigation";
-import { getFirmaVeterinarioPublico } from "@/lib/supabase/usuarios";
+import { firmaCompleta, resolverFirmaComprobante } from "@/lib/supabase/usuarios";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -1032,10 +1032,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     if (!user?.id) return;
     let cancelado = false;
     setFirmaProfesionalIncompleta(null);
-    getFirmaVeterinarioPublico(user.id).then((firma) => {
+    resolverFirmaComprobante(user.id, tenantId).then((firma) => {
       if (cancelado) return;
-      const incompleta = !firma || !firma.nombre?.trim() || !firma.matricula?.trim() || !firma.firmaUrl;
-      setFirmaProfesionalIncompleta(incompleta);
+      setFirmaProfesionalIncompleta(!firmaCompleta(firma));
     });
     return () => {
       cancelado = true;
@@ -1046,8 +1045,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   /** Params comunes (emisor + firma del profesional) para las 3 operaciones sobre la orden. */
   const construirParamsOrden = async () => {
     if (!addOrdenMascota) return null;
-    const uidFirma = user?.id;
-    const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
+    const firma = await resolverFirmaComprobante(user?.id, tenantId);
     return {
       emisor: {
         nombre: veterinaria.nombre,
@@ -1178,7 +1176,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     forzarFirmaPropia?: boolean,
   ) => {
     const uidFirma = (forzarFirmaPropia ? user?.id : creadoPor) || user?.id;
-    const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
+    const firma = await resolverFirmaComprobante(uidFirma, tenantId);
     await generarComprobanteVeterinario({
       emisor: {
         nombre: veterinaria.nombre,
@@ -1219,9 +1217,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     if (!h.id) return;
     let forzarFirmaPropia = false;
     const uidFirma = h.creadoPor || user?.id;
-    const firma = uidFirma ? await getFirmaVeterinarioPublico(uidFirma) : null;
-    const incompleta = !firma || !firma.nombre?.trim() || !firma.matricula?.trim() || !firma.firmaUrl;
-    if (incompleta && h.creadoPor && h.creadoPor !== user?.id) {
+    const firma = await resolverFirmaComprobante(uidFirma, tenantId);
+    if (!firmaCompleta(firma) && h.creadoPor && h.creadoPor !== user?.id) {
       forzarFirmaPropia = true;
     }
     if (h.tipoVisita === "orden_medica") {

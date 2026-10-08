@@ -182,6 +182,9 @@ async function construirComprobante(params: GenerarComprobanteParams): Promise<j
     l.texto(`M.P. ${profesional.matricula}`, xFirma + ANCHO_FIRMA / 2, yFirma, { size: 8, color: COLOR.gris, align: "center" })
   }
 
+  // ── 4. Pie: crédito del sistema, abajo a la izquierda (no pisa la firma) ──
+  l.texto("Hecho desde VetPanel - ServiTec", MARGEN, l.alto - 16, { size: 7, color: COLOR.gris })
+
   return doc
 }
 
