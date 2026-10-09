@@ -207,6 +207,9 @@ function dibujarResultado(
 
   const dif = caja.diferencia ?? 0
   const filas: [string, string, boolean?][] = [
+    ...(caja.totalGastos > 0
+      ? [["Gastos pagados con la caja", `− ${formatCurrency(caja.totalGastos)}`] as [string, string]]
+      : []),
     ["Esperado en caja", formatCurrency(caja.saldoEsperado ?? 0)],
     ["Contado en caja", formatCurrency(caja.saldoDeclarado ?? 0)],
     [

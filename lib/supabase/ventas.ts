@@ -90,6 +90,7 @@ function aCaja(f: Fila): Caja {
     totalOtros: num(f.total_otros),
     totalVentas: num(f.total_ventas),
     cantidadVentas: num(f.cantidad_ventas),
+    totalGastos: num(f.total_gastos),
     abiertaPorNombre: (f.abierta_por_nombre as string) ?? undefined,
     cerradaPorNombre: (f.cerrada_por_nombre as string) ?? undefined,
     observaciones: (f.observaciones as string) ?? "",
@@ -327,6 +328,7 @@ export interface ResultadoCierre {
   totalOtros: number
   totalVentas: number
   cantidadVentas: number
+  totalGastos: number
 }
 
 export async function cerrarCaja(
@@ -350,6 +352,7 @@ export async function cerrarCaja(
     totalOtros: num(r.total_otros),
     totalVentas: num(r.total_ventas),
     cantidadVentas: num(r.cantidad_ventas),
+    totalGastos: num(r.total_gastos),
   }
 }
 
@@ -362,6 +365,8 @@ export interface ResumenCaja {
   totalOtros: number
   totalVentas: number
   cantidadVentas: number
+  /** Gastos pagados con plata del cajón en este turno. */
+  totalGastos: number
   saldoEsperado: number
   /** Facturación por medio de pago, incluido efectivo. */
   porMedioPago: { medio: MedioPago; total: number }[]
@@ -372,6 +377,12 @@ export async function getResumenCaja(caja: Caja): Promise<ResumenCaja> {
     .from("ventas").select("id, medio_pago, total")
     .eq("caja_id", caja.id).eq("estado", "completada")
   throwIfSupabaseError(error, "Error al calcular resumen de caja")
+
+  const { data: gastos, error: errorGastos } = await supabase
+    .from("gastos").select("monto")
+    .eq("caja_id", caja.id).is("anulado_at", null)
+  throwIfSupabaseError(errorGastos, "Error al calcular gastos de caja")
+  const totalGastos = ((gastos ?? []) as Fila[]).reduce((s, g) => s + num(g.monto), 0)
 
   const ventas = (data ?? []) as Fila[]
   const idsMixtos = ventas.filter((f) => f.medio_pago === "mixto").map((f) => f.id as string)
@@ -419,7 +430,8 @@ export async function getResumenCaja(caja: Caja): Promise<ResumenCaja> {
     totalOtros: otros,
     totalVentas: efectivo + otros,
     cantidadVentas: (data ?? []).length,
-    saldoEsperado: caja.saldoInicial + efectivo,
+    totalGastos,
+    saldoEsperado: caja.saldoInicial + efectivo - totalGastos,
     porMedioPago: [...porMedio.entries()].map(([medio, total]) => ({ medio, total })),
   }
 }

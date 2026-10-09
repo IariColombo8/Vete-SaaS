@@ -592,9 +592,49 @@ export interface Caja {
   totalOtros: number
   totalVentas: number
   cantidadVentas: number
+  /** Gastos pagados con plata del cajón durante el turno. */
+  totalGastos: number
   abiertaPorNombre?: string
   cerradaPorNombre?: string
   observaciones: string
   aperturaAt: string
   cierreAt?: string
+}
+
+// ── Gastos ──
+
+/** Gasto que se repite todos los meses (alquiler, luz, sueldo). */
+export interface GastoFijo {
+  id: string
+  descripcion: string
+  categoria: string
+  /** Monto base; un mes puntual puede tener otro (tabla `gastos_fijos_montos`). */
+  monto: number
+  diaVencimiento?: number
+  /** "YYYY-MM-01" */
+  desdeMes: string
+  /** "YYYY-MM-01", inclusive. Sin valor = sigue vigente. */
+  hastaMes?: string
+}
+
+/** Un gasto efectivamente pagado: por única vez, o el pago de un mes de un fijo. */
+export interface Gasto {
+  id: string
+  descripcion: string
+  categoria: string
+  monto: number
+  /** "YYYY-MM-DD" */
+  fecha: string
+  gastoFijoId?: string
+  /** "YYYY-MM-01", solo si viene de un gasto fijo. */
+  mes?: string
+  /** Caja de la que salió la plata; sin valor = se pagó por otro lado. */
+  cajaId?: string
+  registradoPorNombre?: string
+  observaciones: string
+  createdAt: string
+  /** Si se anuló: cuándo, por qué y quién. Un anulado no suma en ningún total. */
+  anuladoAt?: string
+  anuladoMotivo?: string
+  anuladoPorNombre?: string
 }

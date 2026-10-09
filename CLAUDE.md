@@ -300,6 +300,34 @@ Feature `ventas` en `lib/plans.ts`: **solo plan Pro**.
 Secciones `pos`, `ventas` y `caja` en `lib/auth/permissions.ts`: las ve también
 el `empleado`.
 
+### Gastos
+
+`supabase/047_gastos.sql`. Tres tablas: `gastos_fijos` (plantilla mensual con
+monto base, `desde_mes`/`hasta_mes`), `gastos_fijos_montos` (monto de un fijo
+para un mes puntual; sin fila vale el base) y `gastos` (lo efectivamente pagado:
+un único, o el pago de un mes de un fijo — índice único `(gasto_fijo_id, mes)`).
+Los meses se guardan como `date` el día 1 (`"YYYY-MM-01"`, ver `lib/gastos/meses.ts`).
+
+- **Pagar congela el monto**: cambiar el base o el monto de un mes ya pagado no
+  toca la fila de `gastos`.
+- **Antes de registrar cualquier pago se pregunta si sale de la caja.** Si sí,
+  `registrar_gasto` imputa el gasto a la caja abierta (la bloquea con
+  `for update`) y `cerrar_caja` lo resta del esperado (`cajas.total_gastos`).
+  `getResumenCaja` hace la misma resta en vivo.
+- `gastos` es solo `select` por RLS: se inserta por `registrar_gasto` y **nunca
+  se borra** — se anula con `anular_gasto` (`048_gastos_anular.sql`), que exige
+  motivo y guarda quién y cuándo. Un anulado no suma en totales ni en el esperado
+  de caja y libera el mes de su fijo (el índice único excluye anulados). Si salió
+  de una caja ya cerrada, ese cierre queda como se calculó.
+- **Excepción solo para desarrollo:** `app/api/gastos/eliminar` borra de verdad
+  con service_role, para limpiar pruebas. Responde 404 salvo con
+  `NODE_ENV === "development"` y host `localhost`; el botón (ámbar, "solo
+  localhost") aparece con el mismo criterio. No se hizo como RPC/policy a
+  propósito: la base es la misma para localhost y producción, y un permiso de
+  borrado en Supabase valdría también en producción.
+- Sección `gastos` en `lib/auth/permissions.ts`: **solo veterinario/superadmin**
+  (alquiler y sueldos no son del mostrador). Feature `ventas` (plan Pro).
+
 **Sidebar del panel.** La barra horizontal se reemplazó por un sidebar lateral
 colapsable (`components/vet-admin-sidebar.tsx` sobre `components/ui/sidebar`).
 Tres grupos con título: **Clínica** (dashboard, turnos, libreta, clientes),
@@ -363,6 +391,7 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 | `/[slug]/admin/Ventas` | Dashboard de ventas y remitos | ídem + plan Pro |
 | `/[slug]/admin/Caja` | Apertura, arqueo y cierre de caja | ídem + plan Pro |
 | `/[slug]/admin/CuentaCorriente` | Cuentas corrientes de clientes | ídem + plan Pro |
+| `/[slug]/admin/Gastos` | Gastos fijos mensuales y por única vez | `veterinario`/`superadmin` + plan Pro |
 | `/[slug]/admin/PromosSorteos` | Ofertas, promos y sorteos | ídem |
 | `/[slug]/admin/Configuracion` | Config del tenant | ídem |
 | `/mis-turnos` | Turnos del cliente | Autenticado |

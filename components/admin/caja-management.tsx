@@ -177,7 +177,11 @@ export function CajaManagement({ tenantId }: Props) {
             icono={<Wallet className="h-4 w-4" />}
             titulo="Debería haber en caja"
             valor={formatCurrency(resumen.saldoEsperado)}
-            nota={`${resumen.cantidadVentas} ventas · Apertura + efectivo`}
+            nota={
+              resumen.totalGastos > 0
+                ? `Apertura + efectivo − ${formatCurrency(resumen.totalGastos)} de gastos`
+                : `${resumen.cantidadVentas} ventas · Apertura + efectivo`
+            }
             ayuda="caja.esperado"
             destacada
           />
