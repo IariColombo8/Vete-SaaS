@@ -22,6 +22,7 @@ import { EmailProviderConfig } from "@/components/admin/email-provider-config"
 import { MiFirmaManagement } from "@/components/admin/mi-firma-management"
 import { PlanManagement } from "@/components/billing/plan-management"
 import { MpPointConfig } from "@/components/admin/mp-point-config"
+import { FacturacionConfig } from "@/components/admin/facturacion-config"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
@@ -1317,6 +1318,7 @@ export default function ConfiguracionPage() {
           {/* ═══════════════════════════════════════════════════════════════════ */}
           <TabsContent value="integraciones" className="space-y-6 mt-6">
             <MpPointConfig tenantId={slug} />
+            <FacturacionConfig tenantId={slug} />
           </TabsContent>
         </Tabs>
 

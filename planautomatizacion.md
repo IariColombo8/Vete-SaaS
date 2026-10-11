@@ -132,7 +132,42 @@ inicial, lo que ya se hizo y el diseño de lo que falta. Fecha de inicio:
 
 ---
 
-## 4. Fase 3 — Factura electrónica ARCA (ex AFIP) — DISEÑO, sin código
+## 4. Fase 3 — Factura electrónica ARCA (ex AFIP) — IMPLEMENTADA (directo, falta homologar)
+
+**Estado al 2026-10-10:** se implementó la **opción A (directo contra ARCA)**
+en vez del intermediario que recomendaba el diseño: evita un costo mensual
+por veterinaria y no bloquea en elegir proveedor. Código:
+
+- `supabase/052_facturacion.sql` (aplicada): `tenant_fiscal` (CUIT, condición
+  IVA, punto de venta, ambiente, clave privada **cifrada**, CSR, certificado,
+  ticket WSAA cacheado), `comprobantes` (snapshot completo, único por número
+  entre emitidos, una factura por venta), RPC `facturacion_estado`,
+  `productos.alicuota_iva`, `clientes.cuit` / `condicion_iva`.
+- `lib/facturacion/`: `crypto.ts` (AES-256-GCM con `FACTURACION_ENCRYPTION_KEY`),
+  `certificados.ts` (clave + CSR con node-forge, validación del .crt),
+  `wsaa.ts` (TRA firmado CMS → token/sign), `wsfe.ts` (FEDummy,
+  FECompUltimoAutorizado, FECAESolicitar, SOAP a mano), `comprobante.ts`
+  (letra, receptor, reparto de IVA, QR; **puro y testeado**), `emitir.ts`
+  (orquestación, idempotente por venta, nota de crédito), `factura-pdf.ts`
+  (PDF con QR reutilizando el generador del remito).
+- Rutas: `app/api/facturacion/config` (dueño: datos, CSR, certificado,
+  probar) y `app/api/facturacion/emitir` (staff: factura o NC).
+- UI: Configuración → Integraciones → Factura electrónica
+  (`facturacion-config.tsx`), botón **Facturar / Descargar factura / Nota de
+  crédito** en el remito y en el historial (`facturar-button.tsx`), datos
+  fiscales del cliente en su perfil.
+
+**Pendiente para salir a producción:**
+1. Probar en **homologación** con un CUIT real: generar CSR, pedir certificado
+   en el portal de testing de ARCA, autorizar `wsfe`, "Probar conexión",
+   emitir una Factura C/B y verificar el CAE en "Comprobantes en línea".
+2. Confirmar el **umbral de identificación de consumidor final** vigente
+   (`ARCA_UMBRAL_IDENTIFICACION_CF`, default $417.288) con el contador.
+3. Revisar alícuotas de IVA por producto (default 21 %) con cada veterinaria
+   antes de habilitar producción.
+4. `FACTURACION_ENCRYPTION_KEY` en Vercel (distinta de la local).
+
+Lo que sigue es el diseño original, que se mantiene como referencia.
 
 ### Qué es
 

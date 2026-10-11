@@ -16,6 +16,7 @@ import { AtencionDialog } from "./pos/atencion-dialog"
 import { RemitoDialog } from "./pos/remito-dialog"
 import { CobroPointDialog } from "./pos/cobro-point-dialog"
 import { getEstadoPoint, vincularCobroPoint } from "./pos/use-mp-point"
+import { getEstadoFacturacion, type EstadoFacturacion } from "@/lib/supabase/comprobantes"
 import {
   agregarAlCarrito,
   agregarAtencion,
@@ -151,6 +152,14 @@ export function PosManagement({ tenantId }: Props) {
         }),
       )
       .catch(() => setEmisor({ nombre: "VetPanel" }))
+  }, [tenantId])
+
+  // Factura electrónica: si está configurada, el remito ofrece "Facturar".
+  const [facturacion, setFacturacion] = useState<EstadoFacturacion | null>(null)
+  useEffect(() => {
+    getEstadoFacturacion(tenantId)
+      .then(setFacturacion)
+      .catch(() => setFacturacion(null))
   }, [tenantId])
 
   /**
@@ -489,6 +498,8 @@ export function PosManagement({ tenantId }: Props) {
         venta={ventaHecha}
         emisor={emisor}
         onCerrar={() => setVentaHecha(null)}
+        tenantId={tenantId}
+        facturacion={facturacion}
       />
 
       <OfertasPromosPanel

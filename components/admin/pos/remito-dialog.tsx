@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button"
 import { descargarRemitoPDF, linkWhatsApp, type EmisorRemito } from "@/lib/ventas/remito"
 import { formatCantidad, formatCurrency } from "@/lib/format"
 import type { Venta } from "@/lib/supabase/types"
+import type { EstadoFacturacion } from "@/lib/supabase/comprobantes"
+import { FacturarButton } from "./facturar-button"
 
 interface Props {
   venta: Venta | null
   emisor: EmisorRemito
   onCerrar: () => void
+  /** Para ofrecer "Facturar" junto con el remito. */
+  tenantId?: string
+  facturacion?: EstadoFacturacion | null
 }
 
 /**
@@ -26,7 +31,7 @@ interface Props {
  * automáticamente requiere la API de WhatsApp Business, con cuenta de Meta,
  * plantillas aprobadas y costo por mensaje.
  */
-export function RemitoDialog({ venta, emisor, onCerrar }: Props) {
+export function RemitoDialog({ venta, emisor, onCerrar, tenantId, facturacion }: Props) {
   const [generando, setGenerando] = useState(false)
 
   if (!venta) return null
@@ -114,6 +119,9 @@ export function RemitoDialog({ venta, emisor, onCerrar }: Props) {
           <Button variant="outline" className="w-full" onClick={descargar} disabled={generando}>
             <Download className="mr-2 h-4 w-4" /> Descargar PDF
           </Button>
+          {tenantId && facturacion?.configurado && (
+            <FacturarButton tenantId={tenantId} venta={venta} emisor={emisor} facturacion={facturacion} />
+          )}
           <Button variant="ghost" className="w-full" onClick={onCerrar}>
             Nueva venta
           </Button>

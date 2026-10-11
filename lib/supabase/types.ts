@@ -157,6 +157,17 @@ export interface HistorialDato {
   fechaCambio: string
 }
 
+/** Condición frente al IVA del cliente (define la letra de la factura). */
+export type CondicionIvaCliente = "CF" | "RI" | "MONOTRIBUTO" | "EXENTO" | "NO_CATEGORIZADO"
+
+export const CONDICIONES_IVA_CLIENTE: { id: CondicionIvaCliente; label: string }[] = [
+  { id: "CF", label: "Consumidor final" },
+  { id: "RI", label: "Responsable inscripto" },
+  { id: "MONOTRIBUTO", label: "Monotributo" },
+  { id: "EXENTO", label: "IVA exento" },
+  { id: "NO_CATEGORIZADO", label: "No categorizado" },
+]
+
 export interface Cliente {
   id?: string
   nombre: string
@@ -164,6 +175,9 @@ export interface Cliente {
   email: string
   dni?: string
   domicilio?: string
+  /** Para Factura A. Opcional: la mayoría son consumidores finales. */
+  cuit?: string
+  condicionIva?: CondicionIvaCliente
   historialDatos?: HistorialDato[]
   createdAt?: string
   updatedAt?: string

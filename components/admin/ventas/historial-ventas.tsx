@@ -19,6 +19,8 @@ import { descargarRemitoPDF, linkWhatsApp, type EmisorRemito } from "@/lib/venta
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { MEDIOS_PAGO, type Venta } from "@/lib/supabase/types"
+import type { Comprobante, EstadoFacturacion } from "@/lib/supabase/comprobantes"
+import { FacturarButton } from "@/components/admin/pos/facturar-button"
 import { COLOR_MEDIO_PAGO } from "./colores-medio-pago"
 
 interface Props {
@@ -27,9 +29,14 @@ interface Props {
   cargando: boolean
   /** Se llama después de anular, para que el contenedor recargue. */
   onCambio: () => void
+  /** Factura electrónica: estado de la integración y facturas ya emitidas por venta. */
+  tenantId?: string
+  facturacion?: EstadoFacturacion | null
+  facturas?: Map<string, Comprobante>
+  notasCredito?: Map<string, Comprobante>
 }
 
-export function HistorialVentas({ ventas, emisor, cargando, onCambio }: Props) {
+export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, facturacion, facturas, notasCredito }: Props) {
   const [aAnular, setAAnular] = useState<Venta | null>(null)
 
   const descargar = async (venta: Venta) => {
@@ -136,6 +143,17 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio }: Props) {
                       >
                         <Download className="h-3.5 w-3.5" />
                       </Button>
+                      {tenantId && facturacion?.configurado && (
+                        <FacturarButton
+                          tenantId={tenantId}
+                          venta={venta}
+                          emisor={emisor}
+                          facturacion={facturacion}
+                          comprobante={facturas?.get(venta.id) ?? null}
+                          notaCredito={notasCredito?.get(venta.id) ?? null}
+                          variante="fila"
+                        />
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

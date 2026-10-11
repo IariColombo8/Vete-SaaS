@@ -383,6 +383,48 @@ API de **Orders** (`/v1/orders`, `type: point`) y `/terminals/v1/*`; la
 - Estados de orden interpretados en `interpretarOrden` (`lib/mp-point/api.ts`).
   Si en producción aparece un `status` no contemplado, ajustar ahí.
 
+### Factura electrónica (ARCA, directo por WSAA + WSFEv1)
+
+Cada veterinaria factura con **su** CUIT y **su** certificado; VetPanel no es
+intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
+(sección 4). Se eligió ir directo contra ARCA en vez de un proveedor pago.
+
+- **Secretos solo en el servidor.** `tenant_fiscal` (`052_facturacion.sql`)
+  tiene RLS sin policies; la clave privada se guarda cifrada con
+  `FACTURACION_ENCRYPTION_KEY` (`lib/facturacion/crypto.ts`). El cliente solo
+  pregunta `facturacion_estado` (RPC) y pega acciones a `app/api/facturacion/*`.
+- **Flujo del certificado:** VetPanel genera clave + CSR (`certificados.ts`),
+  la veterinaria lo sube a ARCA y pega el `.crt`. Al cargarlo se verifica que
+  la clave pública coincida con la clave guardada: si no, ARCA rechazaría la
+  firma con un error incomprensible.
+- **Ticket WSAA cacheado** en `tenant_fiscal` (dura 12 h): ARCA no entrega
+  otro mientras el anterior siga vigente. Cambiar de ambiente o de
+  certificado lo invalida (se pone en null).
+- **Las reglas del comprobante son puras y testeadas** (`comprobante.ts`):
+  letra por condición IVA de emisor y receptor, receptor por CUIT/DNI/CF,
+  reparto proporcional de descuentos/recargos y separación de IVA por
+  alícuota (el último grupo absorbe el redondeo para que `ImpTotal` cuadre),
+  QR de ARCA. Al tocar la emisión, agregar el caso ahí y en el test.
+- `emitir.ts` es **idempotente por venta**: una venta tiene a lo sumo una
+  factura emitida (índice parcial). Un rechazo de ARCA se guarda igual con
+  `estado = 'rechazado'` y sus observaciones. La alícuota de IVA se lee del
+  producto al facturar (`venta_items` no la guarda).
+- **El PDF de la factura lo dibuja el mismo generador del remito**
+  (`lib/ventas/remito.ts`, parámetro `ComprobanteFiscal`): letra, CAE, QR e
+  IVA discriminado. No duplicar el layout.
+- Arranca en **homologación**; nada emitido ahí tiene valor fiscal y el PDF
+  sale sellado "SIN VALOR FISCAL". Falta probar con un CUIT real.
+
+### Perfil del cliente (panel)
+
+`components/admin/clientes/cliente-perfil-dialog.tsx` reemplaza al modal de
+"Detalles": encabezado con acciones (WhatsApp, llamar, email, turnos, vender),
+KPIs (turnos, próximo turno, compras, cuenta corriente) y pestañas Datos /
+Mascotas / Turnos / Compras / Cta. cte. Compras y cuenta corriente solo con
+plan que tenga `ventas`. Los **datos fiscales del cliente** (CUIT, condición
+IVA, para Factura A) se editan ahí mismo con `updateClienteFiscal` (update
+directo, la policy `clientes_staff` lo permite), no en el formulario general.
+
 **Sidebar del panel.** La barra horizontal se reemplazó por un sidebar lateral
 colapsable (`components/vet-admin-sidebar.tsx` sobre `components/ui/sidebar`).
 Tres grupos con título: **Clínica** (dashboard, turnos, libreta, clientes),

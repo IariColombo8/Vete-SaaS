@@ -21,13 +21,33 @@ function aCliente(f: Fila): Cliente {
     email: (f.email as string) ?? "",
     dni: (f.dni as string) ?? "",
     domicilio: (f.domicilio as string) ?? "",
+    cuit: (f.cuit as string | null) ?? undefined,
+    condicionIva: (f.condicion_iva as Cliente["condicionIva"]) ?? "CF",
     historialDatos: (f.historial_datos as HistorialDato[]) ?? [],
     createdAt: (f.created_at as string) ?? undefined,
     updatedAt: (f.updated_at as string) ?? undefined,
   }
 }
 
-const COLS_BASIC = "id, nombre, telefono, email, dni, domicilio, created_at, updated_at"
+const COLS_BASIC = "id, nombre, telefono, email, dni, domicilio, cuit, condicion_iva, created_at, updated_at"
+
+/**
+ * Datos fiscales del cliente (CUIT y condición IVA), para la factura
+ * electrónica. Update directo: la policy `clientes_staff` lo permite y no hay
+ * historial de cambios que llevar como en los datos de contacto.
+ */
+export async function updateClienteFiscal(
+  tenantId: string,
+  clienteId: string,
+  datos: { cuit?: string | null; condicionIva?: Cliente["condicionIva"] },
+): Promise<void> {
+  const fila: Record<string, unknown> = {}
+  if (datos.cuit !== undefined) fila.cuit = datos.cuit?.replace(/\D/g, "") || null
+  if (datos.condicionIva !== undefined) fila.condicion_iva = datos.condicionIva
+  if (Object.keys(fila).length === 0) return
+  const { error } = await supabase.from("clientes").update(fila).eq("tenant_id", tenantId).eq("id", clienteId)
+  throwIfSupabaseError(error, "Error al guardar los datos fiscales del cliente")
+}
 
 // El cálculo y la auditoría de `historialDatos` ahora corren en Postgres
 // (ver supabase/020_clientes_publico.sql), para que también funcionen sin

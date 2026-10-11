@@ -10,6 +10,7 @@ import { HistorialVentas } from "./ventas/historial-ventas"
 import { VentasCharts } from "./ventas/ventas-charts"
 import { getMetricasVentas, getVentas, type MetricasVentas } from "@/lib/supabase/ventas"
 import { getTenantConfig } from "@/lib/supabase/queries"
+import { getComprobantesPorVentas, getEstadoFacturacion, type Comprobante, type EstadoFacturacion } from "@/lib/supabase/comprobantes"
 import { formatCurrency } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import { MEDIOS_PAGO, type MedioPago, type Venta } from "@/lib/supabase/types"
@@ -66,6 +67,41 @@ export function VentasManagement({ tenantId }: Props) {
   const [pagina, setPagina] = useState(0)
   const [cargando, setCargando] = useState(true)
   const [emisor, setEmisor] = useState<EmisorRemito>({ nombre: "" })
+
+  // Factura electrónica: estado de la integración y comprobantes ya emitidos
+  // de las ventas en pantalla, para que la fila muestre "Facturar" o "Descargar".
+  const [facturacion, setFacturacion] = useState<EstadoFacturacion | null>(null)
+  const [facturas, setFacturas] = useState<Map<string, Comprobante>>(new Map())
+  const [notasCredito, setNotasCredito] = useState<Map<string, Comprobante>>(new Map())
+
+  useEffect(() => {
+    getEstadoFacturacion(tenantId)
+      .then(setFacturacion)
+      .catch(() => setFacturacion(null))
+  }, [tenantId])
+
+  useEffect(() => {
+    if (!facturacion?.configurado || ventas.length === 0) {
+      setFacturas(new Map())
+      setNotasCredito(new Map())
+      return
+    }
+    let vigente = true
+    getComprobantesPorVentas(tenantId, ventas.map((v) => v.id))
+      .then((r) => {
+        if (!vigente) return
+        setFacturas(r.facturas)
+        setNotasCredito(r.notasCredito)
+      })
+      .catch(() => {
+        if (!vigente) return
+        setFacturas(new Map())
+        setNotasCredito(new Map())
+      })
+    return () => {
+      vigente = false
+    }
+  }, [tenantId, ventas, facturacion?.configurado])
 
   const { desde, hasta } = useMemo(() => rangoFechas(rango), [rango])
 
@@ -232,6 +268,10 @@ export function VentasManagement({ tenantId }: Props) {
               emisor={emisor}
               cargando={cargando}
               onCambio={cargar}
+              tenantId={tenantId}
+              facturacion={facturacion}
+              facturas={facturas}
+              notasCredito={notasCredito}
             />
             {totalVentas > POR_PAGINA && (
               <div className="flex items-center justify-center gap-3 border-t p-3">

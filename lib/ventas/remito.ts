@@ -6,9 +6,12 @@ import { COLOR, Lienzo, type RGB } from "./remito-layout"
 
 /**
  * Remito de venta: PDF para imprimir o mandar, y el texto que acompaña al
- * mensaje de WhatsApp.
+ * mensaje de WhatsApp. El mismo generador dibuja la **factura electrónica**
+ * cuando recibe un `ComprobanteFiscal`: cambia la letra, el título, el
+ * número, y agrega CAE, QR de ARCA e IVA discriminado (Factura A).
  *
- * Sigue la estructura del remito argentino, que es la que la gente reconoce:
+ * Sigue la estructura del comprobante argentino, que es la que la gente
+ * reconoce:
  *
  *   ┌──────────────────────────────────────────┐
  *   │  logo + emisor      ┌─┐    N° 0001-00000042│  ← recuadro de la letra
@@ -19,18 +22,15 @@ import { COLOR, Lienzo, type RGB } from "./remito-layout"
  *   │  CANT.  DESCRIPCIÓN     P.UNIT.   IMPORTE  │
  *   │  ...                                       │
  *   ├────────────────────────────────────────────┤
- *   │              subtotal / descuento / TOTAL  │
+ *   │  QR · CAE            subtotal / IVA / TOTAL│
  *   └────────────────────────────────────────────┘
- *
- * El recuadro de la letra y la numeración `0001-00000042` son lo que hace que
- * se lea como un remito y no como un ticket de supermercado.
  *
  * La tabla de detalle se estira con renglones vacíos hasta los totales, como en
  * el remito de papel: así una venta de tres ítems no deja media hoja en blanco.
  *
  * Se arma en el navegador con jsPDF y no se persiste: se regenera desde la
- * venta, que es el dato real. Toca `document` al descargar, así que solo corre
- * en cliente.
+ * venta (y el comprobante guardado), que son el dato real. Toca `document` al
+ * descargar, así que solo corre en cliente.
  */
 
 /** Datos de la veterinaria que van en el encabezado. */
@@ -43,6 +43,47 @@ export interface EmisorRemito {
   logoUrl?: string
   /** Opcional: no todas las veterinarias lo tienen cargado. */
   cuit?: string
+}
+
+/** Lo que distingue a una factura/nota de crédito de un remito, ya resuelto para dibujar. */
+export interface ComprobanteFiscal {
+  letra: "A" | "B" | "C"
+  /** "01", "06", "11"… el código ARCA del tipo, para el recuadro de la letra. */
+  codigo: string
+  titulo: string
+  /** `0001-00000042`. */
+  numero: string
+  /** Texto ya formateado. */
+  fecha: string
+  cae: string
+  caeVto: string
+  /** Data URL de la imagen del QR de ARCA. */
+  qrDataUrl: string | null
+  emisor: {
+    razonSocial: string
+    cuit: string
+    condicionIva: string
+    domicilioFiscal?: string
+    ingresosBrutos?: string
+    inicioActividades?: string
+  }
+  receptor: {
+    nombre: string
+    domicilio: string
+    docLabel: string
+    docNro: string
+    condicionIva: string
+  }
+  /** Factura A: se discriminan neto e IVA. B y C muestran solo el total. */
+  discriminaIva: boolean
+  neto: number
+  ivaLineas: { alicuota: number; importe: number }[]
+  opEx: number
+  total: number
+  /** Ítems del comprobante (snapshot); si no vienen, se usan los de la venta. */
+  items?: VentaItem[]
+  /** Si es homologación, sello "SIN VALOR FISCAL". */
+  esPrueba: boolean
 }
 
 // ── Medidas ──
@@ -72,57 +113,43 @@ export function numeroFormateado(venta: Pick<Venta, "numero">): string {
 }
 
 export function nombreArchivoRemito(venta: Pick<Venta, "numero">): string {
-  return `Remito-0001-${String(venta.numero).padStart(8, "0")}.pdf`
+  return `Remito-${numeroFormateado(venta)}.pdf`
 }
 
 /**
- * Descarga el logo y lo convierte a data URL, que es lo único que jsPDF sabe
- * incrustar sin pelearse con CORS.
+ * Baja el logo y lo convierte a data URL con sus medidas reales.
  *
- * Devuelve `null` ante cualquier problema —red, permisos, formato— porque un
- * logo que no carga no puede impedir que salga el remito.
+ * jsPDF no incrusta una URL remota: necesita los bytes. Si la imagen no carga
+ * (red, CORS, formato que no entiende —los SVG no los rasteriza—) se devuelve
+ * `null` y el remito sale sin logo: un logo que falla no puede impedir que
+ * salga el comprobante.
  */
 export async function cargarLogo(
   url: string | undefined,
 ): Promise<{ dataUrl: string; ancho: number; alto: number } | null> {
-  if (!url) return null
+  if (!url || typeof window === "undefined") return null
 
   try {
     const respuesta = await fetch(url, { mode: "cors" })
     if (!respuesta.ok) return null
-
     const blob = await respuesta.blob()
-    // Los SVG no los rasteriza jsPDF: quedarían como un rectángulo vacío.
-    if (!/^image\/(png|jpeg|jpg|webp)$/.test(blob.type)) return null
+    if (blob.type.includes("svg")) return null
 
-    const dataUrlOriginal = await new Promise<string>((resolve, reject) => {
+    const dataUrl = await new Promise<string>((resolver, rechazar) => {
       const lector = new FileReader()
-      lector.onload = () => resolve(String(lector.result))
-      lector.onerror = () => reject(new Error("No se pudo leer el logo"))
+      lector.onload = () => resolver(lector.result as string)
+      lector.onerror = () => rechazar(lector.error)
       lector.readAsDataURL(blob)
     })
 
-    // Las proporciones reales hacen falta para no deformarlo en el encabezado.
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image()
-      el.onload = () => resolve(el)
-      el.onerror = () => reject(new Error("Logo inválido"))
-      el.src = dataUrlOriginal
+    const medidas = await new Promise<{ ancho: number; alto: number }>((resolver, rechazar) => {
+      const img = new Image()
+      img.onload = () => resolver({ ancho: img.naturalWidth, alto: img.naturalHeight })
+      img.onerror = () => rechazar(new Error("No se pudo leer la imagen del logo"))
+      img.src = dataUrl
     })
-    const ancho = img.naturalWidth
-    const alto = img.naturalHeight
 
-    // jsPDF reconoce el formato mirando los bytes de la imagen, y su detector
-    // interno no cubre WEBP (viene de fotos/capturas de celular): sale
-    // "UNKNOWN" al querer incrustarlo. Redibujar en un canvas y exportar
-    // siempre como PNG evita depender de qué formato haya subido el usuario.
-    const canvas = document.createElement("canvas")
-    canvas.width = ancho
-    canvas.height = alto
-    const ctx = canvas.getContext("2d")
-    const dataUrl = ctx ? (ctx.drawImage(img, 0, 0), canvas.toDataURL("image/png")) : dataUrlOriginal
-
-    return { dataUrl, ancho, alto }
+    return { dataUrl, ...medidas }
   } catch {
     return null
   }
@@ -164,27 +191,40 @@ function marcoDe(l: Lienzo): Marco {
   }
 }
 
+/** Alto que ocupan totales + pie en la última hoja. La factura necesita más (QR + IVA). */
+function reservaUltima(factura?: ComprobanteFiscal): number {
+  if (!factura) return ALTO_PIE + 92
+  return ALTO_PIE + 110 + (factura.discriminaIva ? 14 * (factura.ivaLineas.length + 1) : 0)
+}
+
 /**
  * Arma el PDF y lo devuelve sin descargarlo. Para el caso normal usar
- * `descargarRemitoPDF`, que además resuelve el logo.
+ * `descargarRemitoPDF`, que además resuelve el logo. Con `factura` dibuja el
+ * comprobante fiscal en vez del remito.
  */
-export function generarRemitoPDF(venta: Venta, emisor: EmisorRemito, logo: Logo = null): jsPDF {
+export function generarRemitoPDF(
+  venta: Venta,
+  emisor: EmisorRemito,
+  logo: Logo = null,
+  factura?: ComprobanteFiscal,
+): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4" })
   const l = new Lienzo(doc)
   const m = marcoDe(l)
 
-  const items = venta.items ?? []
+  const items = factura?.items?.length ? factura.items : (venta.items ?? [])
   // Cuántas filas entran entre el encabezado y el pie de la primera hoja.
   const yPrimerDetalle = MARGEN + ALTO_ENCABEZADO + 78
   const alturas = items.map(altoFila)
+  const reserva = reservaUltima(factura)
 
-  const paginas = repartirEnPaginas(alturas, yPrimerDetalle, l.alto)
+  const paginas = repartirEnPaginas(alturas, yPrimerDetalle, l.alto, reserva)
 
   paginas.forEach((pagina, i) => {
     if (i > 0) doc.addPage()
 
-    dibujarEncabezado(l, m, venta, emisor, logo)
-    const yDetalle = dibujarCliente(l, m, venta)
+    dibujarEncabezado(l, m, venta, emisor, logo, factura)
+    const yDetalle = dibujarCliente(l, m, venta, factura)
     const esUltima = i === paginas.length - 1
 
     const yFin = dibujarDetalle(
@@ -195,18 +235,20 @@ export function generarRemitoPDF(venta: Venta, emisor: EmisorRemito, logo: Logo 
       // La tabla se estira con renglones vacíos hasta donde empiezan los
       // totales. Es como se ve un remito de papel: el bloque de detalle ocupa
       // la hoja entera en vez de dejar medio A4 en blanco.
-      esUltima ? l.alto - MARGEN - ALTO_PIE - 92 : l.alto - MARGEN - 30,
+      esUltima ? l.alto - MARGEN - reserva : l.alto - MARGEN - 30,
+      factura?.discriminaIva ?? false,
     )
 
     // Los totales van solo en la última hoja: repetirlos en cada una haría
     // parecer que cada página es una venta distinta.
     if (esUltima) {
-      dibujarTotales(l, m, venta, yFin)
-      dibujarPie(l, m, venta)
+      dibujarTotales(l, m, venta, yFin, factura)
+      dibujarPie(l, m, venta, factura)
     }
   })
 
-  sellarAnulada(l, venta)
+  if (factura?.esPrueba) sellar(l, "SIN VALOR FISCAL", COLOR.gris)
+  if (!factura) sellarAnulada(l, venta)
   numerarPaginas(l, doc)
 
   return doc
@@ -227,10 +269,11 @@ function repartirEnPaginas(
   alturas: number[],
   yInicial: number,
   altoPagina: number,
+  reservaUltimaPagina: number,
 ): { desde: number; hasta: number }[] {
   // La última página necesita lugar extra para totales + firma.
   const limiteNormal = altoPagina - MARGEN - 30
-  const limiteUltima = altoPagina - MARGEN - ALTO_PIE - 90
+  const limiteUltima = altoPagina - MARGEN - reservaUltimaPagina
 
   if (alturas.length === 0) return [{ desde: 0, hasta: 0 }]
 
@@ -256,7 +299,7 @@ function repartirEnPaginas(
 
 /**
  * Encabezado: el emisor a la izquierda, los datos del comprobante a la derecha,
- * y el recuadro de la letra "R" partiendo los dos al medio.
+ * y el recuadro de la letra ("R" remito, o A/B/C factura) partiendo los dos al medio.
  */
 function dibujarEncabezado(
   l: Lienzo,
@@ -264,6 +307,7 @@ function dibujarEncabezado(
   venta: Venta,
   emisor: EmisorRemito,
   logo: Logo,
+  factura?: ComprobanteFiscal,
 ) {
   const y = MARGEN
   const centro = l.ancho / 2
@@ -286,7 +330,8 @@ function dibujarEncabezado(
   }
 
   const anchoEmisor = centro - x - 12
-  l.texto(l.recortar(emisor.nombre || "VetPanel", anchoEmisor, { size: 14, bold: true }), x, y + 30, {
+  const nombreEmisor = factura?.emisor.razonSocial || emisor.nombre || "VetPanel"
+  l.texto(l.recortar(nombreEmisor, anchoEmisor, { size: 14, bold: true }), x, y + 30, {
     size: 14,
     bold: true,
   })
@@ -297,9 +342,24 @@ function dibujarEncabezado(
     l.texto(l.recortar(valor, anchoEmisor, { size: 8 }), x, yEmisor, { size: 8, color: COLOR.gris })
     yEmisor += 11
   }
-  lineaEmisor(emisor.direccion)
-  lineaEmisor([emisor.telefono, emisor.email].filter(Boolean).join("  ·  "))
-  lineaEmisor(emisor.cuit ? `CUIT ${emisor.cuit}` : undefined)
+  if (factura) {
+    // Nombre de fantasía debajo de la razón social, si difieren.
+    if (emisor.nombre && emisor.nombre !== factura.emisor.razonSocial) lineaEmisor(emisor.nombre)
+    lineaEmisor(factura.emisor.domicilioFiscal || emisor.direccion)
+    lineaEmisor(`CUIT ${factura.emisor.cuit}  ·  ${factura.emisor.condicionIva}`)
+    lineaEmisor(
+      [
+        factura.emisor.ingresosBrutos ? `IIBB ${factura.emisor.ingresosBrutos}` : null,
+        factura.emisor.inicioActividades ? `Inicio act. ${factura.emisor.inicioActividades}` : null,
+      ]
+        .filter(Boolean)
+        .join("  ·  ") || undefined,
+    )
+  } else {
+    lineaEmisor(emisor.direccion)
+    lineaEmisor([emisor.telefono, emisor.email].filter(Boolean).join("  ·  "))
+    lineaEmisor(emisor.cuit ? `CUIT ${emisor.cuit}` : undefined)
+  }
 
   // ── Recuadro de la letra ──
   // Es la marca visual del comprobante argentino: un cuadrado con la letra,
@@ -314,15 +374,15 @@ function dibujarEncabezado(
     borde: COLOR.tinta,
     grosor: 1,
   })
-  l.texto("R", centro, yLetra + 27, { size: 24, bold: true, align: "center" })
-  l.texto("COD. 91", centro, yLetra + 38, { size: 5.5, color: COLOR.gris, align: "center" })
+  l.texto(factura?.letra ?? "R", centro, yLetra + 27, { size: 24, bold: true, align: "center" })
+  l.texto(`COD. ${factura?.codigo ?? "91"}`, centro, yLetra + 38, { size: 5.5, color: COLOR.gris, align: "center" })
 
   // ── Derecha: qué comprobante es ──
   const xDer = m.der - PAD
   // Los rótulos arrancan pasado el recuadro de la letra, o quedan tapados.
   const xRotulos = centro + LADO / 2 + 10
-  l.texto("REMITO", xDer, y + 26, { size: 15, bold: true, align: "right", charSpace: 1.5 })
-  l.texto("Documento no válido como factura", xDer, y + 38, {
+  l.texto(factura?.titulo ?? "REMITO", xDer, y + 26, { size: 15, bold: true, align: "right", charSpace: 1.5 })
+  l.texto(factura ? "ORIGINAL" : "Documento no válido como factura", xDer, y + 38, {
     size: 6.5,
     color: COLOR.gris,
     align: "right",
@@ -334,13 +394,19 @@ function dibujarEncabezado(
     l.rotulo(rotulo, xRotulos, yDato)
     l.texto(valor, xDer, yDato, { size: 9, bold: true, align: "right" })
   }
-  dato("N°", numeroFormateado(venta), y + 64)
-  dato("Fecha", formatDateTime(venta.createdAt), y + 79)
-  dato("Pago", etiquetaMedioPago(venta.medioPago), y + 94)
+  if (factura) {
+    dato("N°", factura.numero, y + 64)
+    dato("Fecha", factura.fecha, y + 79)
+    dato("Remito", numeroFormateado(venta), y + 94)
+  } else {
+    dato("N°", numeroFormateado(venta), y + 64)
+    dato("Fecha", formatDateTime(venta.createdAt), y + 79)
+    dato("Pago", etiquetaMedioPago(venta.medioPago), y + 94)
+  }
 }
 
 /** Bloque del destinatario. Los datos que faltan se muestran como raya. */
-function dibujarCliente(l: Lienzo, m: Marco, venta: Venta): number {
+function dibujarCliente(l: Lienzo, m: Marco, venta: Venta, factura?: ComprobanteFiscal): number {
   const y = MARGEN + ALTO_ENCABEZADO + 12
   const ALTO = 50
 
@@ -349,12 +415,12 @@ function dibujarCliente(l: Lienzo, m: Marco, venta: Venta): number {
   const col2 = m.izq + m.ancho * 0.52
   const guion = "—"
 
+  const nombre = factura?.receptor.nombre || venta.clienteNombre || "Consumidor final"
+  const domicilio = factura?.receptor.domicilio || venta.clienteDomicilio
+
   l.rotulo("Sr./es.", m.izq + PAD, y + 15)
   l.texto(
-    l.recortar(venta.clienteNombre || "Consumidor final", col2 - m.izq - PAD * 2, {
-      size: 11,
-      bold: true,
-    }),
+    l.recortar(nombre, col2 - m.izq - PAD * 2, { size: 11, bold: true }),
     m.izq + PAD,
     y + 31,
     { size: 11, bold: true },
@@ -362,20 +428,22 @@ function dibujarCliente(l: Lienzo, m: Marco, venta: Venta): number {
 
   l.rotulo("Domicilio", m.izq + PAD, y + 43)
   l.texto(
-    l.recortar(venta.clienteDomicilio || guion, col2 - m.izq - PAD * 2 - 46, { size: 8 }),
+    l.recortar(domicilio || guion, col2 - m.izq - PAD * 2 - 46, { size: 8 }),
     m.izq + PAD + 46,
     y + 43,
     { size: 8, color: COLOR.gris },
   )
 
-  l.rotulo("DNI / CUIT", col2, y + 15)
-  l.texto(venta.clienteDni || guion, col2 + 60, y + 15, { size: 8.5 })
+  l.rotulo(factura?.receptor.docLabel ?? "DNI / CUIT", col2, y + 15)
+  l.texto(factura ? factura.receptor.docNro || guion : venta.clienteDni || guion, col2 + 60, y + 15, { size: 8.5 })
 
-  l.rotulo("Teléfono", col2, y + 31)
-  l.texto(venta.clienteTelefono || guion, col2 + 60, y + 31, { size: 8.5 })
+  l.rotulo(factura ? "Pago" : "Teléfono", col2, y + 31)
+  l.texto(factura ? etiquetaMedioPago(venta.medioPago) : venta.clienteTelefono || guion, col2 + 60, y + 31, {
+    size: 8.5,
+  })
 
   l.rotulo("Cond. IVA", col2, y + 43)
-  l.texto("Consumidor final", col2 + 60, y + 43, { size: 8, color: COLOR.gris })
+  l.texto(factura?.receptor.condicionIva ?? "Consumidor final", col2 + 60, y + 43, { size: 8, color: COLOR.gris })
 
   return y + ALTO + 16
 }
@@ -387,6 +455,7 @@ function dibujarDetalle(
   offset: number,
   yInicial: number,
   yTope: number,
+  discriminaIva: boolean,
 ): number {
   let y = yInicial
 
@@ -397,7 +466,7 @@ function dibujarDetalle(
   l.texto("DESCRIPCIÓN", m.xDescripcion, yRot, {
     size: 6.5, bold: true, color: COLOR.papel, charSpace: 0.6,
   })
-  l.texto("P. UNIT.", m.xPrecio, yRot, {
+  l.texto(discriminaIva ? "P. UNIT. (c/IVA)" : "P. UNIT.", m.xPrecio, yRot, {
     size: 6.5, bold: true, color: COLOR.papel, charSpace: 0.6, align: "right",
   })
   l.texto("IMPORTE", m.xImporte, yRot, {
@@ -474,7 +543,7 @@ function dibujarDetalle(
   return y
 }
 
-function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number): number {
+function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number, factura?: ComprobanteFiscal): number {
   const ANCHO = 220
   const x = m.der - ANCHO
   let y = yInicial + 14
@@ -485,7 +554,12 @@ function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number): nu
     y += 14
   }
 
-  if (venta.descuento > 0) {
+  if (factura?.discriminaIva) {
+    fila("Neto gravado", formatCurrency(factura.neto))
+    factura.ivaLineas.forEach((iva) => fila(`IVA ${iva.alicuota}%`, formatCurrency(iva.importe)))
+    if (factura.opEx > 0) fila("Exento", formatCurrency(factura.opEx))
+    y += 2
+  } else if (!factura && venta.descuento > 0) {
     fila("Subtotal", formatCurrency(venta.subtotal))
     fila("Descuento", `- ${formatCurrency(venta.descuento)}`)
     y += 2
@@ -494,30 +568,51 @@ function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number): nu
   // El total en su propia barra: es el número que se busca de un vistazo.
   // En un remito anulado va en gris: el verde lo haría leer como cobrado.
   const ALTO = 30
-  const fondo = venta.estado === "anulada" ? COLOR.gris : COLOR.acento
+  const fondo = !factura && venta.estado === "anulada" ? COLOR.gris : COLOR.acento
+  const total = factura ? factura.total : venta.total
   l.rect(x, y - 10, ANCHO, ALTO, { relleno: fondo, radio: 4 })
   l.texto("TOTAL", x + 12, y + 9, { size: 10, bold: true, color: COLOR.papel, charSpace: 1 })
-  l.texto(formatCurrency(venta.total), m.xImporte - 2, y + 10, {
+  l.texto(formatCurrency(total), m.xImporte - 2, y + 10, {
     size: 14,
     bold: true,
     color: COLOR.papel,
     align: "right",
   })
 
-  const cantidad = (venta.items ?? []).length
-  l.texto(
-    `${cantidad} ${cantidad === 1 ? "ítem" : "ítems"}`,
-    m.izq + PAD,
-    y + 10,
-    { size: 8, color: COLOR.gris },
-  )
+  if (!factura) {
+    const cantidad = (venta.items ?? []).length
+    l.texto(
+      `${cantidad} ${cantidad === 1 ? "ítem" : "ítems"}`,
+      m.izq + PAD,
+      y + 10,
+      { size: 8, color: COLOR.gris },
+    )
+  }
 
   return y + ALTO + 6
 }
 
-/** Observaciones de la venta y legendas al pie de la hoja. */
-function dibujarPie(l: Lienzo, m: Marco, venta: Venta) {
-  if (venta.observaciones) {
+/** Observaciones de la venta y leyendas al pie de la hoja. En la factura: QR y CAE. */
+function dibujarPie(l: Lienzo, m: Marco, venta: Venta, factura?: ComprobanteFiscal) {
+  if (factura) {
+    const QR = 72
+    const yQr = l.alto - MARGEN - ALTO_PIE - QR + 8
+    if (factura.qrDataUrl) {
+      l.doc.addImage(factura.qrDataUrl, "PNG", m.izq, yQr, QR, QR)
+    }
+    const xTexto = m.izq + (factura.qrDataUrl ? QR + 10 : 0)
+    l.texto("Comprobante Autorizado", xTexto, yQr + 14, { size: 8, bold: true })
+    l.rotulo("CAE", xTexto, yQr + 30)
+    l.texto(factura.cae, xTexto + 28, yQr + 30, { size: 9, bold: true })
+    l.rotulo("Vto. CAE", xTexto, yQr + 44)
+    l.texto(factura.caeVto, xTexto + 44, yQr + 44, { size: 9 })
+    l.texto(
+      "Esta Administración Federal no se responsabiliza por los datos ingresados en el detalle de la operación",
+      xTexto,
+      yQr + 60,
+      { size: 5.5, color: COLOR.gris },
+    )
+  } else if (venta.observaciones) {
     l.texto(
       l.recortar(`Observaciones: ${venta.observaciones}`, m.ancho, { size: 8 }),
       m.izq,
@@ -540,15 +635,18 @@ function dibujarPie(l: Lienzo, m: Marco, venta: Venta) {
 /** Sello diagonal sobre todas las páginas de un remito anulado. */
 function sellarAnulada(l: Lienzo, venta: Venta) {
   if (venta.estado !== "anulada") return
+  sellar(l, "ANULADO", COLOR.rojo)
+}
 
+function sellar(l: Lienzo, texto: string, color: RGB) {
   const total = l.doc.getNumberOfPages()
   for (let p = 1; p <= total; p++) {
     l.doc.setPage(p)
     l.conOpacidad(0.14, () => {
       l.doc.setFont("helvetica", "bold")
-      l.doc.setFontSize(76)
-      l.doc.setTextColor(...(COLOR.rojo as RGB))
-      l.doc.text("ANULADO", l.ancho / 2, l.alto / 2, { align: "center", angle: 24 })
+      l.doc.setFontSize(texto.length > 8 ? 54 : 76)
+      l.doc.setTextColor(...color)
+      l.doc.text(texto, l.ancho / 2, l.alto / 2, { align: "center", angle: 24 })
     })
   }
 }
