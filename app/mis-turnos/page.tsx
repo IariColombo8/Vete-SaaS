@@ -120,7 +120,7 @@ export default function MisTurnosPage() {
                         </div>
                       </div>
                       <Badge variant="secondary" className="text-xs shrink-0">
-                        {vet.plan === "basico" ? "Basico" : vet.plan === "plus" ? "Plus" : "Pro"}
+                        {vet.plan === "pro" ? "Pro" : "Básico"}
                       </Badge>
                     </div>
                   </CardHeader>

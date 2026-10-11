@@ -11,8 +11,8 @@ export interface PreguntaFrecuente {
 
 export const FAQS: PreguntaFrecuente[] = [
   {
-    q: "¿Puedo empezar gratis?",
-    a: "Sí. El plan Básico es gratuito e incluye hasta 10 turnos por mes, tu página pública y la gestión de turnos y clientes. No pedimos tarjeta para empezar.",
+    q: "¿Puedo probarlo gratis?",
+    a: "Sí. Al registrarte tenés 10 días del plan Pro completo, sin tarjeta y con datos de ejemplo. Cuando termina, elegís con qué plan seguir: Básico ($50.000/mes) o Pro ($80.000/mes). No se cobra nada sin que lo confirmes.",
   },
   {
     q: "¿Necesito instalar algo o saber de tecnología?",
@@ -24,7 +24,7 @@ export const FAQS: PreguntaFrecuente[] = [
   },
   {
     q: "¿Puedo cambiar de plan cuando quiera?",
-    a: "Sí. Subís o bajás de plan en cualquier momento. El cambio se refleja de inmediato en los límites y funciones disponibles.",
+    a: "Sí. Subís o bajás de plan en cualquier momento desde tu panel, pagando con Mercado Pago. El cambio se refleja de inmediato en los límites y funciones disponibles, y cancelás cuando quieras.",
   },
   {
     q: "¿Mis datos y los de mis pacientes están seguros?",

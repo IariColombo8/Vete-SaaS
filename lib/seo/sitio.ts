@@ -8,7 +8,7 @@ export const SITIO = {
   nombre: "VetPanel",
   titulo: "VetPanel — Software de gestión para veterinarias",
   descripcion:
-    "Turnos online, historia clínica digital, libreta sanitaria con QR, recordatorios por WhatsApp y punto de venta. Tu veterinaria con su propia página, lista en minutos. Empezá gratis.",
+    "Turnos online, historia clínica digital, libreta sanitaria con QR, recordatorios por WhatsApp y punto de venta. Tu veterinaria con su propia página, lista en minutos. Probá 10 días gratis, sin tarjeta.",
   imagen: "/metadato.png",
 } as const
 

@@ -8,6 +8,7 @@ import { getTenantConfig, getTurnosDelMes } from "@/lib/supabase/queries"
 import type { TenantConfig } from "@/lib/supabase/queries"
 import { getPlanLimits, planAllows } from "@/lib/plans"
 import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
+import { getEstadoBilling } from "@/components/billing/use-billing"
 import { Ayuda } from "@/components/ui/ayuda"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,8 +39,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
 const planInfo: Record<string, { label: string; color: string }> = {
-  basico: { label: "Basico (10 turnos/mes)", color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  plus:   { label: "Plus",                   color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  basico: { label: "Básico (10 turnos/mes)", color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
   pro:    { label: "Pro",                    color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" },
 }
 
@@ -58,6 +58,28 @@ export default function DashboardPage() {
       setTurnosMes(count)
     })
   }, [slug])
+
+  // Vuelta del checkout de Mercado Pago (`back_url` = Dashboard?billing=ok).
+  // El webhook puede tardar: se sincroniza el estado real antes de festejar.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("billing") !== "ok") return
+    router.replace(`/${slug}/admin/Dashboard`)
+    getEstadoBilling(slug, true)
+      .then((estado) => {
+        if (estado.suscripcion?.status === "authorized") {
+          toast({ title: "¡Suscripción activa!", description: "Tu veterinaria ya está en el plan Pro." })
+          getTenantConfig(slug).then(setConfig)
+        } else {
+          toast({
+            title: "Pago en proceso",
+            description: "Mercado Pago todavía no confirmó el pago. Revisá el estado en Configuración → Plan.",
+          })
+        }
+      })
+      .catch(() => {
+        toast({ title: "No se pudo verificar el pago", description: "Revisá Configuración → Plan.", variant: "destructive" })
+      })
+  }, [slug, router, toast])
 
   const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
 

@@ -14,6 +14,8 @@ import type { LineaPagoMixto } from "./pos/mixto-pagos"
 import { AlimentoSelector } from "./pos/alimento-selector"
 import { AtencionDialog } from "./pos/atencion-dialog"
 import { RemitoDialog } from "./pos/remito-dialog"
+import { CobroPointDialog } from "./pos/cobro-point-dialog"
+import { getEstadoPoint, vincularCobroPoint } from "./pos/use-mp-point"
 import {
   agregarAlCarrito,
   agregarAtencion,
@@ -82,6 +84,16 @@ export function PosManagement({ tenantId }: Props) {
   const [atencionAbierto, setAtencionAbierto] = useState(false)
   const [cobrando, setCobrando] = useState(false)
   const [ventaHecha, setVentaHecha] = useState<Venta | null>(null)
+
+  // Mercado Pago Point: si la veterinaria conectó su terminal, débito y
+  // crédito se pueden cobrar mandando el monto a la terminal.
+  const [pointDisponible, setPointDisponible] = useState(false)
+  const [cobroPointAbierto, setCobroPointAbierto] = useState(false)
+  useEffect(() => {
+    getEstadoPoint(tenantId)
+      .then((estado) => setPointDisponible(estado.configurado))
+      .catch(() => setPointDisponible(false))
+  }, [tenantId])
   const [saldoCliente, setSaldoCliente] = useState(0)
   const [saldarDeuda, setSaldarDeuda] = useState(false)
 
@@ -246,7 +258,13 @@ export function PosManagement({ tenantId }: Props) {
 
   const limpiar = limpiarCompartido
 
-  const cobrar = async () => {
+  /**
+   * Registra la venta. Con `cobroPointId` la venta ya fue cobrada en la
+   * terminal: se registra igual que siempre y después se ata al pago de MP.
+   * Lanza en vez de solo mostrar el toast para que el diálogo de Point pueda
+   * avisar que el pago salió pero la venta no quedó registrada.
+   */
+  const cobrar = async (cobroPointId?: string) => {
     if (carrito.length === 0) return
 
     // "Consumidor final" es una fila real, así que acá no alcanza con que haya
@@ -297,6 +315,14 @@ export function PosManagement({ tenantId }: Props) {
         toast.success(`Venta #${resultado.numero} registrada`)
       }
 
+      // La venta ya está; si el vínculo con el pago de MP falla, queda la
+      // fila en `mp_point_cobros` para conciliar a mano, no se revierte nada.
+      if (cobroPointId) {
+        vincularCobroPoint(tenantId, cobroPointId, resultado.ventaId).catch((e) => {
+          console.error("No se pudo asociar el cobro Point a la venta:", e)
+        })
+      }
+
       // La venta ya está cobrada; si la historia clínica falla no hay que
       // revertir nada, solo avisar para que se cargue a mano después.
       await anotarHistoriasClinicas(carrito)
@@ -310,6 +336,7 @@ export function PosManagement({ tenantId }: Props) {
       // Los mensajes de la RPC ya están escritos para el usuario
       // ("No hay stock suficiente de X"), así que se muestran tal cual.
       toast.error(e instanceof Error ? e.message : "No se pudo registrar la venta")
+      if (cobroPointId) throw e
     } finally {
       setCobrando(false)
     }
@@ -344,7 +371,9 @@ export function PosManagement({ tenantId }: Props) {
       onCantidad={actualizarCantidad}
       onQuitar={(id) => setCarrito((actual) => quitarDelCarrito(actual, id))}
       onVaciar={limpiar}
-      onCobrar={cobrar}
+      onCobrar={() => cobrar()}
+      pointDisponible={pointDisponible}
+      onCobrarPoint={() => setCobroPointAbierto(true)}
     />
   )
 
@@ -354,6 +383,19 @@ export function PosManagement({ tenantId }: Props) {
     // panel (3.5rem) y el padding vertical del main (3rem).
     <div className="flex h-[calc(100vh-6.5rem)] flex-col gap-3">
       <CajaBar tenantId={tenantId} caja={caja} onCambio={recargarCaja} />
+
+      {cobroPointAbierto && (
+        <CobroPointDialog
+          open={cobroPointAbierto}
+          tenantId={tenantId}
+          monto={totales.total + (saldarDeuda ? saldoCliente : 0)}
+          descripcion={`${emisor.nombre || "VetPanel"} · ${carrito.length} ítem${carrito.length === 1 ? "" : "s"}`}
+          tipoTarjeta={medioPago === "credito" ? "credit_card" : "debit_card"}
+          cuotas={medioPago === "credito" ? cuotas : undefined}
+          onAprobado={(cobroId) => cobrar(cobroId)}
+          onCerrar={() => setCobroPointAbierto(false)}
+        />
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border bg-card p-3">
         <Button

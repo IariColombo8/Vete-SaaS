@@ -116,7 +116,7 @@ export interface TurnoConfig {
 
 export interface TenantConfig {
   nombre?: string
-  plan?: "basico" | "plus" | "pro"
+  plan?: "basico" | "pro"
   status?: "activo" | "pausado"
   adminIds?: string[]
   createdAt?: string
@@ -143,6 +143,8 @@ export interface TenantConfig {
   onboardingCompletado?: boolean
   /** Vencimiento del trial de plan Pro. null/undefined = sin trial. */
   trialExpiresAt?: string | null
+  /** Estado de la suscripción de Mercado Pago (authorized/pending/paused/cancelled). Solo lectura. */
+  mpPreapprovalStatus?: string | null
 }
 
 export type TenantFull = Tenant & TenantConfig

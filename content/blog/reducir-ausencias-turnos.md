@@ -29,4 +29,4 @@ Con el historial podés identificar clientes que faltan seguido y tener una conv
 
 ---
 
-Todo esto ya viene integrado en VetPanel. [Empezá gratis](/registro) y configurá tus recordatorios hoy.
+Todo esto ya viene integrado en VetPanel. [Probá gratis 10 días](/registro) y configurá tus recordatorios hoy.

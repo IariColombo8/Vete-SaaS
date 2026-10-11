@@ -87,4 +87,4 @@ No hace falta pasar todo el archivo de papel de un día para el otro. Lo más pr
 
 Una buena historia clínica veterinaria digital registra al paciente y a sus responsables, ordena cada atención, lleva las vacunas y los medicamentos con su próxima fecha, guarda los estudios, separa lo interno de lo que ve el dueño y está disponible en el consultorio y a domicilio.
 
-Así funciona la historia clínica de VetPanel: fichas por mascota con co-dueños, atenciones con diagnóstico y tratamiento, vacunas y medicamentos con su próxima dosis, archivos adjuntos, órdenes médicas y notas privadas o visibles para el dueño, todo con los datos de cada veterinaria separados del resto. [Creá tu cuenta gratis](/registro) y cargá tu primer paciente hoy.
+Así funciona la historia clínica de VetPanel: fichas por mascota con co-dueños, atenciones con diagnóstico y tratamiento, vacunas y medicamentos con su próxima dosis, archivos adjuntos, órdenes médicas y notas privadas o visibles para el dueño, todo con los datos de cada veterinaria separados del resto. [Probá VetPanel gratis 10 días](/registro) y cargá tu primer paciente hoy.

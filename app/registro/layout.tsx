@@ -3,9 +3,9 @@ import { SITIO } from "@/lib/seo/sitio"
 
 // La página es "use client" y no puede exportar metadata: sin este layout
 // heredaba el título genérico del sitio y Google la tomaba como copia de la home.
-const titulo = "Creá tu cuenta gratis — VetPanel"
+const titulo = "Probá VetPanel 10 días gratis — Registro"
 const descripcion =
-  "Registrá tu veterinaria en VetPanel y en minutos tenés turnos online, historia clínica y libreta sanitaria digital. Gratis, sin tarjeta."
+  "Registrá tu veterinaria en VetPanel y en minutos tenés turnos online, historia clínica y libreta sanitaria digital. 10 días de prueba gratis, sin tarjeta."
 
 export const metadata: Metadata = {
   title: { absolute: titulo },

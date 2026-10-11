@@ -68,6 +68,7 @@ export function VetAdminLayout({ slug, children }: Props) {
   const [checking, setChecking] = useState(true)
   const [vetNombre, setVetNombre] = useState<string>("")
   const [trialVencido, setTrialVencido] = useState(false)
+  const [motivoBloqueo, setMotivoBloqueo] = useState<"trial" | "suscripcion">("trial")
   const [role, setRole] = useState<UserRole | null>(null)
 
   // Solo depende de `user`/`slug`: rol, tenant y config no cambian al navegar
@@ -90,6 +91,10 @@ export function VetAdminLayout({ slug, children }: Props) {
       setRole(userRole)
       setVetNombre(config?.nombre || slug)
       setTrialVencido(getTrialStatus(config ?? {}).vencido)
+      // Sin suscripción activa el servidor deja `trial_expires_at` en el pasado:
+      // el aviso tiene que decir "suscripción" y no "prueba" en ese caso.
+      const sus = config?.mpPreapprovalStatus
+      setMotivoBloqueo(sus === "cancelled" || sus === "paused" ? "suscripcion" : "trial")
       setChecking(false)
     })
   }, [user, authLoading, slug, router])
@@ -135,7 +140,13 @@ export function VetAdminLayout({ slug, children }: Props) {
         />
 
         <SidebarInset className="bg-slate-50 dark:bg-slate-950">
-          {trialVencido && <TrialExpiredBanner />}
+          {trialVencido && (
+            <TrialExpiredBanner
+              tenantId={slug}
+              puedeGestionar={role === "veterinario" || role === "superadmin"}
+              motivo={motivoBloqueo}
+            />
+          )}
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-1 h-4" />

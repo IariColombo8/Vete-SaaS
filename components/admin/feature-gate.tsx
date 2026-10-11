@@ -13,7 +13,7 @@ interface Props {
   titulo: string
   /** Qué hace la sección, para el cartel de upsell. */
   descripcion: string
-  /** Nombre del plan mínimo que la habilita ("Plus", "Pro"). */
+  /** Nombre del plan mínimo que la habilita ("Pro"). */
   planMinimo: string
   icono: ReactNode
   children: ReactNode

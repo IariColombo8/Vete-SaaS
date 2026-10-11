@@ -25,4 +25,4 @@ Un panel con métricas te muestra tus servicios más pedidos, tus horarios pico 
 
 ---
 
-¿Listo para empezar? [Probá VetPanel gratis](/registro) y tené tu clínica online en minutos.
+¿Listo para empezar? [Probá VetPanel gratis 10 días](/registro) y tené tu clínica online en minutos.

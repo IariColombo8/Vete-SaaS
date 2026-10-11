@@ -71,6 +71,5 @@ export function EtiquetaRol({ rol }: { rol: UserRole }) {
 
 export const NOMBRE_PLAN: Record<NonNullable<TenantFull["plan"]>, string> = {
   basico: "Básico",
-  plus: "Plus",
   pro: "Pro",
 }

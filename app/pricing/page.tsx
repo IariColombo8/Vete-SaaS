@@ -2,26 +2,31 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Check, Minus, ArrowRight } from "lucide-react"
 import { PricingCards } from "@/components/pricing/pricing-cards"
-import { PLAN_LIST, type Feature } from "@/lib/plans"
+import { PLAN_LIST, TRIAL_DIAS, formatPrecioPlan, type Feature } from "@/lib/plans"
+import { datosEstructuradosPricing, serializarJsonLd } from "@/lib/seo/datos-estructurados"
+import { APP_URL, SITIO } from "@/lib/seo/sitio"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
+const TITULO = "Precios y planes — VetPanel"
+const DESCRIPCION = `Software de gestión para veterinarias desde ${formatPrecioPlan("basico")}/mes. Plan Pro (${formatPrecioPlan("pro")}/mes) con turnos ilimitados, WhatsApp, mostrador, factura electrónica y Mercado Pago Point. ${TRIAL_DIAS} días de prueba gratis, sin tarjeta.`
 
 export const metadata: Metadata = {
-  title: "Precios y planes — VetPanel",
-  description:
-    "Planes simples y transparentes para tu veterinaria. Empezá gratis con el plan Básico o escalá a Plus y Pro con turnos ilimitados, WhatsApp, libreta en PDF y más.",
+  title: TITULO,
+  description: DESCRIPCION,
   alternates: { canonical: "/pricing" },
-  // Precios todavía no definitivos: fuera de Google (y del sitemap) hasta que lo
-  // sean. `follow` deja que siga los links a /registro.
-  robots: { index: false, follow: true },
   openGraph: {
     type: "website",
     locale: "es_AR",
     url: `${APP_URL}/pricing`,
-    siteName: "VetPanel",
-    title: "Precios y planes — VetPanel",
-    description: "Planes simples y transparentes para tu veterinaria. Empezá gratis.",
-    images: [{ url: "/metadato.png", width: 1200, height: 630, alt: "VetPanel Logo" }],
+    siteName: SITIO.nombre,
+    title: TITULO,
+    description: DESCRIPCION,
+    images: [{ url: SITIO.imagen, width: 1200, height: 630, alt: "VetPanel — precios y planes" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITULO,
+    description: DESCRIPCION,
+    images: [SITIO.imagen],
   },
 }
 
@@ -34,24 +39,33 @@ const FEATURE_LABELS: { key: Feature; label: string }[] = [
   { key: "qrMascota", label: "QR público por mascota" },
   { key: "recordatoriosVacunas", label: "Recordatorios de vacunas" },
   { key: "multipleProfesionales", label: "Múltiples profesionales" },
+  { key: "productos", label: "Productos y control de stock" },
+  { key: "ventas", label: "Mostrador, caja y remitos" },
+  { key: "promosSorteos", label: "Ofertas, promos y sorteos" },
+  { key: "facturacionElectronica", label: "Factura electrónica (ARCA)" },
+  { key: "mercadoPagoPoint", label: "Cobro con Mercado Pago Point" },
 ]
 
 const FAQS: { q: string; a: string }[] = [
   {
-    q: "¿Puedo empezar gratis?",
-    a: "Sí. El plan Básico es gratuito e incluye hasta 10 turnos por mes, tu página pública y la gestión de turnos y clientes. No pedimos tarjeta para empezar.",
+    q: "¿Cómo funciona la prueba gratis?",
+    a: `Al registrarte tenés ${TRIAL_DIAS} días de plan Pro completo, sin tarjeta y con datos de ejemplo para probar. Cuando termina, elegís con qué plan seguir: Básico o Pro. No se cobra nada sin que lo confirmes.`,
+  },
+  {
+    q: "¿Cómo se paga?",
+    a: "Por suscripción mensual con Mercado Pago, desde tu panel. Podés pagar con tarjeta de crédito, débito o saldo en cuenta. Cancelás cuando quieras desde Configuración → Plan y no se hacen más cobros.",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí. Podés subir o bajar de plan cuando quieras. El cambio se refleja de inmediato en los límites y funciones disponibles.",
+    a: "Sí. Subís de Básico a Pro, o bajás de Pro a Básico, desde tu panel. Cuando Mercado Pago confirma el pago del plan nuevo, la suscripción anterior se cancela sola y las funciones cambian de inmediato.",
   },
   {
-    q: "¿Qué pasa si supero el límite de turnos del mes?",
-    a: "Cuando alcanzás el límite mensual de tu plan, no se pueden agendar nuevos turnos hasta el mes siguiente o hasta que mejores tu plan. Los turnos ya agendados no se ven afectados.",
+    q: "¿Qué pasa si supero el límite de turnos del plan Básico?",
+    a: "Cuando alcanzás los 10 turnos del mes no se pueden agendar más hasta el mes siguiente o hasta que pases a Pro. Los turnos ya agendados no se ven afectados.",
   },
   {
-    q: "¿Los precios incluen impuestos?",
-    a: "Los precios mostrados están expresados en pesos argentinos. La facturación final puede incluir impuestos según tu condición fiscal.",
+    q: "¿Los precios incluyen impuestos?",
+    a: "Los precios están expresados en pesos argentinos. La facturación final puede incluir impuestos según tu condición fiscal.",
   },
 ]
 
@@ -62,6 +76,12 @@ function formatLimite(valor: number | null, sufijo: string): string {
 export default function PricingPage() {
   return (
     <main className="bg-slate-950 min-h-screen">
+      <script
+        type="application/ld+json"
+        // Generado en el servidor desde datos propios, escapado en serializarJsonLd.
+        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosPricing(FAQS)) }}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-slate-800 py-20 sm:py-28">
         <div className="pointer-events-none absolute inset-0">
@@ -76,7 +96,8 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="mt-5 text-lg text-slate-400 max-w-2xl mx-auto">
-            Empezá gratis y escalá cuando tu clínica crezca. Sin costos ocultos, cancelás cuando quieras.
+            Probá Pro {TRIAL_DIAS} días gratis, sin tarjeta. Después elegís el plan que le queda a tu clínica.
+            Sin costos ocultos, cancelás cuando quieras.
           </p>
         </div>
       </section>
@@ -102,6 +123,7 @@ export default function PricingPage() {
                   {PLAN_LIST.map((plan) => (
                     <th key={plan.id} className="py-4 px-3 text-center text-white font-bold">
                       {plan.nombre}
+                      <span className="block text-xs font-medium text-slate-400">{formatPrecioPlan(plan.id)}/mes</span>
                     </th>
                   ))}
                 </tr>
@@ -129,9 +151,9 @@ export default function PricingPage() {
                     {PLAN_LIST.map((plan) => (
                       <td key={plan.id} className="py-3 px-3 text-center">
                         {plan.features[key] ? (
-                          <Check className="h-4 w-4 text-emerald-400 inline" />
+                          <Check className="h-4 w-4 text-emerald-400 inline" aria-label="Incluido" />
                         ) : (
-                          <Minus className="h-4 w-4 text-slate-600 inline" />
+                          <Minus className="h-4 w-4 text-slate-600 inline" aria-label="No incluido" />
                         )}
                       </td>
                     ))}
@@ -164,12 +186,12 @@ export default function PricingPage() {
       <section className="py-20 border-t border-slate-800 bg-gradient-to-br from-emerald-900/30 via-slate-950 to-teal-900/30">
         <div className="container max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5">
-            Probá VetPanel hoy, gratis
+            Probá VetPanel {TRIAL_DIAS} días gratis
           </h2>
-          <p className="text-slate-400 mb-8">Sin tarjeta, sin compromisos. Empezás en minutos.</p>
-          <Link href="/registro?plan=basico">
+          <p className="text-slate-400 mb-8">Sin tarjeta. Tu clínica online en minutos, con el plan Pro completo.</p>
+          <Link href="/registro">
             <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-10 py-4 text-base font-bold text-white shadow-2xl shadow-emerald-500/30 transition-all hover:scale-105">
-              Empezar gratis
+              Empezar la prueba
               <ArrowRight className="h-5 w-5" />
             </button>
           </Link>

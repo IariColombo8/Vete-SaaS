@@ -4,7 +4,6 @@ import { PLAN_LIST, type PlanDefinition } from "@/lib/plans"
 
 /** Formatea un precio mensual del catálogo a texto para mostrar. */
 function formatPrecio(plan: PlanDefinition): { price: string; period: string } {
-  if (plan.precioMensual <= 0) return { price: "Gratis", period: "" }
   return {
     price: `$${plan.precioMensual.toLocaleString("es-AR")}`,
     period: "/mes",
@@ -13,8 +12,7 @@ function formatPrecio(plan: PlanDefinition): { price: string; period: string } {
 
 const DESCRIPCIONES: Record<string, string> = {
   basico: "Para probar sin compromiso",
-  plus: "Para clínicas en funcionamiento",
-  pro: "Para clínicas que necesitan más",
+  pro: "Para clínicas en funcionamiento",
 }
 
 type PricingVariant = "dark" | "light"
@@ -78,13 +76,12 @@ export function PricingCards({ ctaHref = "/registro", variant = "dark" }: Pricin
   const s = styles(variant)
 
   return (
-    <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+    <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
       {PLAN_LIST.map((plan) => {
-        const highlight = plan.id === "plus"
-        const muted = plan.id === "pro"
+        const highlight = plan.id === "pro"
+        const muted = false
         const { price, period } = formatPrecio(plan)
-        const cta =
-          plan.id === "basico" ? "Empezar gratis" : plan.id === "plus" ? "Contratar Plus" : "Contratar Pro"
+        const cta = plan.id === "pro" ? "Probar Pro 10 días gratis" : "Contratar Básico"
 
         const cardTone = highlight ? s.highlightCard : muted ? s.mutedCard : s.baseCard
         const titleTone = muted ? s.titleMuted : s.title

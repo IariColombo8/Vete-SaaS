@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { ChevronDown, Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react"
+import { ChevronDown, CreditCard, Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -50,6 +50,9 @@ interface Props {
   onQuitar: (lineaId: string) => void
   onVaciar: () => void
   onCobrar: () => void
+  /** La veterinaria tiene una terminal Mercado Pago Point conectada. */
+  pointDisponible: boolean
+  onCobrarPoint: () => void
 }
 
 /** Panel derecho del mostrador: qué se lleva, a quién y cómo paga. */
@@ -79,6 +82,8 @@ export function CarritoPanel({
   onQuitar,
   onVaciar,
   onCobrar,
+  pointDisponible,
+  onCobrarPoint,
 }: Props) {
   const esDebito = medioPago === "debito"
   const esCredito = medioPago === "credito"
@@ -410,6 +415,18 @@ export function CarritoPanel({
               </div>
             )}
           </div>
+        )}
+
+        {pointDisponible && (esDebito || esCredito) && (
+          <Button
+            onClick={onCobrarPoint}
+            disabled={vacio || cobrando || readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : "Mandar el monto a la terminal Point"}
+            className="h-12 w-full bg-sky-600 text-base hover:bg-sky-700"
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            Cobrar con Point
+          </Button>
         )}
 
         <Button

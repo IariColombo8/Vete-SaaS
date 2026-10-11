@@ -62,4 +62,4 @@ Ningún recordatorio llega si el teléfono está mal cargado. Pedí el número c
 
 Los recordatorios de vacunas por WhatsApp son de esas tareas que nadie hace a tiempo si dependen de acordarse. Automatizados, protegen mejor a las mascotas, traen a los clientes de vuelta y te sacan un trabajo repetitivo de encima.
 
-En VetPanel, cuando aplicás una vacuna cargás la fecha de la próxima dosis en la ficha de la mascota, y el sistema le manda el WhatsApp al dueño una semana antes, sin que tengas que acordarte. Además, cada mascota tiene su libreta sanitaria digital, que el dueño puede abrir desde un QR. (Los recordatorios automáticos y el QR dependen del plan.) [Creá tu cuenta gratis](/registro) y probalo con tus pacientes.
+En VetPanel, cuando aplicás una vacuna cargás la fecha de la próxima dosis en la ficha de la mascota, y el sistema le manda el WhatsApp al dueño una semana antes, sin que tengas que acordarte. Además, cada mascota tiene su libreta sanitaria digital, que el dueño puede abrir desde un QR. (Los recordatorios automáticos y el QR dependen del plan.) [Probá VetPanel gratis 10 días](/registro) y probalo con tus pacientes.

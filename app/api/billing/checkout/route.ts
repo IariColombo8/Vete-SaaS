@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server"
-import { getAdminDb, verificarToken } from "@/lib/supabase/admin"
+import { autorizarDueno } from "@/lib/billing/dueno"
 import { crearSuscripcion, isMercadoPagoConfigured } from "@/lib/billing/mercadopago"
 import { getPlan, normalizePlan } from "@/lib/plans"
 
 /**
- * Crea una suscripción de Mercado Pago para mejorar el plan de un tenant.
+ * Crea una suscripción de Mercado Pago para contratar (o cambiar a) un plan.
  *
- * Body: { tenantId, planId }
+ * Body: { tenantId, planId: "basico" | "pro" }
  * Auth: header `Authorization: Bearer <Supabase access token>` — debe ser el
  * veterinario dueño del tenant (o superadmin).
  *
  * Responde { ok, initPoint } para redirigir al checkout de Mercado Pago.
+ *
+ * El id del preapproval nuevo se guarda en `mp_preapproval_pendiente`, nunca
+ * sobre `mp_preapproval_id`: si el tenant ya tiene una suscripción cobrando
+ * (cambio de plan), la vigente sigue hasta que la nueva se autorice; en ese
+ * momento `aplicarEstadoPreapproval` cancela la vieja. Sin vigente, el
+ * pendiente pasa a ser el id principal.
  */
 export async function POST(request: Request) {
   if (!isMercadoPagoConfigured()) {
@@ -20,11 +26,6 @@ export async function POST(request: Request) {
     )
   }
 
-  const admin = getAdminDb()
-  if (!admin) {
-    return NextResponse.json({ ok: false, error: "Supabase Admin no configurado" }, { status: 503 })
-  }
-
   let payload: { tenantId?: string; planId?: string }
   try {
     payload = await request.json()
@@ -32,50 +33,63 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "JSON inválido" }, { status: 400 })
   }
 
-  const tenantId = payload.tenantId
+  const auth = await autorizarDueno(request, payload.tenantId)
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status })
+  const tenantId = payload.tenantId as string
   const planId = normalizePlan(payload.planId)
-  if (!tenantId) {
-    return NextResponse.json({ ok: false, error: "Falta tenantId" }, { status: 400 })
-  }
-
-  // Verificar identidad y rol.
-  const authHeader = request.headers.get("authorization") || ""
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
-  if (!token) return NextResponse.json({ ok: false, error: "Falta token" }, { status: 401 })
-
-  const user = await verificarToken(token)
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "Token inválido" }, { status: 401 })
-  }
-
-  const email = user.email || ""
-  const { data: userData } = await admin
-    .from("usuarios")
-    .select("role, tenant_id")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  const esDueño = userData?.role === "veterinario" && userData?.tenant_id === tenantId
-  const esSuper = userData?.role === "superadmin"
-  if (!esDueño && !esSuper) {
-    return NextResponse.json({ ok: false, error: "Sin permiso sobre este tenant" }, { status: 403 })
-  }
-
   const plan = getPlan(planId)
-  if (plan.precioMensual <= 0) {
-    return NextResponse.json({ ok: false, error: "El plan seleccionado no es pago" }, { status: 400 })
+
+  const { data: tenant, error: errTenant } = await auth.admin
+    .from("tenants")
+    .select("plan, mp_preapproval_id, mp_preapproval_status, email")
+    .eq("slug", tenantId)
+    .maybeSingle()
+  if (errTenant || !tenant) {
+    return NextResponse.json({ ok: false, error: "Veterinaria no encontrada" }, { status: 404 })
+  }
+
+  const suscripcionActiva = tenant.mp_preapproval_status === "authorized"
+  if (suscripcionActiva && normalizePlan(tenant.plan as string) === planId) {
+    return NextResponse.json(
+      { ok: false, error: `Esta veterinaria ya tiene el plan ${plan.nombre} con una suscripción activa` },
+      { status: 409 },
+    )
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
+  const payerEmail = auth.email || (tenant.email as string | null) || ""
+  if (!payerEmail) {
+    return NextResponse.json({ ok: false, error: "Tu cuenta no tiene email" }, { status: 400 })
+  }
+
   try {
     const suscripcion = await crearSuscripcion({
       tenantId,
       planId,
       planNombre: plan.nombre,
       montoMensual: plan.precioMensual,
-      payerEmail: email,
-      backUrl: `${appUrl}/${tenantId}/admin?billing=ok`,
+      payerEmail,
+      backUrl: `${appUrl}/${tenantId}/admin/Dashboard?billing=ok`,
     })
+
+    const { error } = await auth.admin
+      .from("tenants")
+      .update(
+        suscripcionActiva
+          ? { mp_preapproval_pendiente: suscripcion.id }
+          : { mp_preapproval_id: suscripcion.id, mp_preapproval_status: "pending", mp_preapproval_pendiente: null },
+      )
+      .eq("slug", tenantId)
+    if (error) throw error
+
+    await auth.admin.from("billing_eventos").insert({
+      tenant_id: tenantId,
+      origen: "checkout",
+      tipo: "pending",
+      preapproval_id: suscripcion.id,
+      detalle: { usuario: auth.userId, plan: planId, monto: plan.precioMensual, cambioDePlan: suscripcionActiva },
+    })
+
     return NextResponse.json({ ok: true, initPoint: suscripcion.initPoint, id: suscripcion.id })
   } catch (error) {
     console.error("[billing/checkout] Error:", error)

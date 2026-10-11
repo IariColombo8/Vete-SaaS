@@ -14,7 +14,7 @@ export default function ProductosPage() {
       feature="productos"
       titulo="Productos y stock"
       descripcion="Cargá tu mercadería, controlá el stock, marcá ofertas y avisate de los vencimientos."
-      planMinimo="Plus"
+      planMinimo="Pro"
       icono={<Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />}
     >
       <ProductosManagement tenantId={slug} />

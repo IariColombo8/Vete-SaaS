@@ -54,7 +54,7 @@ export function HeroCta() {
     <div className="flex flex-col sm:flex-row gap-4 items-start">
       <Link href="/registro" onClick={() => track("hero_cta_click", { action: "registro" })}>
         <button className="inline-flex items-center gap-2 rounded-2xl bg-coral hover:bg-coral-ink px-7 py-3.5 text-base font-semibold text-white shadow-xl shadow-coral/30 transition-all hover:scale-105">
-          Registrate gratis
+          Probá 10 días gratis
           <ArrowRight className="h-4 w-4" />
         </button>
       </Link>

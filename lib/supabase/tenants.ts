@@ -1,6 +1,6 @@
 import { supabase } from "./config"
 import { throwIfSupabaseError } from "./assert"
-import { planAllows, type Feature } from "../plans"
+import { normalizePlan, planAllows, type Feature } from "../plans"
 import type { Tenant, TenantConfig, TenantFull, TurnoConfig } from "./types"
 
 /**
@@ -17,7 +17,9 @@ type FilaTenant = Record<string, unknown>
 function aConfig(fila: FilaTenant): TenantConfig {
   return {
     nombre: (fila.nombre as string) ?? undefined,
-    plan: (fila.plan as TenantConfig["plan"]) ?? undefined,
+    // La base todavía admite "plus" (plan eliminado): se normaliza acá para
+    // que ningún componente lo vea.
+    plan: fila.plan ? normalizePlan(fila.plan as string) : undefined,
     status: (fila.status as TenantConfig["status"]) ?? undefined,
     adminIds: (fila.admin_ids as string[]) ?? [],
     createdAt: (fila.created_at as string) ?? undefined,
@@ -39,6 +41,7 @@ function aConfig(fila: FilaTenant): TenantConfig {
     emailProvider: (fila.email_provider as TenantConfig["emailProvider"]) ?? "resend",
     onboardingCompletado: (fila.onboarding_completado as boolean) ?? false,
     trialExpiresAt: (fila.trial_expires_at as string) ?? undefined,
+    mpPreapprovalStatus: (fila.mp_preapproval_status as string | null) ?? null,
   }
 }
 
@@ -68,6 +71,7 @@ function aFila(data: Partial<TenantConfig>): Record<string, unknown> {
     emailProvider: "email_provider",
     onboardingCompletado: "onboarding_completado",
     trialExpiresAt: "trial_expires_at",
+    mpPreapprovalStatus: "mp_preapproval_status",
   }
   const fila: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(data)) {

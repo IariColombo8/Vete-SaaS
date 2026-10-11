@@ -213,7 +213,7 @@ app/[slug]/(vetadmin)/productos/page.tsx
 `ajustar_stock`, que valida, actualiza y registra el movimiento en una
 transacción. La única excepción es el stock inicial al dar de alta un producto.
 
-Feature `productos` en `lib/plans.ts`: disponible desde el plan **Plus**.
+Feature `productos` en `lib/plans.ts`: solo plan **Pro** (desde 2026-10 hay dos planes, Básico y Pro; ver "Planes y suscripción").
 Sección `productos` en `lib/auth/permissions.ts`: la ve también el `empleado`.
 
 ### Ventas, caja y remitos
@@ -328,6 +328,61 @@ Los meses se guardan como `date` el día 1 (`"YYYY-MM-01"`, ver `lib/gastos/mese
 - Sección `gastos` en `lib/auth/permissions.ts`: **solo veterinario/superadmin**
   (alquiler y sueldos no son del mostrador). Feature `ventas` (plan Pro).
 
+### Planes y suscripción (autoservicio con Mercado Pago)
+
+Dos planes en `lib/plans.ts`, los dos pagos: **Básico** ($50.000/mes, 10
+turnos/mes, 1 usuario) y **Pro** ($80.000/mes, todo; `PLAN_RECOMENDADO`). No
+hay plan gratis: lo gratis es la prueba de 10 días de Pro (`TRIAL_DIAS`) al
+registrarse. Plus se eliminó: el enum de
+Postgres lo conserva y `normalizePlan("plus")` devuelve `pro`; `aConfig` en
+`lib/supabase/tenants.ts` normaliza al leer, así ningún componente ve "plus".
+Diagnóstico, decisiones y roadmap completo en **`planautomatizacion.md`**.
+
+- **El plan no se toca desde el cliente.** Trigger `tenants_proteger_billing`
+  (`049_billing_autoservicio.sql`): con sesión de usuario, cambiar `plan`,
+  `status`, `trial_expires_at` o `mp_*` falla salvo superadmin. El
+  service_role (webhook, cron, API routes) sí puede. No hay vía desde el
+  navegador: contratar o cambiar de plan siempre pasa por el checkout de MP.
+- **Una sola regla estado → plan**: `lib/billing/aplicar-estado.ts`. La usan
+  el webhook, `estado?sync=1` (vuelta del checkout), `cancelar` y el cron.
+  `authorized` → el plan del `external_reference` + apaga el trial + cancela
+  en MP la suscripción anterior si había (cambio de plan); `cancelled|paused`
+  → sin plan activo: `trial_expires_at = now()` y el panel queda en solo
+  lectura, solo si es la suscripción vigente; `pending` → seguimiento. El
+  checkout de un cambio de plan va a `mp_preapproval_pendiente`, nunca pisa
+  la vigente. Todo queda en `billing_eventos`.
+- `checkout` guarda `mp_preapproval_id` en `pending` al crear la suscripción:
+  así se puede consultar MP aunque el webhook no haya llegado.
+- Webhook valida `x-signature` con `MP_WEBHOOK_SECRET` (sin la variable solo
+  avisa en consola). Cron `/api/cron/billing` concilia contra MP y manda los
+  emails de trial por vencer / vencido (Resend) una sola vez cada uno.
+- Env: `MP_ACCESS_TOKEN` es el token de la cuenta de **VetPanel** (cobra las
+  suscripciones). No confundir con el token de Point de cada veterinaria.
+- UI: Configuración → Plan (`components/billing/plan-management.tsx`), banner
+  de trial vencido con "Suscribirme a Pro" / "Seguir con Básico", Dashboard
+  sincroniza con `?billing=ok`.
+
+### Mercado Pago Point por veterinaria
+
+Cada tenant conecta **su** cuenta de MP (Configuración → Integraciones) y
+cobra débito/crédito mandando el monto a su terminal desde el mostrador.
+API de **Orders** (`/v1/orders`, `type: point`) y `/terminals/v1/*`; la
+"integration-api" de payment intents del kiosko está deprecada.
+
+- El token vive en `mp_point_config` (`050_mp_point.sql`): RLS encendida y
+  **sin policies**. Solo lo leen las rutas de `app/api/mp-point/` con
+  service_role, tras `autorizarStaff` (cobrar) o `autorizarDueno` (configurar).
+  El cliente solo pregunta `mp_point_estado` (¿configurado?, sin token).
+- **La venta se registra cuando la terminal aprueba**, no antes:
+  `CobroPointDialog` crea la orden, consulta cada 2 s y recién con
+  `resultado === "aprobada"` llama a `cobrar(cobroId)`; después
+  `cobros/[id]/vincular` ata `ventas.mp_order_id/mp_payment_id`. Si el pago
+  salió y `registrar_venta` falló, el diálogo lo dice con el id de pago.
+- La terminal tiene que estar en modo **PDV**; `config` POST lo setea y la
+  UI pide reiniciarla. Una sola terminal PDV por punto de venta (regla de MP).
+- Estados de orden interpretados en `interpretarOrden` (`lib/mp-point/api.ts`).
+  Si en producción aparece un `status` no contemplado, ajustar ahí.
+
 **Sidebar del panel.** La barra horizontal se reemplazó por un sidebar lateral
 colapsable (`components/vet-admin-sidebar.tsx` sobre `components/ui/sidebar`).
 Tres grupos con título: **Clínica** (dashboard, turnos, libreta, clientes),
@@ -386,7 +441,7 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 | `/[slug]/admin/Turnos` | Gestión de turnos | ídem |
 | `/[slug]/admin/Libreta` | Libreta sanitaria / historial | ídem |
 | `/[slug]/admin/Clientes` | Listado de clientes | ídem |
-| `/[slug]/admin/Productos` | Productos y stock | ídem + plan Plus |
+| `/[slug]/admin/Productos` | Productos y stock | ídem + plan Pro |
 | `/[slug]/admin/Vender` | Punto de venta (mostrador/POS) | ídem + plan Pro |
 | `/[slug]/admin/Ventas` | Dashboard de ventas y remitos | ídem + plan Pro |
 | `/[slug]/admin/Caja` | Apertura, arqueo y cierre de caja | ídem + plan Pro |

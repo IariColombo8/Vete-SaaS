@@ -3,9 +3,13 @@ import { planAllows, getPlanLimits, normalizePlan, getPlan, getTrialStatus } fro
 
 describe("normalizePlan", () => {
   it("acepta planes válidos", () => {
-    expect(normalizePlan("plus")).toBe("plus")
+    expect(normalizePlan("pro")).toBe("pro")
     expect(normalizePlan("pro")).toBe("pro")
     expect(normalizePlan("basico")).toBe("basico")
+  })
+
+  it("plus (plan eliminado) se trata como pro", () => {
+    expect(normalizePlan("plus")).toBe("pro")
   })
 
   it("cae a básico ante valores inválidos o vacíos", () => {
@@ -21,16 +25,17 @@ describe("planAllows", () => {
     expect(planAllows("basico", "analytics")).toBe(false)
   })
 
-  it("plus habilita whatsapp y analytics pero no qrMascota", () => {
-    expect(planAllows("plus", "whatsapp")).toBe(true)
-    expect(planAllows("plus", "analytics")).toBe(true)
-    expect(planAllows("plus", "qrMascota")).toBe(false)
+  it("básico tampoco tiene facturación ni Point", () => {
+    expect(planAllows("basico", "facturacionElectronica")).toBe(false)
+    expect(planAllows("basico", "mercadoPagoPoint")).toBe(false)
   })
 
   it("pro habilita todo", () => {
     expect(planAllows("pro", "qrMascota")).toBe(true)
     expect(planAllows("pro", "multipleProfesionales")).toBe(true)
     expect(planAllows("pro", "recordatoriosVacunas")).toBe(true)
+    expect(planAllows("pro", "facturacionElectronica")).toBe(true)
+    expect(planAllows("pro", "mercadoPagoPoint")).toBe(true)
   })
 })
 
@@ -48,9 +53,10 @@ describe("getPlanLimits", () => {
 
 describe("getPlan", () => {
   it("devuelve la definición con nombre y precio", () => {
-    expect(getPlan("plus").nombre).toBe("Plus")
-    expect(getPlan("plus").precioMensual).toBeGreaterThan(0)
-    expect(getPlan("basico").precioMensual).toBe(0)
+    expect(getPlan("pro").nombre).toBe("Pro")
+    expect(getPlan("pro").precioMensual).toBeGreaterThan(0)
+    expect(getPlan("basico").precioMensual).toBe(50000)
+    expect(getPlan("pro").precioMensual).toBe(80000)
   })
 })
 

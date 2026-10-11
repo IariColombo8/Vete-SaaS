@@ -20,6 +20,8 @@ import { Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin,
 import { EquipoManagement } from "@/components/admin/equipo-management"
 import { EmailProviderConfig } from "@/components/admin/email-provider-config"
 import { MiFirmaManagement } from "@/components/admin/mi-firma-management"
+import { PlanManagement } from "@/components/billing/plan-management"
+import { MpPointConfig } from "@/components/admin/mp-point-config"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
@@ -37,7 +39,17 @@ export default function ConfiguracionPage() {
   const { toast } = useToast()
   const [loadingData, setLoadingData] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"datos" | "turnos" | "equipo" | "firma">("datos")
+  type TabConfig = "datos" | "turnos" | "equipo" | "firma" | "plan" | "integraciones"
+  const TABS: TabConfig[] = ["datos", "turnos", "equipo", "firma", "plan", "integraciones"]
+  const [activeTab, setActiveTab] = useState<TabConfig>("datos")
+
+  // `?tab=plan` llega desde el banner de trial vencido y los emails de billing.
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab")
+    if (tab && (TABS as string[]).includes(tab)) setActiveTab(tab as TabConfig)
+    // TABS es constante: no hace falta en las dependencias.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Datos de la veterinaria ──
   const [basic, setBasic] = useState({ nombre: "", telefono: "", email: "", direccion: "", ciudad: "" })
@@ -392,12 +404,14 @@ export default function ConfiguracionPage() {
           <p className="text-sm text-muted-foreground">Gestiona los datos de tu veterinaria y la configuracion de turnos.</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "datos" | "turnos" | "equipo" | "firma")}>
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabConfig)}>
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
             <TabsTrigger value="datos">Datos</TabsTrigger>
             <TabsTrigger value="turnos">Turnos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="firma">Mi firma</TabsTrigger>
+            <TabsTrigger value="plan">Plan</TabsTrigger>
+            <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
           </TabsList>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -1289,6 +1303,20 @@ export default function ConfiguracionPage() {
           {/* ═══════════════════════════════════════════════════════════════════ */}
           <TabsContent value="firma" className="space-y-6 mt-6">
             <MiFirmaManagement tenantId={slug} />
+          </TabsContent>
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/*  TAB: PLAN Y SUSCRIPCIÓN                                           */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <TabsContent value="plan" className="space-y-6 mt-6">
+            <PlanManagement tenantId={slug} />
+          </TabsContent>
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/*  TAB: INTEGRACIONES (Mercado Pago Point, y después factura ARCA)   */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <TabsContent value="integraciones" className="space-y-6 mt-6">
+            <MpPointConfig tenantId={slug} />
           </TabsContent>
         </Tabs>
 

@@ -1,85 +1,40 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
-import { motion } from "motion/react"
 import { track } from "@vercel/analytics"
 import { Check, Star } from "lucide-react"
-import { PLAN_LIST, type PlanDefinition } from "@/lib/plans"
+import { PLAN_LIST, TRIAL_DIAS, formatPrecioPlan } from "@/lib/plans"
 import { Reveal } from "@/components/landing/motion"
-
-type Period = "mensual" | "anual"
 
 const DESCRIPCIONES: Record<string, string> = {
   basico: "Para empezar sin compromiso",
-  plus: "Para clínicas en funcionamiento",
-  pro: "Para clínicas que vuelan",
+  pro: "Para clínicas en funcionamiento",
 }
 
-/** Precio a mostrar según periodo. Anual = 10 meses (2 gratis). */
-function priceFor(plan: PlanDefinition, period: Period): { big: string; sub: string } {
-  if (plan.precioMensual <= 0) return { big: "Gratis", sub: "para siempre" }
-  if (period === "mensual") {
-    return { big: `$${plan.precioMensual.toLocaleString("es-AR")}`, sub: "/mes" }
-  }
-  const mesEquivalente = Math.round((plan.precioMensual * 10) / 12)
-  const totalAnual = plan.precioMensual * 10
-  return {
-    big: `$${mesEquivalente.toLocaleString("es-AR")}`,
-    sub: `/mes · $${totalAnual.toLocaleString("es-AR")} al año`,
-  }
-}
-
-function PeriodToggle({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
-  return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-warm-border bg-white p-1">
-      {(["mensual", "anual"] as Period[]).map((p) => (
-        <button
-          key={p}
-          onClick={() => onChange(p)}
-          className="relative rounded-full px-5 py-2 text-sm font-semibold capitalize transition-colors"
-        >
-          {period === p && (
-            <motion.span
-              layoutId="period-pill"
-              className="absolute inset-0 rounded-full bg-coral"
-              transition={{ type: "spring", stiffness: 300, damping: 26 }}
-            />
-          )}
-          <span className={`relative z-10 ${period === p ? "text-white" : "text-ink-muted"}`}>{p}</span>
-          {p === "anual" && (
-            <span className="relative z-10 ml-1.5 rounded-full bg-teal-soft px-1.5 py-0.5 text-[10px] font-bold text-teal">
-              2 meses gratis
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  )
-}
-
+/**
+ * Sección de precios de la landing. Lee el catálogo único (`lib/plans`): los
+ * precios que ve el visitante son los mismos que cobra el checkout.
+ *
+ * Solo precio mensual: el checkout crea suscripciones mensuales. Un plan
+ * anual con descuento está en el backlog (`planautomatizacion.md`); hasta que
+ * exista no se promete.
+ */
 export function PricingSection() {
-  const [period, setPeriod] = useState<Period>("mensual")
-
   return (
     <section id="precios" className="bg-cream py-24">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center mb-10">
           <p className="text-sm font-semibold uppercase tracking-widest text-coral mb-3">Precios</p>
           <h2 className="font-display text-4xl sm:text-5xl font-semibold text-ink">Simple y transparente</h2>
-          <p className="mt-4 text-ink-muted">Empezá gratis. Subís de plan cuando tu clínica crezca.</p>
-          <div className="mt-7 flex justify-center">
-            <PeriodToggle period={period} onChange={setPeriod} />
-          </div>
+          <p className="mt-4 text-ink-muted">
+            {TRIAL_DIAS} días de prueba gratis con Pro, sin tarjeta. Después, el plan que le quede a tu clínica.
+          </p>
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto items-stretch">
           {PLAN_LIST.map((plan, i) => {
-            const highlight = plan.id === "plus"
-            const muted = plan.id === "pro"
-            const { big, sub } = priceFor(plan, period)
-            const cta =
-              plan.id === "basico" ? "Empezar gratis" : `Contratar ${plan.nombre}`
+            const highlight = plan.id === "pro"
+            const cta = plan.id === "pro" ? `Probar Pro ${TRIAL_DIAS} días gratis` : `Contratar ${plan.nombre}`
 
             return (
               <Reveal key={plan.id} delay={i * 0.08}>
@@ -87,8 +42,6 @@ export function PricingSection() {
                   className={`relative flex h-full flex-col rounded-3xl p-8 transition-transform ${
                     highlight
                       ? "border-2 border-coral/40 bg-white shadow-[0_24px_50px_-24px_rgba(255,107,92,0.45)] md:-translate-y-2"
-                      : muted
-                      ? "border border-warm-border bg-white/60"
                       : "border border-warm-border bg-white"
                   }`}
                 >
@@ -101,15 +54,11 @@ export function PricingSection() {
                   )}
 
                   <div className="mb-6">
-                    <h3 className={`font-display text-xl font-semibold mb-1 ${muted ? "text-ink-muted" : "text-ink"}`}>
-                      {plan.nombre}
-                    </h3>
+                    <h3 className="font-display text-xl font-semibold mb-1 text-ink">{plan.nombre}</h3>
                     <p className="text-sm text-ink-muted mb-4">{DESCRIPCIONES[plan.id]}</p>
                     <div className="flex items-baseline gap-1.5">
-                      <span className={`font-display text-4xl font-semibold ${muted ? "text-ink-muted" : "text-ink"}`}>
-                        {big}
-                      </span>
-                      <span className="text-sm text-ink-muted">{sub}</span>
+                      <span className="font-display text-4xl font-semibold text-ink">{formatPrecioPlan(plan.id)}</span>
+                      <span className="text-sm text-ink-muted">/mes</span>
                     </div>
                   </div>
 
@@ -122,16 +71,11 @@ export function PricingSection() {
                     ))}
                   </ul>
 
-                  <Link
-                    href={`/registro?plan=${plan.id}`}
-                    onClick={() => track("plan_select", { plan: plan.id, period })}
-                  >
+                  <Link href={`/registro?plan=${plan.id}`} onClick={() => track("plan_select", { plan: plan.id })}>
                     <button
                       className={`w-full rounded-xl py-3 text-sm font-semibold transition-all ${
                         highlight
                           ? "bg-coral hover:bg-coral-ink text-white shadow-lg shadow-coral/25 hover:scale-[1.02]"
-                          : muted
-                          ? "border border-warm-border bg-cream text-ink-muted hover:text-ink hover:border-coral/30"
                           : "border border-warm-border bg-cream text-ink hover:border-coral/40"
                       }`}
                     >

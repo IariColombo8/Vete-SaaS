@@ -89,7 +89,7 @@ describe("filtrarTenants", () => {
   const lista = [
     tenant({ slug: "zeta", nombre: "Zeta Vet", plan: "pro" }),
     tenant({ slug: "alfa", nombre: "Alfa Vet", status: "pausado" }),
-    tenant({ slug: "beta", nombre: "Beta Vet", plan: "plus" }),
+    tenant({ slug: "beta", nombre: "Beta Vet", plan: "basico" }),
   ]
 
   it("pone las activas primero y ordena alfabéticamente", () => {

@@ -68,4 +68,4 @@ Si además querés que la próxima vacuna se recuerde sola, en otra guía contam
 
 La libreta sanitaria digital no es una moda: es la misma libreta de siempre, pero que no se pierde, siempre se lee bien y está en el bolsillo del dueño cuando la necesita. Para tu veterinaria es menos tiempo buscando datos y clientes más conectados con la salud de su mascota.
 
-En VetPanel, la libreta sanitaria se arma sola a partir de lo que cargás en la historia clínica: vacunas, desparasitaciones, medicamentos, consultas y archivos, y vos elegís qué entradas ve el dueño. Además se puede compartir en PDF o con un QR por mascota (según el plan). [Creá tu cuenta gratis](/registro) y digitalizá la primera libreta hoy.
+En VetPanel, la libreta sanitaria se arma sola a partir de lo que cargás en la historia clínica: vacunas, desparasitaciones, medicamentos, consultas y archivos, y vos elegís qué entradas ve el dueño. Además se puede compartir en PDF o con un QR por mascota (según el plan). [Probá VetPanel gratis 10 días](/registro) y digitalizá la primera libreta hoy.

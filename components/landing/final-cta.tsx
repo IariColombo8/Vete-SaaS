@@ -16,20 +16,20 @@ export function FinalCta() {
       <div className="relative z-10 container max-w-3xl mx-auto px-4 text-center">
         <Reveal>
           <h2 className="font-display text-4xl sm:text-5xl font-semibold text-white mb-6 leading-tight">
-            Volvé a casa a horario.<br className="hidden sm:block" /> Empezá hoy, gratis.
+            Volvé a casa a horario.<br className="hidden sm:block" /> Probalo hoy, gratis.
           </h2>
           <p className="text-lg text-white/85 mb-10">
-            Sin tarjeta, sin instalar nada. Tu clínica online en minutos.
+            10 días de Pro sin tarjeta, sin instalar nada. Tu clínica online en minutos.
           </p>
           <Magnetic strength={0.4}>
             <Link href="/registro" onClick={() => track("hero_cta_click", { action: "registro", from: "final" })}>
               <button className="inline-flex items-center gap-2 rounded-2xl bg-white px-10 py-4 text-base font-bold text-coral shadow-2xl shadow-black/20 transition-all hover:bg-cream">
-                Crear mi clínica gratis
+                Empezar la prueba gratis
                 <ArrowRight className="h-5 w-5" />
               </button>
             </Link>
           </Magnetic>
-          <p className="mt-4 text-xs text-white/70">Plan Básico gratis para siempre · Plus desde $14.999/mes</p>
+          <p className="mt-4 text-xs text-white/70">Después, Básico $50.000/mes o Pro $80.000/mes · Cancelás cuando quieras</p>
         </Reveal>
       </div>
     </section>

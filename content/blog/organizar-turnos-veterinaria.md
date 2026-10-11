@@ -66,4 +66,4 @@ Cinco minutos el lunes alcanzan para ver qué días se llenan y cuáles quedan f
 
 Organizar los turnos no requiere trabajar más, sino sacar de tus manos lo repetitivo: que los horarios disponibles se calculen solos, que el cliente reserve sin escribirte y que los recordatorios salgan sin que tengas que acordarte.
 
-Eso es exactamente lo que hace VetPanel: tu veterinaria con su propia página de turnos online, duración por servicio, días bloqueados, anticipación mínima y recordatorios por WhatsApp, tanto si atendés en consultorio como a domicilio. [Creá tu cuenta gratis](/registro) y en unos minutos tenés tu link para compartir.
+Eso es exactamente lo que hace VetPanel: tu veterinaria con su propia página de turnos online, duración por servicio, días bloqueados, anticipación mínima y recordatorios por WhatsApp, tanto si atendés en consultorio como a domicilio. [Probá VetPanel gratis 10 días](/registro) y en unos minutos tenés tu link para compartir.
