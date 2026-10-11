@@ -17,7 +17,6 @@ export const RUTAS_NO_INDEXABLES = [
   "/api/",
   "/superadmin",
   "/login",
-  "/mis-turnos",
   "/*/admin",
   "/*/onboarding",
   "/*/libreta/",

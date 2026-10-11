@@ -491,7 +491,6 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 | `/[slug]/admin/Gastos` | Gastos fijos mensuales y por única vez | `veterinario`/`superadmin` + plan Pro |
 | `/[slug]/admin/PromosSorteos` | Ofertas, promos y sorteos | ídem |
 | `/[slug]/admin/Configuracion` | Config del tenant | ídem |
-| `/mis-turnos` | Turnos del cliente | Autenticado |
 | `/login` | Google OAuth (Supabase Auth) | Público |
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |

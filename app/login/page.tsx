@@ -112,13 +112,6 @@ export default function LoginPage() {
                   <Store className="mr-2 h-4 w-4" />
                   Registrar mi veterinaria
                 </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 w-full"
-                  onClick={() => router.push("/mis-turnos")}
-                >
-                  Ver mis turnos
-                </Button>
               </div>
             </CardContent>
           </Card>

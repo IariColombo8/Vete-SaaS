@@ -285,7 +285,6 @@ export function Navbar() {
   const isVetPublicRoute = /^\/[^/]+\//.test(pathname) &&
     !pathname.startsWith("/login") &&
     !pathname.startsWith("/registro") &&
-    !pathname.startsWith("/mis-turnos") &&
     !pathname.startsWith("/admin") &&
     !pathname.startsWith("/superadmin")
   if (isVetPublicRoute) return <VetPublicNavbar />

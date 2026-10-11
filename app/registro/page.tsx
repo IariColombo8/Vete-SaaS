@@ -88,7 +88,9 @@ export default function RegistroPage() {
     resolveUserDashboard(user.id)
       .then(({ role, redirectTo }) => {
         if (cancelado) return
-        if (role === "veterinario" || role === "superadmin") {
+        // Quien ya tiene veterinaria va a su panel. Un veterinario sin tenant
+        // (su veterinaria se borró) sigue acá y crea una nueva.
+        if ((role === "veterinario" || role === "superadmin") && redirectTo !== "/registro") {
           router.replace(redirectTo)
           return
         }
