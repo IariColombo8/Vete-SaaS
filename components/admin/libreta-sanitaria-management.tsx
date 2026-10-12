@@ -129,6 +129,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -1660,7 +1661,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     >
                       <Icon className="h-3.5 w-3.5" />
                       <span>{m.nombre} – {m.tipo}</span>
-                      {proximos > 0 && <Badge className="ml-0.5 h-4 min-w-[18px] px-1 text-[10px] bg-amber-500 text-white border-0">{proximos}</Badge>}
+                      {proximos > 0 && <Badge className="ml-0.5 h-4 min-w-[18px] px-1 text-[11px] bg-amber-500 text-white border-0">{proximos}</Badge>}
                     </button>
                   );
                 })}
@@ -1729,8 +1730,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           </button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-[10px]">{visitasReales.length} visitas</Badge>
-                          {proximos > 0 && <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">{proximos} próximo{proximos !== 1 ? "s" : ""}</Badge>}
+                          <Badge variant="secondary" className="text-[11px]">{visitasReales.length} visitas</Badge>
+                          {proximos > 0 && <Badge className="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">{proximos} próximo{proximos !== 1 ? "s" : ""}</Badge>}
                           {clienteExpandido.cliente.id && m.id && (
                             <>
                               <QrLibretaButton
@@ -1826,7 +1827,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {saldoCtaCte > 0 && (
-                              <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">
+                              <Badge className="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0">
                                 Debe {formatCurrency(saldoCtaCte)}
                               </Badge>
                             )}
@@ -1906,7 +1907,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{h.motivo || "Consulta"}</p>
                                           <Badge
                                             variant="secondary"
-                                            className={`text-[9px] px-1.5 py-0 shrink-0 ${h.esPrivada ? "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"}`}
+                                            className={`text-[11px] px-1.5 py-0 shrink-0 ${h.esPrivada ? "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"}`}
                                           >
                                             {h.esPrivada ? "Privada" : "Visible al cliente"}
                                           </Badge>
@@ -2050,8 +2051,28 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
   ) : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-2 sm:p-3 md:p-4">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 h-[calc(100vh-180px)] min-h-[400px]">
+    <div className="space-y-4">
+      <EncabezadoPagina
+        icono={FileText}
+        titulo="Libreta sanitaria"
+        descripcion="Historia clínica, vacunas y turnos de cada mascota. Elegí un cliente para ver su ficha."
+        acciones={
+          <RegistroClienteDialog
+            tenantId={tenantId}
+            modo="admin"
+            onExito={recargarTrasRegistro}
+            trigger={
+              <Button variant="outline">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Registrar cliente y su mascota
+              </Button>
+            }
+          />
+        }
+      />
+      {/* Alto fijo para que lista y ficha scrolleen cada una por su lado:
+          barra superior (56) + padding del main (48) + encabezado (~78) + separación (16). */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 h-[calc(100vh-200px)] min-h-[400px]">
         {/* Panel izquierdo: lista */}
         <div className="md:col-span-4 flex flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
           <div className="p-2 sm:p-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
@@ -2059,20 +2080,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <Input placeholder="Buscar por DNI o nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-8 h-9 text-sm border-slate-300 dark:border-slate-700" />
             </div>
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">{filtered.length} de {total}</p>
-              <RegistroClienteDialog
-                tenantId={tenantId}
-                modo="admin"
-                onExito={recargarTrasRegistro}
-                trigger={
-                  <Button variant="outline" size="sm" className="h-7 text-[11px]">
-                    <UserPlus className="h-3.5 w-3.5 mr-1" />
-                    Registrar cliente y su mascota
-                  </Button>
-                }
-              />
-            </div>
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{filtered.length} de {total} clientes</p>
           </div>
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-2 space-y-1">
@@ -2113,7 +2121,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         <p className="font-medium text-slate-900 dark:text-slate-100 truncate text-sm">{c.nombre}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">DNI {c.dni}</p>
                         <p
-                          className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5"
+                          className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5"
                           title={(resumenMascotas?.names ?? []).join(", ")}
                         >
                           {textoMascotas}
@@ -2203,7 +2211,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
 
       {/* Modal editar cliente */}
       <Dialog open={!!editingCliente} onOpenChange={(open) => !open && setEditingCliente(null)}>
-        <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-slate-900 dark:text-slate-100">
               Editar datos del cliente
@@ -2265,7 +2273,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           setEditEntradaOpen(open);
           if (!open && isMobile && expandedClienteId) setDetailSheetOpen(true);
         }}>
-        <DialogContent className="sm:max-w-lg border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-slate-900 dark:text-slate-100">
               {editTipo === "historia" ? "Editar consulta" : "Editar turno"}
@@ -2420,7 +2428,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
 
       {/* Modal datos generales de la mascota (raza, edad, peso, chip) */}
       <Dialog open={editMascotaDataOpen} onOpenChange={setEditMascotaDataOpen}>
-        <DialogContent className="sm:max-w-sm border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
               Datos de la mascota
@@ -2582,7 +2590,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             if (isMobile && expandedClienteId) setDetailSheetOpen(true);
           }
         }}>
-        <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Syringe className="h-4 w-4 text-emerald-600" /> Vacunas, medicamentos, servicios y desparasitación
@@ -2760,7 +2768,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         placeholder={item.producto?.unidad === "kg" ? "Kg" : "Cant."}
                       />
                       {item.producto && (
-                        <p className="mt-0.5 text-[10px] text-slate-400 text-center">
+                        <p className="mt-0.5 text-[11px] text-slate-400 text-center">
                           {item.producto.unidad === "kg" ? "kg" : "un."} · {formatCurrency(item.producto.precio)}{item.producto.unidad === "kg" ? "/kg" : ""}
                         </p>
                       )}
@@ -2936,7 +2944,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             if (isMobile && expandedClienteId) setDetailSheetOpen(true);
           }
         }}>
-        <DialogContent className="sm:max-w-lg border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
               Nueva entrada
@@ -3075,7 +3083,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             if (isMobile && expandedClienteId) setDetailSheetOpen(true);
           }
         }}>
-        <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               <Paperclip className="h-4 w-4" /> Subir archivo adjunto

@@ -351,7 +351,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   Ver detalles
                 </button>
                 <Dialog open={pendientesDialogOpen} onOpenChange={setPendientesDialogOpen}>
-                  <DialogContent className="sm:max-w-2xl border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+                  <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                       <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
                         Turnos pendientes

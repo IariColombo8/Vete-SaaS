@@ -347,7 +347,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
       />
 
       <Dialog open={pendientesDialogOpen} onOpenChange={setPendientesDialogOpen}>
-        <DialogContent className="sm:max-w-2xl border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
               Turnos pendientes
@@ -408,7 +408,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
       </Dialog>
 
       <Dialog open={!!generateHistoriaTurno} onOpenChange={(open) => !open && setGenerateHistoriaTurno(null)}>
-        <DialogContent className="sm:max-w-lg border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
               Nota clínica rápida

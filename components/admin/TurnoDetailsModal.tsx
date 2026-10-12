@@ -103,7 +103,7 @@ export function TurnoDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4">
           <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
             Detalles del Turno
@@ -133,7 +133,7 @@ export function TurnoDetailsModal({
               </div>
               <div className="space-y-1.5 sm:space-y-2">
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                     Nombre
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -141,7 +141,7 @@ export function TurnoDetailsModal({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
                     <Phone className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Teléfono
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -149,7 +149,7 @@ export function TurnoDetailsModal({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
                     <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Email
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 break-all">
@@ -157,7 +157,7 @@ export function TurnoDetailsModal({
                   </p>
                 </div>
                 <div className="p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600">
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
                     <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-4 lg:w-4" />{" "}
                     Dirección de Atención
                   </p>
@@ -186,7 +186,7 @@ export function TurnoDetailsModal({
               ) : (
                 <div className="space-y-1.5 sm:space-y-2">
                   <div>
-                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                       Nombre
                     </p>
                     <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -195,7 +195,7 @@ export function TurnoDetailsModal({
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     <div>
-                      <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                         Tipo
                       </p>
                       <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">
@@ -203,7 +203,7 @@ export function TurnoDetailsModal({
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                         Raza
                       </p>
                       <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -213,7 +213,7 @@ export function TurnoDetailsModal({
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     <div>
-                      <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                         Edad
                       </p>
                       <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -222,7 +222,7 @@ export function TurnoDetailsModal({
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                         Peso
                       </p>
                       <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -246,7 +246,7 @@ export function TurnoDetailsModal({
             </div>
             <div className="grid gap-2 sm:gap-3 grid-cols-3">
               <div>
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Fecha
                 </p>
                 <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -260,7 +260,7 @@ export function TurnoDetailsModal({
                 </p>
               </div>
               <div>
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Hora
                 </p>
                 <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -268,14 +268,14 @@ export function TurnoDetailsModal({
                 </p>
               </div>
               <div>
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Estado
                 </p>
                 <div className="mt-1">{getEstadoBadge(turno.estado)}</div>
               </div>
             </div>
             <div className="mt-2 sm:mt-3">
-              <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
                 <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Servicio
                 Requerido
               </p>
@@ -287,7 +287,7 @@ export function TurnoDetailsModal({
 
             {turno.profesionalNombre && (
               <div className="mt-2 sm:mt-3">
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Profesional
                 </p>
                 <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -299,14 +299,14 @@ export function TurnoDetailsModal({
             {/* NUEVO: Mostrar vacunas si el servicio es vacunación */}
             {turno.servicio === "vacunacion" && turno.vacunas && turno.vacunas.length > 0 && (
               <div className="mt-2 sm:mt-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-blue-800 dark:text-blue-200 mb-1.5 sm:mb-2 flex items-center gap-1">
+                <p className="text-xs font-bold text-blue-800 dark:text-blue-200 mb-1.5 sm:mb-2 flex items-center gap-1">
                   <Syringe className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Vacunas Seleccionadas
                 </p>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {turno.vacunas.map((vacuna, index) => (
                     <Badge
                       key={index}
-                      className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300 border-0 text-[9px] sm:text-[10px]"
+                      className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300 border-0 text-[11px] sm:text-xs"
                     >
                       {vacuna}
                     </Badge>
@@ -316,7 +316,7 @@ export function TurnoDetailsModal({
             )}
 
             <div className="mt-2 sm:mt-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600">
-              <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
                 <FileText className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Motivo de
                 Consulta
               </p>

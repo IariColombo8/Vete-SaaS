@@ -81,7 +81,7 @@ export default function LibretaDetallesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4">
           <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
             Detalles de la {isHistoria ? "Consulta" : "Visita"}
@@ -104,7 +104,7 @@ export default function LibretaDetallesModal({
               </div>
               <div className="space-y-1.5 sm:space-y-2">
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                     Nombre
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -112,7 +112,7 @@ export default function LibretaDetallesModal({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
                     <Phone className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Teléfono
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -120,7 +120,7 @@ export default function LibretaDetallesModal({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
                     <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Email
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 break-all">
@@ -128,7 +128,7 @@ export default function LibretaDetallesModal({
                   </p>
                 </div>
                 <div className="p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600">
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
                     <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-4 lg:w-4" /> Dirección
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -148,7 +148,7 @@ export default function LibretaDetallesModal({
               </div>
               <div className="space-y-1.5 sm:space-y-2">
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                     Nombre
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -157,7 +157,7 @@ export default function LibretaDetallesModal({
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                       Tipo
                     </p>
                     <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">
@@ -165,7 +165,7 @@ export default function LibretaDetallesModal({
                     </p>
                   </div>
                   <div>
-                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                       Raza
                     </p>
                     <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -175,7 +175,7 @@ export default function LibretaDetallesModal({
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                       Edad
                     </p>
                     <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -183,7 +183,7 @@ export default function LibretaDetallesModal({
                     </p>
                   </div>
                   <div>
-                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                       Peso
                     </p>
                     <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -205,7 +205,7 @@ export default function LibretaDetallesModal({
             </div>
             <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3">
               <div>
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Fecha
                 </p>
                 <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -220,7 +220,7 @@ export default function LibretaDetallesModal({
               </div>
               {horaStr ? (
                 <div>
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1 flex items-center gap-1">
                     <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Hora
                   </p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -231,7 +231,7 @@ export default function LibretaDetallesModal({
             </div>
             {motivo ? (
               <div className="mt-2 sm:mt-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600">
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
                   <FileText className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Motivo
                 </p>
                 <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -243,7 +243,7 @@ export default function LibretaDetallesModal({
               <div className="mt-2 sm:mt-3 space-y-2">
                 {h.aplicaciones.map((a, i) => (
                   <div key={i} className="p-2 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600">
-                    <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                       {a.tipo === "vacuna" ? "Vacuna" : a.tipo === "medicamento" ? "Medicamento" : "Desparasitación"}
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">{a.nombre}</p>
@@ -256,7 +256,7 @@ export default function LibretaDetallesModal({
             ) : (
               <>
                 <div className="mt-2 sm:mt-3">
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                     Diagnóstico
                   </p>
                   <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -264,7 +264,7 @@ export default function LibretaDetallesModal({
                   </p>
                 </div>
                 <div className="mt-2 sm:mt-3">
-                  <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                     Tratamiento
                   </p>
                   <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -275,7 +275,7 @@ export default function LibretaDetallesModal({
             )}
             {proximaVisita ? (
               <div className="mt-2 sm:mt-3">
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Próxima visita
                 </p>
                 <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -289,7 +289,7 @@ export default function LibretaDetallesModal({
             ) : null}
             {observaciones ? (
               <div className="mt-2 sm:mt-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600">
-                <p className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Observaciones
                 </p>
                 <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 whitespace-pre-wrap">

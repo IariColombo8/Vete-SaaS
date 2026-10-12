@@ -29,7 +29,7 @@ export function EditTurnoModal({
   const readOnly = useReadOnly();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4">
           <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
             Editar Turno

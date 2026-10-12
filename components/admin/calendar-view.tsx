@@ -107,7 +107,7 @@ export function CalendarView({
             </span>
             {turnosCount > 0 && !isBlocked && (
               <div
-                className={`mt-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black ${
+                className={`mt-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black ${
                   isSelected
                     ? "bg-white/30 text-white"
                     : ocupacionLevel === "high"
