@@ -60,8 +60,8 @@ const FAQS: { q: string; a: string }[] = [
     a: "Sí. Subís de Básico a Pro, o bajás de Pro a Básico, desde tu panel. Cuando Mercado Pago confirma el pago del plan nuevo, la suscripción anterior se cancela sola y las funciones cambian de inmediato.",
   },
   {
-    q: "¿Qué pasa si supero el límite de turnos del plan Básico?",
-    a: "Cuando alcanzás los 10 turnos del mes no se pueden agendar más hasta el mes siguiente o hasta que pases a Pro. Los turnos ya agendados no se ven afectados.",
+    q: "¿Cuál es la diferencia entre Básico y Pro?",
+    a: "Básico es la clínica completa: turnos ilimitados, clientes, libreta sanitaria, historia clínica y tu página pública, para hasta 2 usuarios. Pro suma el comercio (productos, stock, mostrador, caja, factura electrónica y Mercado Pago Point), WhatsApp con recordatorios automáticos, métricas y usuarios ilimitados.",
   },
   {
     q: "¿Los precios incluyen impuestos?",

@@ -11,7 +11,7 @@ function formatPrecio(plan: PlanDefinition): { price: string; period: string } {
 }
 
 const DESCRIPCIONES: Record<string, string> = {
-  basico: "Para probar sin compromiso",
+  basico: "La clínica completa",
   pro: "Para clínicas en funcionamiento",
 }
 

@@ -34,14 +34,21 @@ export const TOURS: Partial<Record<AdminSection, PasoTour[]>> = {
       element: '[data-tour="comercio"]',
       popover: {
         title: "Comercio",
-        description: "Vender: cobrás en el mostrador y emitís el remito. Productos: cargás tu catálogo y controlás el stock. Ventas: revisás el historial de remitos. Caja: abrís, arqueás y cerrás la caja del día.",
+        description: "En el orden del día: Vender cobra en el mostrador y emite el remito, Caja abre y cierra el turno, Ventas muestra el historial, Cuenta corriente cobra lo que quedó debiendo y Productos maneja el catálogo y el stock.",
       },
     },
     {
-      element: '[data-tour="cuenta"]',
+      element: '[data-tour="online"]',
       popover: {
-        title: "Cuenta",
-        description: "Tienda virtual: tus enlaces para compartir y lo que se ve en tu página pública. Configuración: datos de la clínica, horarios, turnos, equipo y plan.",
+        title: "Online",
+        description: "Lo que ven tus clientes desde afuera: tu página, el link para sacar turno con su QR, y las promos y sorteos que se publican en el catálogo.",
+      },
+    },
+    {
+      element: '[data-tour="administracion"]',
+      popover: {
+        title: "Administración",
+        description: "Gastos del negocio y Configuración: datos de la clínica, horarios y turnos, equipo, plan e integraciones.",
       },
     },
   ],

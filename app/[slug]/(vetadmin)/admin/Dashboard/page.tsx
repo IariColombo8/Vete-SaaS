@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
 const planInfo: Record<string, { label: string; color: string }> = {
-  basico: { label: "Básico (10 turnos/mes)", color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  basico: { label: "Básico",                 color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
   pro:    { label: "Pro",                    color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" },
 }
 

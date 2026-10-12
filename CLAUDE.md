@@ -330,13 +330,23 @@ Los meses se guardan como `date` el día 1 (`"YYYY-MM-01"`, ver `lib/gastos/mese
 
 ### Planes y suscripción (autoservicio con Mercado Pago)
 
-Dos planes en `lib/plans.ts`, los dos pagos: **Básico** ($50.000/mes, 10
-turnos/mes, 1 usuario) y **Pro** ($80.000/mes, todo; `PLAN_RECOMENDADO`). No
+Dos planes en `lib/plans.ts`, los dos pagos: **Básico** ($50.000/mes, la
+clínica completa: turnos ilimitados, hasta 2 usuarios, libreta en PDF y QR) y **Pro** ($80.000/mes, todo; `PLAN_RECOMENDADO`). No
 hay plan gratis: lo gratis es la prueba de 10 días de Pro (`TRIAL_DIAS`) al
 registrarse. Plus se eliminó: el enum de
 Postgres lo conserva y `normalizePlan("plus")` devuelve `pro`; `aConfig` en
 `lib/supabase/tenants.ts` normaliza al leer, así ningún componente ve "plus".
 Diagnóstico, decisiones y roadmap completo en **`planautomatizacion.md`**.
+
+**Básico vs Pro (desde 2026-10-12).** La línea es el comercio y lo que tiene
+costo por uso: Pro suma productos, mostrador, caja, ARCA, Point, promos,
+WhatsApp, métricas y varios profesionales. Los **recordatorios de vacunas
+quedan en Pro** porque salen por WhatsApp (el cron filtra por `whatsapp`):
+habilitarlos sin WhatsApp prometería algo que nunca se envía. Los límites
+tienen espejo en Postgres (`plan_limites`, `054_plan_basico_clinica.sql`):
+`crear_turno` aplica el de turnos y un trigger en `invitaciones` el de
+usuarios (dueño + cada invitación). Si cambian en `lib/plans.ts`, cambiarlos
+también ahí.
 
 - **El plan no se toca desde el cliente.** Trigger `tenants_proteger_billing`
   (`049_billing_autoservicio.sql`): con sesión de usuario, cambiar `plan`,
@@ -427,8 +437,10 @@ directo, la policy `clientes_staff` lo permite), no en el formulario general.
 
 **Sidebar del panel.** La barra horizontal se reemplazó por un sidebar lateral
 colapsable (`components/vet-admin-sidebar.tsx` sobre `components/ui/sidebar`).
-Tres grupos con título: **Clínica** (dashboard, turnos, libreta, clientes),
-**Comercio** (vender, productos, ventas, caja) y **Cuenta** (tienda virtual, configuración). Un grupo
+Cuatro grupos con título: **Clínica** (dashboard, turnos, libreta, clientes),
+**Comercio** en el orden del día (vender, caja, ventas, cuenta corriente,
+productos), **Online** (tienda virtual, promos y sorteos) y **Administración**
+(gastos, configuración). Un grupo
 cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 
 - `collapsible="icon"`: plegado deja los iconos, con el nombre en tooltip.
@@ -498,7 +510,7 @@ pueden reservar, no son solo vidriera.
 | `/[slug]/admin/Gastos` | Gastos fijos mensuales y por única vez | `veterinario`/`superadmin` + plan Pro |
 | `/[slug]/admin/PromosSorteos` | Ofertas, promos y sorteos | ídem |
 | `/[slug]/admin/TiendaVirtual` | Web pública: enlaces + QR, logo, portada, fotos, servicios, ubicación | `veterinario`/`superadmin` |
-| `/[slug]/admin/Configuracion` | Config del tenant (datos, horarios, turnos, equipo, plan, integraciones) | ídem |
+| `/[slug]/admin/Configuracion` | Pestañas: Clínica (datos), Turnos (horarios, anticipación, mascotas, servicios, vacunas, profesionales), Equipo, Mi firma, Plan, Integraciones (Point, ARCA, Google Calendar, email) | ídem |
 | `/login` | Google OAuth (Supabase Auth) | Público |
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |

@@ -7,7 +7,7 @@ import { PLAN_LIST, TRIAL_DIAS, formatPrecioPlan } from "@/lib/plans"
 import { Reveal } from "@/components/landing/motion"
 
 const DESCRIPCIONES: Record<string, string> = {
-  basico: "Para empezar sin compromiso",
+  basico: "La clínica completa",
   pro: "Para clínicas en funcionamiento",
 }
 

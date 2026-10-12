@@ -12,8 +12,11 @@ import {
   createInvitacion,
   getInvitacionesByTenant,
   deleteInvitacion,
+  getTenantConfig,
   type Invitacion,
 } from "@/lib/supabase/queries"
+import { getPlan } from "@/lib/plans"
+import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
 import { useAuth } from "@/hooks/use-auth"
 import { Loader2, Plus, Trash2, UserPlus, Mail, Clock, CheckCircle2 } from "lucide-react"
 
@@ -30,11 +33,20 @@ export function EquipoManagement({ tenantId }: { tenantId: string }) {
   const [saving, setSaving] = useState(false)
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<"veterinario" | "empleado">("empleado")
+  const [plan, setPlan] = useState<string | undefined>(undefined)
+
+  // Cada invitación ocupa un lugar (pendiente o aceptada) y el dueño ocupa
+  // otro. Borrar una invitación pendiente libera el lugar.
+  const maxUsuarios = getPlan(plan).limits.maxUsuarios
+  const lugaresUsados = invitaciones.length + 1
+  const topeAlcanzado = maxUsuarios !== null && lugaresUsados >= maxUsuarios
 
   const cargar = async () => {
     setLoading(true)
     try {
-      setInvitaciones(await getInvitacionesByTenant(tenantId))
+      const [invs, cfg] = await Promise.all([getInvitacionesByTenant(tenantId), getTenantConfig(tenantId)])
+      setInvitaciones(invs)
+      setPlan(cfg?.plan)
     } catch (error) {
       console.error("Error cargando invitaciones:", error)
     } finally {
@@ -53,6 +65,15 @@ export function EquipoManagement({ tenantId }: { tenantId: string }) {
       toast({ title: "Email inválido", description: "Ingresá un email válido.", variant: "destructive" })
       return
     }
+    const yaInvitado = invitaciones.some((i) => i.email.toLowerCase() === emailNormalizado)
+    if (topeAlcanzado && !yaInvitado) {
+      toast({
+        title: "Llegaste al límite de usuarios",
+        description: `Tu plan ${getPlan(plan).nombre} incluye hasta ${maxUsuarios} usuarios. Pasá a Pro para sumar más.`,
+        variant: "destructive",
+      })
+      return
+    }
     setSaving(true)
     try {
       await createInvitacion(tenantId, emailNormalizado, role, user?.id)
@@ -64,7 +85,12 @@ export function EquipoManagement({ tenantId }: { tenantId: string }) {
       await cargar()
     } catch (error) {
       console.error("Error creando invitación:", error)
-      toast({ title: "Error", description: "No se pudo crear la invitación.", variant: "destructive" })
+      const porLimite = error instanceof Error && error.message.includes("PLAN_USER_LIMIT")
+      toast({
+        title: porLimite ? "Llegaste al límite de usuarios" : "Error",
+        description: porLimite ? "Tu plan no admite más usuarios. Pasá a Pro para sumar más." : "No se pudo crear la invitación.",
+        variant: "destructive",
+      })
     } finally {
       setSaving(false)
     }
@@ -94,6 +120,24 @@ export function EquipoManagement({ tenantId }: { tenantId: string }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        {maxUsuarios !== null && !loading && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm ${
+            topeAlcanzado
+              ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+              : "bg-muted/30"
+          }`}>
+            <div>
+              <p className="font-semibold">Usuarios: {lugaresUsados} de {maxUsuarios}</p>
+              <p className="text-xs text-muted-foreground">
+                {topeAlcanzado
+                  ? `Tu plan ${getPlan(plan).nombre} no admite más usuarios. Con Pro son ilimitados.`
+                  : "Contás vos y cada persona que invites."}
+              </p>
+            </div>
+            {topeAlcanzado && <UpgradePlanButton tenantId={tenantId} planActual={plan} />}
+          </div>
+        )}
+
         {/* Formulario de invitación */}
         <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div className="space-y-1.5">

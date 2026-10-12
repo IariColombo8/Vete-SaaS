@@ -261,12 +261,12 @@ export default function ConfiguracionPage() {
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold">Configuracion</h1>
-          <p className="text-sm text-muted-foreground">Gestiona los datos de tu veterinaria y la configuracion de turnos.</p>
+          <p className="text-sm text-muted-foreground">Datos de la clínica, cómo se toman los turnos, tu equipo, tu plan y las conexiones con otros servicios.</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabConfig)}>
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
-            <TabsTrigger value="datos">Datos</TabsTrigger>
+            <TabsTrigger value="datos">Clínica</TabsTrigger>
             <TabsTrigger value="turnos">Turnos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="firma">Mi firma</TabsTrigger>
@@ -287,7 +287,7 @@ export default function ConfiguracionPage() {
               <Store className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold">Logo, portada, servicios y ubicación</p>
-                <p className="text-xs text-muted-foreground">Lo que se ve en tu página pública ahora se edita en Tienda virtual.</p>
+                <p className="text-xs text-muted-foreground">Lo que se ve en tu página pública se edita en Tienda virtual.</p>
               </div>
               <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </Link>
@@ -328,6 +328,13 @@ export default function ConfiguracionPage() {
                 </form>
               </CardContent>
             </Card>
+
+          </TabsContent>
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/*  TAB: CONFIGURACION DE TURNOS                                      */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <TabsContent value="turnos" className="space-y-6 mt-6">
 
             {/* ── HORARIOS ── */}
             <Card>
@@ -474,45 +481,6 @@ export default function ConfiguracionPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* ── GOOGLE CALENDAR ── */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Google Calendar</CardTitle>
-                <CardDescription>
-                  ID del calendario donde se registran los turnos automáticamente.
-                  Lo encontrás en Google Calendar → Configuración del calendario → ID del calendario.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Input
-                  placeholder="Ej: clinica@gmail.com o xxxxxxxx@group.calendar.google.com"
-                  value={calendarIdField}
-                  onChange={e => setCalendarIdField(e.target.value)}
-                  className="font-mono text-sm"
-                />
-                <Button
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
-                  disabled={saving === "calendar"}
-                  onClick={() => saveDatos("calendar", { calendarId: calendarIdField.trim() || null })}
-                  type="button"
-                >
-                  {saving === "calendar"
-                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
-                    : <><Save className="mr-2 h-4 w-4" />Guardar</>
-                  }
-                </Button>
-              </CardContent>
-            </Card>
-
-            <EmailProviderConfig slug={slug} emailProvider={emailProvider} onProviderChange={setEmailProvider} />
-
-          </TabsContent>
-
-          {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/*  TAB: CONFIGURACION DE TURNOS                                      */}
-          {/* ═══════════════════════════════════════════════════════════════════ */}
-          <TabsContent value="turnos" className="space-y-6 mt-6">
 
             {/* ── MASCOTAS QUE ATIENDEN ── */}
             <Card>
@@ -826,11 +794,42 @@ export default function ConfiguracionPage() {
           </TabsContent>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/*  TAB: INTEGRACIONES (Mercado Pago Point, y después factura ARCA)   */}
+          {/*  TAB: INTEGRACIONES (Point, ARCA, Google Calendar, email)          */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
           <TabsContent value="integraciones" className="space-y-6 mt-6">
             <MpPointConfig tenantId={slug} />
             <FacturacionConfig tenantId={slug} />
+            {/* ── GOOGLE CALENDAR ── */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Google Calendar</CardTitle>
+                <CardDescription>
+                  ID del calendario donde se registran los turnos automáticamente.
+                  Lo encontrás en Google Calendar → Configuración del calendario → ID del calendario.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input
+                  placeholder="Ej: clinica@gmail.com o xxxxxxxx@group.calendar.google.com"
+                  value={calendarIdField}
+                  onChange={e => setCalendarIdField(e.target.value)}
+                  className="font-mono text-sm"
+                />
+                <Button
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
+                  disabled={saving === "calendar"}
+                  onClick={() => saveDatos("calendar", { calendarId: calendarIdField.trim() || null })}
+                  type="button"
+                >
+                  {saving === "calendar"
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                    : <><Save className="mr-2 h-4 w-4" />Guardar</>
+                  }
+                </Button>
+              </CardContent>
+            </Card>
+
+            <EmailProviderConfig slug={slug} emailProvider={emailProvider} onProviderChange={setEmailProvider} />
           </TabsContent>
         </Tabs>
 

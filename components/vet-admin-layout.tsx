@@ -42,6 +42,7 @@ function sectionFromPath(pathname: string, slug: string): AdminSection | null {
   if (resto.startsWith("Caja")) return "caja"
   if (resto.startsWith("CuentaCorriente")) return "cuentaCorriente"
   if (resto.startsWith("Gastos")) return "gastos"
+  if (resto.startsWith("PromosSorteos")) return "promosSorteos"
   if (resto.startsWith("Dashboard")) return "dashboard"
   return null
 }

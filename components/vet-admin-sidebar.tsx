@@ -29,9 +29,13 @@ interface ItemNav {
 }
 
 /**
- * El panel hace dos trabajos distintos —atender animales y vender mercadería— y
- * mezclarlos en una lista sola hacía que "Turnos" y "Vender" parecieran lo
- * mismo. Cada grupo lleva su título; colapsado, los títulos se ocultan solos y
+ * Cuatro bloques, uno por tipo de trabajo:
+ * - Clínica: atender animales.
+ * - Comercio: el mostrador, en el orden del día (vender → caja → ventas →
+ *   cobrar cuentas → reponer productos).
+ * - Online: lo que ve el cliente desde afuera (página, catálogo, promos).
+ * - Administración: lo del dueño (gastos, configuración).
+ * Cada grupo lleva su título; colapsado, los títulos se ocultan solos y
  * quedan los iconos separados por bloque.
  */
 function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNav[] }[] {
@@ -49,21 +53,27 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
       titulo: "Comercio",
       tour: "comercio",
       items: [
-        { href: `/${slug}/admin/Vender`,          label: "Vender",     icon: ShoppingCart, section: "pos" },
-        { href: `/${slug}/admin/Productos`,       label: "Productos",  icon: Package,      section: "productos" },
-        { href: `/${slug}/admin/Ventas`,          label: "Ventas",     icon: Receipt,      section: "ventas" },
-        { href: `/${slug}/admin/Caja`,            label: "Caja",       icon: Wallet,       section: "caja" },
-        { href: `/${slug}/admin/CuentaCorriente`, label: "Cta Cte",    icon: Landmark,     section: "cuentaCorriente" },
-        { href: `/${slug}/admin/Gastos`,          label: "Gastos",     icon: HandCoins,    section: "gastos" },
-        { href: `/${slug}/admin/PromosSorteos`,   label: "Promos",     icon: Gift,         section: "promosSorteos" },
+        { href: `/${slug}/admin/Vender`,          label: "Vender",           icon: ShoppingCart, section: "pos" },
+        { href: `/${slug}/admin/Caja`,            label: "Caja",             icon: Wallet,       section: "caja" },
+        { href: `/${slug}/admin/Ventas`,          label: "Ventas",           icon: Receipt,      section: "ventas" },
+        { href: `/${slug}/admin/CuentaCorriente`, label: "Cuenta corriente", icon: Landmark,     section: "cuentaCorriente" },
+        { href: `/${slug}/admin/Productos`,       label: "Productos",        icon: Package,      section: "productos" },
       ],
     },
     {
-      titulo: "Cuenta",
-      tour: "cuenta",
+      titulo: "Online",
+      tour: "online",
       items: [
-        { href: `/${slug}/admin/TiendaVirtual`, label: "Tienda virtual", icon: Store,    section: "tiendaVirtual" },
-        { href: `/${slug}/admin/Configuracion`, label: "Configuración",  icon: Settings, section: "configuracion" },
+        { href: `/${slug}/admin/TiendaVirtual`, label: "Tienda virtual",   icon: Store, section: "tiendaVirtual" },
+        { href: `/${slug}/admin/PromosSorteos`, label: "Promos y sorteos", icon: Gift,  section: "promosSorteos" },
+      ],
+    },
+    {
+      titulo: "Administración",
+      tour: "administracion",
+      items: [
+        { href: `/${slug}/admin/Gastos`,        label: "Gastos",        icon: HandCoins, section: "gastos" },
+        { href: `/${slug}/admin/Configuracion`, label: "Configuración", icon: Settings,  section: "configuracion" },
       ],
     },
   ]

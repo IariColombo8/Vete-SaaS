@@ -6,8 +6,10 @@
  * extra por cada chequeo de permiso. El plan de cada tenant sí vive en la base
  * (`tenants.plan`).
  *
- * Dos planes, los dos pagos: **Básico** ($50.000/mes) y **Pro** ($80.000/mes,
- * todo). No hay plan gratis: lo gratis es la **prueba de 10 días de Pro** al
+ * Dos planes, los dos pagos: **Básico** ($50.000/mes, la clínica completa) y
+ * **Pro** ($80.000/mes, clínica + comercio + WhatsApp, todo). La línea que los
+ * separa es el comercio (productos, mostrador, caja, ARCA, Point, promos) y lo
+ * que tiene costo por uso (WhatsApp y los recordatorios, que salen por ahí). No hay plan gratis: lo gratis es la **prueba de 10 días de Pro** al
  * registrarse, sin tarjeta. El plan intermedio "Plus" se eliminó al pasar a
  * suscripción autoservicio; el enum `tenant_plan` de Postgres conserva el
  * valor y `normalizePlan` lo mapea a `pro` para que el resto de la app nunca
@@ -75,14 +77,21 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     id: "basico",
     nombre: "Básico",
     precioMensual: 50000,
-    limits: { maxTurnosMes: 10, maxUsuarios: 1 },
-    features: { ...ALL_FEATURES_OFF },
+    // Hasta 2026-10 tenía tope de 10 turnos/mes y 1 usuario: no alcanzaba ni
+    // para una semana de una clínica chica, así que nadie lo podía usar.
+    limits: { maxTurnosMes: null, maxUsuarios: 2 },
+    features: {
+      ...ALL_FEATURES_OFF,
+      multiUsuario: true,
+      pdfLibreta: true,
+      qrMascota: true,
+    },
     highlights: [
-      "Hasta 10 turnos por mes",
-      "Página pública de la veterinaria",
-      "Gestión de turnos y clientes",
-      "Libreta sanitaria e historia clínica",
-      "1 usuario",
+      "Turnos ilimitados",
+      "Página pública y link para sacar turno",
+      "Clientes, libreta sanitaria e historia clínica",
+      "Libreta en PDF y QR por mascota",
+      "Hasta 2 usuarios",
     ],
   },
   pro: {

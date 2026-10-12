@@ -20,9 +20,21 @@ describe("normalizePlan", () => {
 })
 
 describe("planAllows", () => {
-  it("básico no tiene features pagas", () => {
+  it("básico no tiene WhatsApp, métricas ni comercio", () => {
     expect(planAllows("basico", "whatsapp")).toBe(false)
     expect(planAllows("basico", "analytics")).toBe(false)
+    expect(planAllows("basico", "productos")).toBe(false)
+    expect(planAllows("basico", "ventas")).toBe(false)
+  })
+
+  it("básico incluye libreta en PDF, QR por mascota y más de un usuario", () => {
+    expect(planAllows("basico", "pdfLibreta")).toBe(true)
+    expect(planAllows("basico", "qrMascota")).toBe(true)
+    expect(planAllows("basico", "multiUsuario")).toBe(true)
+  })
+
+  it("básico no promete recordatorios de vacunas: salen por WhatsApp", () => {
+    expect(planAllows("basico", "recordatoriosVacunas")).toBe(planAllows("basico", "whatsapp"))
   })
 
   it("básico tampoco tiene facturación ni Point", () => {
@@ -40,8 +52,8 @@ describe("planAllows", () => {
 })
 
 describe("getPlanLimits", () => {
-  it("básico limita a 10 turnos/mes y 1 usuario", () => {
-    expect(getPlanLimits("basico")).toEqual({ maxTurnosMes: 10, maxUsuarios: 1 })
+  it("básico tiene turnos ilimitados y hasta 2 usuarios", () => {
+    expect(getPlanLimits("basico")).toEqual({ maxTurnosMes: null, maxUsuarios: 2 })
   })
 
   it("pro es ilimitado (null)", () => {

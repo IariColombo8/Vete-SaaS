@@ -25,8 +25,9 @@ inicial, lo que ya se hizo y el diseño de lo que falta. Fecha de inicio:
 
 ### Decisiones
 
-- **Dos planes, los dos pagos**: Básico ($50.000/mes, 10 turnos/mes, 1
-  usuario) y **Pro** ($80.000/mes, todo). No hay plan gratis: lo gratis es la
+- **Dos planes, los dos pagos**: Básico ($50.000/mes, la clínica completa:
+  turnos ilimitados, hasta 2 usuarios — antes 10 turnos/mes y 1 usuario,
+  cambiado el 2026-10-12) y **Pro** ($80.000/mes, todo). No hay plan gratis: lo gratis es la
   prueba de 10 días de Pro. Plus se eliminó: con dos opciones la decisión es
   simple; con tres hay que comparar grillas. El enum de Postgres conserva
   `plus`; `normalizePlan("plus")` devuelve `pro` y `aConfig` normaliza al
@@ -237,9 +238,8 @@ plan Pro ("factura en un clic").
 1. **Onboarding guiado para Pro**: checklist en el Dashboard ("conectá tu
    Point", "cargá 5 productos", "invitá a tu equipo") con progreso. Sube la
    conversión del trial.
-2. **Límite de usuarios del plan Básico** aplicado en invitaciones
-   (`maxUsuarios`): hoy el límite de turnos se aplica server-side
-   (`044_crear_turno_limite_server_side.sql`) pero el de usuarios no.
+2. ~~**Límite de usuarios del plan Básico** aplicado en invitaciones~~ —
+   hecho en `054_plan_basico_clinica.sql` (trigger) + formulario de Equipo.
 3. **Pausa por falta de pago**: MP pasa la suscripción a `paused` tras varios
    rechazos; hoy eso baja a Básico. Alternativa: 7 días de gracia con banner
    "actualizá tu tarjeta" antes de bajar. Decidir con datos.
