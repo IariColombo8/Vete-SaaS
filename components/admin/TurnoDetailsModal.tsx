@@ -23,19 +23,9 @@ import {
   FileText,
   Sparkles,
   Syringe,
-  Dog,
-  Cat,
-  Bird,
-  PawPrint,
 } from "lucide-react";
 
-function getMascotaIcon(tipo: string) {
-  const t = tipo?.toLowerCase() || "";
-  if (t.includes("perro") || t.includes("dog")) return Dog;
-  if (t.includes("gato") || t.includes("cat")) return Cat;
-  if (t.includes("ave") || t.includes("bird") || t.includes("pájaro")) return Bird;
-  return PawPrint;
-}
+import { IconoMascota } from "@/components/admin/icono-mascota";
 
 interface TurnoDetailsModalProps {
   open: boolean;
@@ -171,10 +161,7 @@ export function TurnoDetailsModal({
             {/* Mascota */}
             <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-                {(() => {
-                  const MascotaIcon = getMascotaIcon(turno.mascota?.tipo ?? "");
-                  return <MascotaIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700 dark:text-slate-300" />;
-                })()}
+                <IconoMascota tipo={turno.mascota?.tipo} className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700 dark:text-slate-300" />
                 <h3 className="font-bold text-xs sm:text-sm lg:text-base text-slate-900 dark:text-slate-100">
                   Información de la Mascota
                 </h3>

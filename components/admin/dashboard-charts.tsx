@@ -60,6 +60,31 @@ interface DashboardChartsProps {
   onNavigateToTurnos?: (fecha?: string) => void;
 }
 
+interface TooltipGraficoProps {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: string | number;
+}
+
+// Fuera del componente: definido adentro, React lo trataba como un componente
+// nuevo en cada render y desmontaba el tooltip mientras el mouse se movía.
+function TooltipGrafico({ active, payload, label }: TooltipGraficoProps) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border bg-popover p-3 shadow-md">
+      <p className="text-sm font-bold text-popover-foreground mb-1">{label}</p>
+      {payload.map((entry, index) => (
+        <p key={index} className="text-xs text-muted-foreground">
+          {entry.name}:{" "}
+          <span className="font-bold" style={{ color: entry.color }}>
+            {entry.value}
+          </span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChartsProps) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -260,29 +285,6 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
     .sort((a, b) => b.cantidad - a.cantidad)
     .slice(0, 6);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-600 rounded-2xl shadow-2xl p-4">
-          <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">
-            {label}
-          </p>
-          {payload.map((entry: any, index: number) => (
-            <p
-              key={index}
-              className="text-xs text-slate-600 dark:text-slate-300"
-            >
-              {entry.name}:{" "}
-              <span className="font-bold" style={{ color: entry.color }}>
-                {entry.value}
-              </span>
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
 
   return (
@@ -582,7 +584,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   axisLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}
                   tickLine={false}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<TooltipGrafico />} />
                 <Area
                   type="monotone"
                   dataKey="cantidad"
@@ -646,7 +648,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   dataKey="value"
                   cornerRadius={10}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<TooltipGrafico />} />
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-3 gap-3 mt-4 w-full">
@@ -723,7 +725,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                     />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<TooltipGrafico />} />
                 <Legend
                   layout="vertical"
                   verticalAlign="middle"
@@ -797,7 +799,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   axisLine={{ stroke: "#cbd5e1" }}
                   tickLine={false}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<TooltipGrafico />} />
                 <Bar
                   dataKey="cantidad"
                   fill="url(#barGradient)"
@@ -858,7 +860,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   tickLine={false}
                   domain={[0, "dataMax + 1"]}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<TooltipGrafico />} />
                 <Area
                   type="monotone"
                   dataKey="cantidad"
@@ -919,7 +921,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.3} horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={false} allowDecimals={false} />
                   <YAxis type="category" dataKey="servicio" width={110} tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<TooltipGrafico />} />
                   <Bar dataKey="cantidad" fill="#f59e0b" radius={[0, 8, 8, 0]} barSize={22} />
                 </BarChart>
               </ResponsiveContainer>

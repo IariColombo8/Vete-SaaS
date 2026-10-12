@@ -73,9 +73,9 @@ function SaasNavbar() {
 
           {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-6">
-            <a href="/#caracteristicas" className={`text-sm transition-colors ${t.link}`}>
+            <Link href="/#caracteristicas" className={`text-sm transition-colors ${t.link}`}>
               Características
-            </a>
+            </Link>
             {/* Precios: comentado junto con la seccion de la landing, pendiente definir planes.
             <a href="/#precios" className={`text-sm transition-colors ${t.link}`}>
               Precios
@@ -129,9 +129,9 @@ function SaasNavbar() {
 
         {mobileOpen && (
           <div className={`border-t py-4 md:hidden flex flex-col gap-2 ${t.mobileBorder}`}>
-            <a href="/#caracteristicas" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
+            <Link href="/#caracteristicas" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Características
-            </a>
+            </Link>
             {/* Precios: comentado junto con la seccion de la landing, pendiente definir planes.
             <a href="/#precios" className={`px-3 py-2 text-sm ${t.link}`} onClick={() => setMobileOpen(false)}>
               Precios

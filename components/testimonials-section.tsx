@@ -107,7 +107,7 @@ export function TestimonialsSection() {
                   {/* Testimonial text */}
                   <blockquote className="relative">
                     <p className="text-[10px] leading-relaxed text-foreground/90 transition-colors duration-300 group-hover:text-foreground italic line-clamp-4 sm:text-xs sm:line-clamp-5 md:text-sm md:line-clamp-none lg:text-base">
-                      "{testimonial.text}"
+                      “{testimonial.text}”
                     </p>
                   </blockquote>
 

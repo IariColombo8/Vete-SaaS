@@ -191,9 +191,9 @@ export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado, onEditar
       <AlertDialog open={confirmando} onOpenChange={setConfirmando}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Sortear "{sorteo.nombre}"?</AlertDialogTitle>
+            <AlertDialogTitle>¿Sortear “{sorteo.nombre}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción es definitiva: se van a elegir los ganadores de cada premio y el sorteo pasa a "finalizado".
+              Esta acción es definitiva: se van a elegir los ganadores de cada premio y el sorteo pasa a “finalizado”.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -206,7 +206,7 @@ export function SorteoDetalle({ tenantId, sorteo, onVolver, onSorteado, onEditar
       <AlertDialog open={cancelando} onOpenChange={setCancelando}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Cancelar "{sorteo.nombre}"?</AlertDialogTitle>
+            <AlertDialogTitle>¿Cancelar “{sorteo.nombre}”?</AlertDialogTitle>
             <AlertDialogDescription>
               Se borra el sorteo y sus premios. Esta acción no se puede deshacer.
             </AlertDialogDescription>
