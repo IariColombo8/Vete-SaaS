@@ -24,20 +24,6 @@ export const TOURS: Partial<Record<AdminSection, PasoTour[]>> = {
       },
     },
     {
-      element: '[data-tour="accesos"]',
-      popover: {
-        title: "Accesos rápidos",
-        description: "Desde acá llegás a turnos, libreta sanitaria, clientes y configuración.",
-      },
-    },
-    {
-      element: '[data-tour="enlaces"]',
-      popover: {
-        title: "Tus enlaces",
-        description: "Compartí tu página pública y el link para sacar turnos con tus clientes.",
-      },
-    },
-    {
       element: '[data-tour="metricas"]',
       popover: {
         title: "Métricas",
@@ -55,7 +41,17 @@ export const TOURS: Partial<Record<AdminSection, PasoTour[]>> = {
       element: '[data-tour="cuenta"]',
       popover: {
         title: "Cuenta",
-        description: "Configurá los datos de tu clínica, horarios, servicios y mascotas que atendés.",
+        description: "Tienda virtual: tus enlaces para compartir y lo que se ve en tu página pública. Configuración: datos de la clínica, horarios, turnos, equipo y plan.",
+      },
+    },
+  ],
+
+  tiendaVirtual: [
+    {
+      element: '[data-tour="tienda-enlaces"]',
+      popover: {
+        title: "Tus enlaces",
+        description: "Copiá el link de tu página o del turnero para mandarlo por WhatsApp, o descargá el QR para imprimirlo en el mostrador.",
       },
     },
   ],

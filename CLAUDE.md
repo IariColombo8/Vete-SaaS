@@ -428,7 +428,7 @@ directo, la policy `clientes_staff` lo permite), no en el formulario general.
 **Sidebar del panel.** La barra horizontal se reemplazó por un sidebar lateral
 colapsable (`components/vet-admin-sidebar.tsx` sobre `components/ui/sidebar`).
 Tres grupos con título: **Clínica** (dashboard, turnos, libreta, clientes),
-**Comercio** (vender, productos, ventas, caja) y **Cuenta** (configuración). Un grupo
+**Comercio** (vender, productos, ventas, caja) y **Cuenta** (tienda virtual, configuración). Un grupo
 cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 
 - `collapsible="icon"`: plegado deja los iconos, con el nombre en tooltip.
@@ -438,6 +438,13 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
   la página nueva sin poder verla.
 - El `main` ya no tiene `container mx-auto`: con el menú plegado el contenido
   tiene que aprovechar el ancho liberado, sobre todo el mostrador.
+
+**Tienda virtual** (`components/admin/tienda-virtual-management.tsx`): todo lo
+que ve el cliente en la web pública — enlaces para compartir (con QR
+descargable), logo, portada y fotos, servicios y ubicación/modalidad. Se sacó
+del Dashboard (que quedó en plan + métricas) y de Configuración → Datos. Los
+**horarios quedan en Configuración** a propósito: también definen qué turnos se
+pueden reservar, no son solo vidriera.
 
 **`components/navbar.tsx` tiene que conocer las rutas del panel.** Su regex
 `isVetAdmin` decide si el navbar público se dibuja o no; si falta una ruta de
@@ -490,7 +497,8 @@ cuyos items no pasan el filtro de rol desaparece entero, título incluido.
 | `/[slug]/admin/CuentaCorriente` | Cuentas corrientes de clientes | ídem + plan Pro |
 | `/[slug]/admin/Gastos` | Gastos fijos mensuales y por única vez | `veterinario`/`superadmin` + plan Pro |
 | `/[slug]/admin/PromosSorteos` | Ofertas, promos y sorteos | ídem |
-| `/[slug]/admin/Configuracion` | Config del tenant | ídem |
+| `/[slug]/admin/TiendaVirtual` | Web pública: enlaces + QR, logo, portada, fotos, servicios, ubicación | `veterinario`/`superadmin` |
+| `/[slug]/admin/Configuracion` | Config del tenant (datos, horarios, turnos, equipo, plan, integraciones) | ídem |
 | `/login` | Google OAuth (Supabase Auth) | Público |
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |

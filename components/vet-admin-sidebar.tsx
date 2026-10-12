@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Calendar, ExternalLink, FileText, Gift, HandCoins, LayoutDashboard, LogOut, Landmark, Package,
-  Receipt, Settings, ShoppingCart, Stethoscope, Users, Wallet,
+  Receipt, Settings, ShoppingCart, Stethoscope, Store, Users, Wallet,
 } from "lucide-react"
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -62,7 +62,8 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
       titulo: "Cuenta",
       tour: "cuenta",
       items: [
-        { href: `/${slug}/admin/Configuracion`, label: "Configuración", icon: Settings, section: "configuracion" },
+        { href: `/${slug}/admin/TiendaVirtual`, label: "Tienda virtual", icon: Store,    section: "tiendaVirtual" },
+        { href: `/${slug}/admin/Configuracion`, label: "Configuración",  icon: Settings, section: "configuracion" },
       ],
     },
   ]
