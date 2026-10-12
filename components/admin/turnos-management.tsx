@@ -40,6 +40,7 @@ import { StatsCard } from "./StatsCard";
 import { NextAppointmentCard } from "./NextAppointmentCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReadOnly } from "@/lib/auth/read-only-context";
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina";
 
 interface TurnosManagementProps {
   tenantId: string;
@@ -184,7 +185,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="flex h-64 items-center justify-center">
         <div className="relative">
           <div className="h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-spin rounded-full border-2 sm:border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500" />
           <div className="absolute inset-0 h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-ping rounded-full border-2 sm:border-4 border-indigo-400 opacity-20" />
@@ -194,48 +195,37 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-2 sm:p-3 lg:p-6">
-      <div className="mb-2 sm:mb-4 lg:mb-6 relative">
-        <div className="absolute inset-0 bg-slate-200/50 dark:bg-slate-800/50 blur-3xl" />
-        <div className="relative backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl lg:rounded-2xl p-2 sm:p-3 lg:p-6 shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 lg:p-3 rounded-lg sm:rounded-xl bg-slate-700 dark:bg-slate-600 shadow-xl">
-              <CalendarIcon
-                className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white"
-                strokeWidth={2}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm sm:text-xl lg:text-3xl font-black text-slate-900 dark:text-slate-100 truncate">
-                Gestión de Turnos
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-0.5 text-[9px] sm:text-[10px] lg:text-sm font-medium truncate">
-                {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-[10px] sm:text-xs gap-1.5 shrink-0"
-              onClick={() => descargarTurnosCSV(turnos)}
-              disabled={turnos.length === 0}
-              title="Exportar todos los turnos a CSV (Excel)"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Exportar CSV</span>
-            </Button>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <EncabezadoPagina
+        icono={CalendarIcon}
+        titulo="Turnos"
+        descripcion={
+          <span className="first-letter:uppercase">
+            {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
+        }
+        acciones={
+          <Button
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => descargarTurnosCSV(turnos)}
+            disabled={turnos.length === 0}
+            title="Exportar todos los turnos a CSV (Excel)"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Exportar CSV</span>
+          </Button>
+        }
+      />
 
       <div className="grid gap-2 sm:gap-3 lg:gap-4 lg:grid-cols-12">
         <div className="lg:col-span-4 space-y-2 sm:space-y-3 lg:space-y-4">
-          <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+          <Card>
             <CardHeader className="pb-1.5 sm:pb-2 lg:pb-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 sm:gap-2">
@@ -249,7 +239,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
                     <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-slate-900 dark:text-white">
                       Calendario
                     </CardTitle>
-                    <CardDescription className="text-[8px] sm:text-[9px] lg:text-[10px] text-slate-600 dark:text-slate-400">
+                    <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
                       Selecciona una fecha
                     </CardDescription>
                   </div>

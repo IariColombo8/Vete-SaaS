@@ -21,6 +21,7 @@ import { getTenantConfig } from "@/lib/supabase/queries"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import { MEDIOS_PAGO, type Caja, type MedioPago, type Venta } from "@/lib/supabase/types"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 interface Props {
   tenantId: string
@@ -105,46 +106,41 @@ export function CajaManagement({ tenantId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-gradient-to-br from-emerald-50 via-sky-50/60 to-transparent p-4 dark:from-emerald-950/30 dark:via-sky-950/10">
-        <div className="flex items-center gap-3">
-          <div className="hidden rounded-xl bg-emerald-600 p-2.5 text-white shadow-sm sm:flex">
-            <Wallet className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Caja</h1>
-            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              Apertura, arqueo y cierre del turno de mostrador <Ayuda tema="caja.arqueo" />
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-0.5 rounded-lg border bg-background p-0.5 shadow-sm">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setVista("hoy")}
-            className={cn(
-              "gap-1.5",
-              vista === "hoy" && "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
-            )}
-          >
-            <Receipt className="h-3.5 w-3.5" />
-            Ventas de hoy
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setVista("historial")}
-            className={cn(
-              "gap-1.5",
-              vista === "historial" && "bg-sky-600 text-white hover:bg-sky-700 hover:text-white",
-            )}
-          >
-            <History className="h-3.5 w-3.5" />
-            Cierres anteriores
-          </Button>
-        </div>
-      </div>
+      <EncabezadoPagina
+        icono={Wallet}
+        titulo="Caja"
+        descripcion={<>Apertura, arqueo y cierre del turno de mostrador <Ayuda tema="caja.arqueo" /></>}
+        acciones={
+          <>
+            <div className="flex gap-0.5 rounded-lg border bg-background p-0.5 shadow-sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setVista("hoy")}
+                className={cn(
+                  "gap-1.5",
+                  vista === "hoy" && "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
+                )}
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                Ventas de hoy
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setVista("historial")}
+                className={cn(
+                  "gap-1.5",
+                  vista === "historial" && "bg-sky-600 text-white hover:bg-sky-700 hover:text-white",
+                )}
+              >
+                <History className="h-3.5 w-3.5" />
+                Cierres anteriores
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       <CajaBar tenantId={tenantId} caja={caja} onCambio={cargar} />
 

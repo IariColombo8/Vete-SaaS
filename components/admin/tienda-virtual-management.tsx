@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { ExternalLink, Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin, Home } from "lucide-react"
+import { ExternalLink, Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stethoscope, MapPin, Home, Store } from "lucide-react"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 import { EnlacesTienda } from "@/components/admin/tienda-virtual/enlaces-tienda"
 
@@ -215,21 +216,22 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
 
   return (
     <>
-      <div className="space-y-6 max-w-2xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">Tienda virtual</h1>
-            <p className="text-sm text-muted-foreground">Tu página pública: lo que ven tus clientes y los links para compartir.</p>
-          </div>
-          <Button variant="outline" size="sm" asChild>
-            <a href={`/${slug}`} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="mr-2 h-3.5 w-3.5" />
-              Ver mi página
-            </a>
-          </Button>
-        </div>
+      <div className="space-y-6">
+        <EncabezadoPagina
+          icono={Store}
+          titulo="Tienda virtual"
+          descripcion="Tu página pública: lo que ven tus clientes y los links para compartir."
+          acciones={
+            <Button variant="outline" asChild>
+              <a href={`/${slug}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Ver mi página
+              </a>
+            </Button>
+          }
+        />
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabTienda)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabTienda)} className="max-w-3xl">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
             <TabsTrigger value="enlaces">Enlaces</TabsTrigger>
             <TabsTrigger value="portada">Portada</TabsTrigger>

@@ -14,6 +14,7 @@ import { getComprobantesPorVentas, getEstadoFacturacion, type Comprobante, type 
 import { formatCurrency } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import { MEDIOS_PAGO, type MedioPago, type Venta } from "@/lib/supabase/types"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 interface Props {
   tenantId: string
@@ -155,74 +156,69 @@ export function VentasManagement({ tenantId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-gradient-to-br from-emerald-50 via-sky-50/60 to-transparent p-4 dark:from-emerald-950/30 dark:via-sky-950/10">
-        <div className="flex items-center gap-3">
-          <div className="hidden rounded-xl bg-emerald-600 p-2.5 text-white shadow-sm sm:flex">
-            <ShoppingBag className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Ventas</h1>
-            <p className="text-sm text-muted-foreground">
-              Facturación, productos más vendidos e historial de remitos
-            </p>
-          </div>
-        </div>
+      <EncabezadoPagina
+        icono={ShoppingBag}
+        titulo="Ventas"
+        descripcion={<>Facturación, productos más vendidos e historial de remitos</>}
+        acciones={
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex gap-0.5 rounded-lg border bg-background p-0.5 shadow-sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setVista("historial")}
+                  className={cn(
+                    "gap-1.5",
+                    vista === "historial" && "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
+                  )}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  Historial
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setVista("dashboard")}
+                  className={cn(
+                    "gap-1.5",
+                    vista === "dashboard" && "bg-sky-600 text-white hover:bg-sky-700 hover:text-white",
+                  )}
+                >
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  Dashboard
+                </Button>
+              </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-0.5 rounded-lg border bg-background p-0.5 shadow-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setVista("historial")}
-              className={cn(
-                "gap-1.5",
-                vista === "historial" && "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
-              )}
-            >
-              <List className="h-3.5 w-3.5" />
-              Historial
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setVista("dashboard")}
-              className={cn(
-                "gap-1.5",
-                vista === "dashboard" && "bg-sky-600 text-white hover:bg-sky-700 hover:text-white",
-              )}
-            >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Dashboard
-            </Button>
-          </div>
-
-          <select
-            value={filtroMedio}
-            onChange={(e) => setFiltroMedio(e.target.value as MedioPago | "todos")}
-            className="h-9 rounded-md border bg-background px-2 text-sm"
-            aria-label="Filtrar por medio de pago"
-          >
-            <option value="todos">Todos los medios</option>
-            {MEDIOS_PAGO.map((m) => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </select>
-
-          <div className="flex gap-1.5">
-            {RANGOS.map(({ id, label }) => (
-              <Button
-                key={id}
-                variant={rango === id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setRango(id)}
-                className={rango === id ? "bg-amber-500 text-white hover:bg-amber-600" : ""}
+              <select
+                value={filtroMedio}
+                onChange={(e) => setFiltroMedio(e.target.value as MedioPago | "todos")}
+                className="h-9 rounded-md border bg-background px-2 text-sm"
+                aria-label="Filtrar por medio de pago"
               >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
+                <option value="todos">Todos los medios</option>
+                {MEDIOS_PAGO.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+
+              <div className="flex gap-1.5">
+                {RANGOS.map(({ id, label }) => (
+                  <Button
+                    key={id}
+                    variant={rango === id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setRango(id)}
+                    className={rango === id ? "bg-amber-500 text-white hover:bg-amber-600" : ""}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </>
+        }
+      />
 
       {vista === "dashboard" ? (
         <div className="space-y-4">

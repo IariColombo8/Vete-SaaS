@@ -10,6 +10,7 @@ import { TablaSaldos } from "./cuenta-corriente/tabla-saldos"
 import { DetalleClienteDialog } from "./cuenta-corriente/detalle-cliente-dialog"
 import { RegistrarCargoDialog } from "./cuenta-corriente/registrar-cargo-dialog"
 import { getSaldosClientes, type ClienteConSaldo } from "@/lib/supabase/cuentaCorriente"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 interface Props {
   tenantId: string
@@ -36,20 +37,16 @@ export function CuentaCorrienteManagement({ tenantId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-xl border bg-gradient-to-br from-rose-50 via-amber-50/60 to-transparent p-4 dark:from-rose-950/30 dark:via-amber-950/10">
-        <div className="hidden rounded-xl bg-rose-600 p-2.5 text-white shadow-sm sm:flex">
-          <Wallet className="h-5 w-5" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Cuenta corriente</h1>
-          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            Clientes con saldo pendiente y registro de cobros <Ayuda tema="ctacte.queEs" />
-          </p>
-        </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setRegistrarCargoAbierto(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Registrar cobro pendiente
-        </Button>
-      </div>
+      <EncabezadoPagina
+        icono={Wallet}
+        titulo="Cuenta corriente"
+        descripcion={<>Clientes con saldo pendiente y registro de cobros <Ayuda tema="ctacte.queEs" /></>}
+        acciones={
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setRegistrarCargoAbierto(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Registrar cobro pendiente
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">

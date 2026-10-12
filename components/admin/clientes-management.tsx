@@ -71,6 +71,7 @@ import { useReadOnly } from "@/lib/auth/read-only-context";
 import { ClientePerfilDialog } from "@/components/admin/clientes/cliente-perfil-dialog";
 import { getTenantConfig } from "@/lib/supabase/queries";
 import { planAllows } from "@/lib/plans";
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina";
 
 const emptyForm = {
   nombre: "",
@@ -463,17 +464,9 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-2 sm:p-3 lg:p-6">
-        <div className="mb-2 sm:mb-4 lg:mb-6">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-lg" />
-            <div className="space-y-1">
-              <Skeleton className="h-6 w-48 sm:w-64" />
-              <Skeleton className="h-4 w-36 sm:w-52" />
-            </div>
-          </div>
-        </div>
-        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl overflow-hidden">
+      <div className="space-y-4">
+        <Skeleton className="h-[76px] w-full rounded-xl" />
+        <Card className="overflow-hidden">
           <CardHeader className="pb-2">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <Skeleton className="h-5 w-32" />
@@ -514,61 +507,42 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-2 sm:p-3 lg:p-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="mb-2 sm:mb-4 lg:mb-6 relative">
-        <div className="absolute inset-0 bg-slate-200/50 dark:bg-slate-800/50 blur-3xl" />
-        <div className="relative backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl lg:rounded-2xl p-2 sm:p-3 lg:p-6 shadow-2xl">
-          <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 lg:p-3 rounded-lg sm:rounded-xl bg-slate-700 dark:bg-slate-600 shadow-xl">
-                <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-xl lg:text-3xl font-black text-slate-900 dark:text-slate-100 truncate">
-                  Gestión de Clientes
-                </h1>
-                <p className="text-slate-600 dark:text-slate-400 mt-0.5 text-[9px] sm:text-[10px] lg:text-sm font-medium truncate">
-                  DNI como clave única – deduplicación automática
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <RegistroClienteDialog
-                tenantId={tenantId}
-                modo="admin"
-                onExito={recargarTrasRegistro}
-                trigger={
-                  <Button
-                    variant="outline"
-                    className="font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
-                  >
-                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    Registrar cliente y su mascota
-                  </Button>
-                }
-              />
-              <Button
-                onClick={openAdd}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Agregar cliente
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <EncabezadoPagina
+        icono={Users}
+        titulo="Clientes"
+        descripcion="Dueños y sus mascotas. El DNI identifica a cada cliente y evita duplicados."
+        acciones={
+          <>
+            <RegistroClienteDialog
+              tenantId={tenantId}
+              modo="admin"
+              onExito={recargarTrasRegistro}
+              trigger={
+                <Button variant="outline">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Registrar cliente y su mascota
+                </Button>
+              }
+            />
+            <Button onClick={openAdd} className="bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="mr-2 h-4 w-4" />
+              Agregar cliente
+            </Button>
+          </>
+        }
+      />
 
       {/* Mini dashboard */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-2 sm:mb-4 lg:mb-6">
-        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-xl">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Card>
           <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2.5 rounded-lg bg-slate-700 dark:bg-slate-600 shrink-0">
               <Users className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Clientes totales</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Clientes totales</p>
               {stats ? (
                 <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.totalClientes}</p>
               ) : (
@@ -577,13 +551,13 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-xl">
+        <Card>
           <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2.5 rounded-lg bg-emerald-600 shrink-0">
               <PawPrint className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Mascotas registradas</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Mascotas registradas</p>
               {stats ? (
                 <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.totalMascotas}</p>
               ) : (
@@ -592,13 +566,13 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-xl">
+        <Card>
           <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2.5 rounded-lg bg-amber-600 shrink-0">
               <UserPlus className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Nuevos este mes</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Nuevos este mes</p>
               {stats ? (
                 <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.clientesNuevosMes}</p>
               ) : (
@@ -610,14 +584,14 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       </div>
 
       {/* Card con tabla */}
-      <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-1.5 sm:pb-2 lg:pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-slate-900 dark:text-white">
                 Listado de clientes
               </CardTitle>
-              <CardDescription className="text-[8px] sm:text-[9px] lg:text-[10px] text-slate-600 dark:text-slate-400">
+              <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
                 {filtered.length} cliente{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
               </CardDescription>
             </div>

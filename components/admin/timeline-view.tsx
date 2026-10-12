@@ -43,21 +43,21 @@ export function TimelineView({
     switch (estado) {
       case "pendiente":
         return (
-          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[9px] sm:text-[10px]">
+          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[11px] sm:text-xs">
             <Clock className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
             Pendiente
           </Badge>
         )
       case "completado":
         return (
-          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 border-0 text-[9px] sm:text-[10px]">
+          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 border-0 text-[11px] sm:text-xs">
             <CheckCircle2 className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
             Completado
           </Badge>
         )
       case "cancelado":
         return (
-          <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-400 border-0 text-[9px] sm:text-[10px]">
+          <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-400 border-0 text-[11px] sm:text-xs">
             <XCircle className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
             Cancelado
           </Badge>
@@ -110,7 +110,7 @@ export function TimelineView({
                 {turno.cliente.nombre}
               </span>
               {isUrgent && (
-                <Badge className="bg-rose-500 text-white border-0 px-1 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold">
+                <Badge className="bg-rose-500 text-white border-0 px-1 sm:px-2 py-0.5 text-[10px] sm:text-[11px] font-bold">
                   <AlertCircle className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5" />
                   PRÓXIMO
                 </Badge>
@@ -122,12 +122,12 @@ export function TimelineView({
                 return <MascotaIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
               })()}
               <span className="font-semibold truncate">{turno.mascota.nombre}</span>
-              <span className="text-[9px] sm:text-[10px] lg:text-xs">({turno.mascota.tipo})</span>
+              <span className="text-xs">({turno.mascota.tipo})</span>
             </div>
           </div>
           <div className="flex flex-col items-end gap-1 sm:gap-2">
             {getEstadoBadge(turno.estado)}
-            <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-indigo-600 dark:text-indigo-400">
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
               {getHora(turno) || "—"}
             </span>
           </div>
@@ -226,7 +226,7 @@ export function TimelineView({
                     : "text-slate-600 dark:text-slate-400 font-semibold"
                 }`}
               >
-                <div className="text-[9px] sm:text-xs lg:text-sm">{slot}</div>
+                <div className="text-xs lg:text-sm">{slot}</div>
               </div>
 
               <div
@@ -259,7 +259,7 @@ export function TimelineView({
                       }`}
                     />
                     <p
-                      className={`text-[9px] sm:text-[10px] lg:text-xs font-semibold ${
+                      className={`text-xs font-semibold ${
                         isPast ? "text-slate-400 dark:text-slate-600" : "text-slate-500 dark:text-slate-500"
                       }`}
                     >

@@ -286,35 +286,12 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-2 sm:p-3 lg:p-6">
-      {/* Header con glassmorphism */}
-      <div className="mb-2 sm:mb-4 lg:mb-6 relative">
-        <div className="absolute inset-0 bg-slate-200/50 dark:bg-slate-800/50 blur-3xl" />
-        <div className="relative backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl lg:rounded-2xl p-2 sm:p-3 lg:p-6 shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 lg:p-3 rounded-lg sm:rounded-xl bg-slate-700 dark:bg-slate-600 shadow-xl">
-              <Sparkles
-                className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white"
-                strokeWidth={2}
-              />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm sm:text-xl lg:text-3xl font-black text-slate-900 dark:text-slate-100 truncate">
-                Dashboard Veterinario
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1 text-sm sm:text-base">
-                Panel de análisis y métricas en tiempo real
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div>
 
       {/* KPI Cards Premium */}
       <div className="grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 mb-8">
         {/* Total Turnos */}
-        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-white/90 to-white/70 dark:from-slate-900/90 dark:to-slate-900/70 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -340,7 +317,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Pendientes */}
-        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-white/90 to-white/70 dark:from-slate-900/90 dark:to-slate-900/70 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -439,7 +416,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Completados */}
-        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-white/90 to-white/70 dark:from-slate-900/90 dark:to-slate-900/70 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -468,7 +445,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Tasa de Éxito */}
-        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-white/90 to-white/70 dark:from-slate-900/90 dark:to-slate-900/70 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -494,7 +471,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Mascotas Únicas */}
-        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-white/90 to-white/70 dark:from-slate-900/90 dark:to-slate-900/70 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -520,7 +497,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Clientes Únicos */}
-        <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-white/90 to-white/70 dark:from-slate-900/90 dark:to-slate-900/70 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -549,7 +526,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       {/* Charts Grid Principal */}
       <div className="grid gap-6 lg:grid-cols-12 mb-6">
         {/* Turnos por Día - Línea suave */}
-        <Card className="lg:col-span-8 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <Card className="lg:col-span-8">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -632,7 +609,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Estado de Turnos - Radial */}
-        <Card className="lg:col-span-4 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg">
@@ -705,7 +682,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       {/* Segunda fila de gráficos */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Tipos de Mascotas - Donut mejorado */}
-        <Card className="lg:col-span-4 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg">
@@ -772,7 +749,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Turnos por Mes - Barras */}
-        <Card className="lg:col-span-4 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
@@ -833,7 +810,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Horarios Populares */}
-        <Card className="lg:col-span-4 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg">
@@ -911,7 +888,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       {/* Tercera fila: servicios top + métricas clave */}
       <div className="grid gap-6 lg:grid-cols-12 mt-6">
         {/* Servicios más solicitados */}
-        <Card className="lg:col-span-8 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+        <Card className="lg:col-span-8">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg">
@@ -951,7 +928,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Métricas clave */}
-        <Card className="lg:col-span-4 border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+        <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">

@@ -458,6 +458,15 @@ del Dashboard (que quedó en plan + métricas) y de Configuración → Datos. Lo
 **horarios quedan en Configuración** a propósito: también definen qué turnos se
 pueden reservar, no son solo vidriera.
 
+**Encabezado de pantalla: `EncabezadoPagina`** (`components/admin/encabezado-pagina.tsx`).
+Toda pantalla del panel arranca con él (icono, título, descripción, acciones a
+la derecha). No dibujar encabezados a mano ni volver al estilo viejo de Turnos
+y Clientes (fondo `min-h-screen` propio que duplicaba el padding del `main`,
+glassmorphism con `shadow-2xl`, textos de 8–9 px). Cards con el estilo por
+defecto de shadcn. Si una pantalla tiene muchas acciones, las de uso
+ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
+(`/Vender`) y la Libreta, que usan todo el alto de la pantalla.
+
 **`components/navbar.tsx` tiene que conocer las rutas del panel.** Su regex
 `isVetAdmin` decide si el navbar público se dibuja o no; si falta una ruta de
 `app/[slug]/(vetadmin)/`, aparecen dos barras encimadas. Le faltaban

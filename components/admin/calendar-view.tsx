@@ -171,7 +171,7 @@ export function CalendarView({
           {["D", "L", "M", "X", "J", "V", "S"].map((day, idx) => (
             <div
               key={idx}
-              className="text-center text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-600 dark:text-slate-400 py-1 sm:py-2"
+              className="text-center text-xs font-bold text-slate-600 dark:text-slate-400 py-1 sm:py-2"
             >
               {day}
             </div>
@@ -189,7 +189,7 @@ export function CalendarView({
             Gestionar Fechas
           </Button>
         </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3 text-[9px] sm:text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 rounded bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-300" />
             <span className="text-slate-600 dark:text-slate-400 font-medium">1-5</span>

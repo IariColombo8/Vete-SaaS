@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { Save, Loader2, Plus, Trash2, PawPrint, FileText, Syringe, Stethoscope, Store, ArrowRight } from "lucide-react"
+import { Save, Loader2, Plus, Trash2, PawPrint, FileText, Syringe, Stethoscope, Store, ArrowRight, Settings } from "lucide-react"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 import { EquipoManagement } from "@/components/admin/equipo-management"
 import { EmailProviderConfig } from "@/components/admin/email-provider-config"
 import { MiFirmaManagement } from "@/components/admin/mi-firma-management"
@@ -258,13 +259,14 @@ export default function ConfiguracionPage() {
 
   return (
     <>
-      <div className="space-y-6 max-w-2xl">
-        <div>
-          <h1 className="text-2xl font-bold">Configuracion</h1>
-          <p className="text-sm text-muted-foreground">Datos de la clínica, cómo se toman los turnos, tu equipo, tu plan y las conexiones con otros servicios.</p>
-        </div>
+      <div className="space-y-6">
+        <EncabezadoPagina
+          icono={Settings}
+          titulo="Configuración"
+          descripcion="Datos de la clínica, cómo se toman los turnos, tu equipo, tu plan y las integraciones."
+        />
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabConfig)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabConfig)} className="max-w-3xl">
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
             <TabsTrigger value="datos">Clínica</TabsTrigger>
             <TabsTrigger value="turnos">Turnos</TabsTrigger>

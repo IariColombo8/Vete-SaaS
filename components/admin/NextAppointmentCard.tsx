@@ -26,7 +26,7 @@ export function NextAppointmentCard({
   )[0];
 
   return (
-    <Card className="border-0 bg-gradient-to-br from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900 shadow-2xl">
+    <Card className="border-0 bg-gradient-to-br from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900 shadow-sm">
       <CardContent className="p-3 sm:p-4">
         <div className="flex items-start gap-2 sm:gap-3">
           <div className="p-2 sm:p-2.5 rounded-xl bg-white/20 backdrop-blur-sm">

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Stethoscope } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 const planInfo: Record<string, { label: string; color: string }> = {
   basico: { label: "Básico",                 color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
@@ -63,26 +64,21 @@ export default function DashboardPage() {
   return (
     <>
       <div className="space-y-6">
-        {/* Encabezado con plan */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-              <Stethoscope className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <EncabezadoPagina
+          icono={Stethoscope}
+          titulo={config?.nombre || slug}
+          descripcion="Resumen de la actividad de tu clínica"
+          acciones={
+            <div className="flex items-center gap-2" data-tour="plan">
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pi.color}`}>
+                Plan {pi.label}
+              </span>
+              {config?.status === "pausado" && (
+                <Badge variant="destructive" className="text-xs">Pausada</Badge>
+              )}
             </div>
-            <div>
-              <h1 className="text-xl font-bold">{config?.nombre || slug}</h1>
-              <p className="text-xs text-muted-foreground font-mono">/{slug}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2" data-tour="plan">
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pi.color}`}>
-              Plan {pi.label}
-            </span>
-            {config?.status === "pausado" && (
-              <Badge variant="destructive" className="text-xs">Pausada</Badge>
-            )}
-          </div>
-        </div>
+          }
+        />
 
         {/* Uso del plan — visible cuando el plan tiene límite mensual */}
         {maxTurnos !== null && turnosMes !== null && (() => {

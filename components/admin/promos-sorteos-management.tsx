@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OfertasTab } from "@/components/admin/promos-sorteos/ofertas-tab"
 import { PromocionesTab } from "@/components/admin/promos-sorteos/promociones-tab"
 import { SorteosTab } from "@/components/admin/promos-sorteos/sorteos-tab"
+import { Gift } from "lucide-react"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 interface Props {
   tenantId: string
@@ -18,13 +20,12 @@ export function PromosSorteosManagement({ tenantId }: Props) {
   const [tab, setTab] = useState("ofertas")
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <div>
-        <h1 className="text-2xl font-bold">Ofertas, promociones y sorteos</h1>
-        <p className="text-sm text-muted-foreground">
-          Gestioná todo lo que tus clientes ven como descuento o beneficio.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <EncabezadoPagina
+        icono={Gift}
+        titulo="Promos y sorteos"
+        descripcion="Ofertas, promociones y sorteos: todo lo que tus clientes ven como descuento o beneficio."
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>

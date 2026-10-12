@@ -31,6 +31,7 @@ import { correEnMes, mesDe, montoDelMes, nombreMes, sumarMeses } from "@/lib/gas
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 import type { Caja, Gasto, GastoFijo } from "@/lib/supabase/types"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 interface Props {
   tenantId: string
@@ -166,28 +167,21 @@ export function GastosManagement({ tenantId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-gradient-to-br from-emerald-50 via-sky-50/60 to-transparent p-4 dark:from-emerald-950/30 dark:via-sky-950/10">
-        <div className="flex items-center gap-3">
-          <div className="hidden rounded-xl bg-emerald-600 p-2.5 text-white shadow-sm sm:flex">
-            <HandCoins className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gastos</h1>
-            <p className="text-sm text-muted-foreground">
-              Fijos de todos los meses y gastos por única vez
-            </p>
-          </div>
-        </div>
-
-        <Button
-          onClick={() => setDialogo({ tipo: "nuevo" })}
-          disabled={readOnly}
-          title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Nuevo gasto
-        </Button>
-      </div>
+      <EncabezadoPagina
+        icono={HandCoins}
+        titulo="Gastos"
+        descripcion={<>Fijos de todos los meses y gastos por única vez</>}
+        acciones={
+          <Button
+            onClick={() => setDialogo({ tipo: "nuevo" })}
+            disabled={readOnly}
+            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Nuevo gasto
+          </Button>
+        }
+      />
 
       <div className="flex items-center justify-between gap-2 rounded-lg border bg-card px-2 py-1.5">
         <Button variant="ghost" size="icon" onClick={() => setMes(sumarMeses(mes, -1))} aria-label="Mes anterior">

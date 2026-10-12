@@ -6,7 +6,7 @@ import {
   Search, AlertTriangle, ChevronLeft, ChevronRight, Tag, Upload, Pencil,
   Package, PackageX, ClipboardList, Layers, Plus, CalendarClock, Trash2,
   FileDown, Loader2, Percent, Scale, X, Eye, EyeOff, Boxes, FolderInput, ScanBarcode, ListChecks,
-  Image as ImageIcon, SlidersHorizontal,
+  Image as ImageIcon, SlidersHorizontal, MoreHorizontal,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { BarcodeScannerDialog } from "@/components/shared/barcode-scanner-dialog"
@@ -51,6 +51,7 @@ import { ordenarCategorias } from "@/lib/productos/categorias"
 import { formatCurrency, formatCantidad } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useReadOnly } from "@/lib/auth/read-only-context"
+import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 
 const POR_PAGINA = 10
 // Tope razonable para "seleccionar todos": ningún catálogo real tiene más
@@ -417,54 +418,57 @@ export function ProductosManagement({ tenantId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Productos</h1>
-          <p className="text-sm text-muted-foreground">
-            Mercadería, medicamentos y servicios de la veterinaria.
-          </p>
-        </div>
-        {/* En celular, 2 columnas x 3 filas, todos los botones del mismo
-            tamaño — en fila y flex-wrap quedaban de ancho dispar y se
-            amontonaban. Desde sm vuelven a ser una fila normal. */}
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-          <Button variant="outline" onClick={exportarStockPDF} disabled={exportando} className="w-full sm:w-auto">
-            {exportando ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="mr-2 h-4 w-4" />
-            )}
-            Stock en PDF
-          </Button>
-          <Button variant="outline" onClick={() => setMargenOpen(true)} className="w-full sm:w-auto">
-            <Percent className="mr-2 h-4 w-4" /> Aplicar ganancia
-          </Button>
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="w-full sm:w-auto">
-            <Upload className="mr-2 h-4 w-4" /> Importar
-          </Button>
-          <Button variant="outline" onClick={() => setEscanearOpen(true)} disabled={readOnly} className="w-full sm:w-auto">
-            <ScanBarcode className="mr-2 h-4 w-4" /> Escanear
-          </Button>
-          <Button
-            variant={modoSeleccion ? "secondary" : "outline"}
-            onClick={() => {
-              setModoSeleccion((v) => !v)
-              setSeleccionadosMap(new Map())
-            }}
-            className="w-full sm:w-auto"
-          >
-            <ListChecks className="mr-2 h-4 w-4" /> {modoSeleccion ? "Ocultar selección" : "Seleccionar"}
-          </Button>
-          <Button
-            className="w-full bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
-            onClick={abrirNuevo}
-            disabled={readOnly}
-            title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Nuevo producto
-          </Button>
-        </div>
-      </div>
+      {/* Solo las dos acciones del día a día quedan a la vista; el resto, que se
+          usa de vez en cuando, va al menú "Más". Antes eran seis botones en
+          fila que en celular ocupaban media pantalla. */}
+      <EncabezadoPagina
+        icono={Package}
+        titulo="Productos"
+        descripcion="Mercadería, medicamentos y servicios de la veterinaria."
+        acciones={
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <MoreHorizontal className="mr-2 h-4 w-4" /> Más
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" /> Importar desde Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMargenOpen(true)}>
+                  <Percent className="mr-2 h-4 w-4" /> Aplicar ganancia
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setModoSeleccion((v) => !v)
+                    setSeleccionadosMap(new Map())
+                  }}
+                >
+                  <ListChecks className="mr-2 h-4 w-4" /> {modoSeleccion ? "Ocultar selección" : "Seleccionar varios"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={exportarStockPDF} disabled={exportando}>
+                  {exportando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                  Stock en PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" onClick={() => setEscanearOpen(true)} disabled={readOnly}>
+              <ScanBarcode className="mr-2 h-4 w-4" /> Escanear
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={abrirNuevo}
+              disabled={readOnly}
+              title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Nuevo producto
+            </Button>
+          </>
+        }
+      />
 
       {/* Tarjetas: además de informar, funcionan como filtro rápido */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

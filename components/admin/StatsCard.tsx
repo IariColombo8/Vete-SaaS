@@ -33,7 +33,7 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
   ).toFixed(0);
 
   return (
-    <Card className="border-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+    <Card>
       <CardHeader className="pb-1.5 sm:pb-2 lg:pb-3">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <div className="p-1 sm:p-1.5 lg:p-2 rounded-md sm:rounded-lg bg-slate-700 dark:bg-slate-600 shadow-lg">
@@ -46,7 +46,7 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
             <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-slate-900 dark:text-white">
               Estadísticas
             </CardTitle>
-            <CardDescription className="text-[8px] sm:text-[9px] lg:text-[10px] text-slate-600 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
               {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {
                 day: "numeric",
                 month: "short",
@@ -57,7 +57,7 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
       </CardHeader>
       <CardContent className="space-y-1.5 sm:space-y-2 lg:space-y-3 p-2 sm:p-3 lg:p-4">
         <div className="space-y-1 sm:space-y-1.5">
-          <div className="flex items-center justify-between text-[9px] sm:text-[10px] lg:text-xs">
+          <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-700 dark:text-slate-300">
               Ocupación
             </span>
@@ -71,7 +71,7 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
               style={{ width: `${ocupacion}%` }}
             />
           </div>
-          <p className="text-[8px] sm:text-[9px] lg:text-[10px] text-slate-500 dark:text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             {selectedDateTurnos.filter((t) => t.estado !== "cancelado").length} de {totalSlots}{" "}
             ocupados
           </p>
@@ -87,7 +87,7 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
                 />
               </div>
               <div>
-                <p className="text-[8px] sm:text-[9px] lg:text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                   Pendientes
                 </p>
                 <p className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-slate-100">
@@ -106,7 +106,7 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
                 />
               </div>
               <div>
-                <p className="text-[8px] sm:text-[9px] lg:text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                   Completados
                 </p>
                 <p className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-slate-100">
