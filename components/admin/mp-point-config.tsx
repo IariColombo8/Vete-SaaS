@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { TutorialPoint } from "@/components/admin/integraciones/tutoriales"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -175,6 +176,9 @@ export function MpPointConfig({ tenantId }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Guía paso a paso: abierta hasta que haya una terminal elegida. */}
+        <TutorialPoint abierto={!config.configurado || !config.terminalId} />
+
         {!config.configurado ? (
           <form onSubmit={guardarToken} className="space-y-3">
             <div className="space-y-1.5">

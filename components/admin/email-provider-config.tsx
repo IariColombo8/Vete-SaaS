@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Save, Mail, CheckCircle2 } from "lucide-react"
 import { updateTenantConfig } from "@/lib/supabase/queries"
+import { TutorialEmail } from "@/components/admin/integraciones/tutoriales"
 import type { TenantConfig } from "@/lib/supabase/queries"
 
 interface EmailProviderConfigProps {
@@ -52,6 +53,9 @@ export function EmailProviderConfig({ slug, emailProvider, onProviderChange }: E
   const [estadoEmailJs, setEstadoEmailJs] = useState<EstadoEmailJs | null>(null)
 
   const provider = emailProvider ?? "resend"
+  // Origen del sitio para la URL de redirección de Google (solo existe en el navegador).
+  const [origen, setOrigen] = useState("")
+  useEffect(() => setOrigen(window.location.origin), [])
 
   useEffect(() => {
     if (provider !== "gmail") return
@@ -175,6 +179,13 @@ export function EmailProviderConfig({ slug, emailProvider, onProviderChange }: E
             </SelectContent>
           </Select>
         </div>
+
+        {/* Guía del proveedor elegido: abierta mientras falte conectarlo. */}
+        <TutorialEmail
+          proveedor={provider}
+          origen={origen}
+          abierto={provider === "gmail" ? !estado?.conectado : provider === "emailjs" ? !estadoEmailJs?.configurado : false}
+        />
 
         {provider === "emailjs" && (
           <div className="space-y-4 rounded-lg border p-4">

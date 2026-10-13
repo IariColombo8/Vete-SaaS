@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { Save, Loader2, Plus, Trash2, PawPrint, FileText, Syringe, Stethoscope, Store, ArrowRight, Settings } from "lucide-react"
+import { Save, Loader2, Plus, Trash2, PawPrint, FileText, Syringe, Stethoscope, Store, ArrowRight, Settings, CreditCard, CalendarDays, Mail } from "lucide-react"
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 import { EquipoManagement } from "@/components/admin/equipo-management"
 import { EmailProviderConfig } from "@/components/admin/email-provider-config"
@@ -24,6 +24,7 @@ import { MiFirmaManagement } from "@/components/admin/mi-firma-management"
 import { PlanManagement } from "@/components/billing/plan-management"
 import { MpPointConfig } from "@/components/admin/mp-point-config"
 import { FacturacionConfig } from "@/components/admin/facturacion-config"
+import { TutorialCalendar } from "@/components/admin/integraciones/tutoriales"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 
 const HORARIOS_DEFAULT: HorarioTenant[] = [
@@ -798,20 +799,40 @@ export default function ConfiguracionPage() {
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {/*  TAB: INTEGRACIONES (Point, ARCA, Google Calendar, email)          */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          <TabsContent value="integraciones" className="space-y-6 mt-6">
-            <MpPointConfig tenantId={slug} />
-            <FacturacionConfig tenantId={slug} />
-            {/* ── GOOGLE CALENDAR ── */}
+          <TabsContent value="integraciones" className="mt-6">
+            {/* Cada integración en su propia pestaña, con su guía paso a paso
+                arriba del formulario: dónde se consigue el certificado, el
+                token o el ID que pide. */}
+            <Tabs defaultValue="point" className="space-y-6">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4">
+                <TabsTrigger value="point" className="gap-1.5 py-2"><CreditCard className="h-4 w-4" />Mercado Pago Point</TabsTrigger>
+                <TabsTrigger value="arca" className="gap-1.5 py-2"><FileText className="h-4 w-4" />Factura (ARCA)</TabsTrigger>
+                <TabsTrigger value="calendar" className="gap-1.5 py-2"><CalendarDays className="h-4 w-4" />Google Calendar</TabsTrigger>
+                <TabsTrigger value="email" className="gap-1.5 py-2"><Mail className="h-4 w-4" />Email</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="point">
+                <MpPointConfig tenantId={slug} />
+              </TabsContent>
+
+              <TabsContent value="arca">
+                <FacturacionConfig tenantId={slug} />
+              </TabsContent>
+
+              {/* ── GOOGLE CALENDAR ── */}
+              <TabsContent value="calendar">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Google Calendar</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Google Calendar</CardTitle>
                 <CardDescription>
-                  ID del calendario donde se registran los turnos automáticamente.
-                  Lo encontrás en Google Calendar → Configuración del calendario → ID del calendario.
+                  Cada turno confirmado se crea como evento en el calendario que elijas.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
+                <TutorialCalendar abierto={!calendarIdField} />
+                <Label htmlFor="calendar-id">ID del calendario (vacío = calendario principal de la cuenta conectada)</Label>
                 <Input
+                  id="calendar-id"
                   placeholder="Ej: clinica@gmail.com o xxxxxxxx@group.calendar.google.com"
                   value={calendarIdField}
                   onChange={e => setCalendarIdField(e.target.value)}
@@ -830,8 +851,12 @@ export default function ConfiguracionPage() {
                 </Button>
               </CardContent>
             </Card>
+              </TabsContent>
 
-            <EmailProviderConfig slug={slug} emailProvider={emailProvider} onProviderChange={setEmailProvider} />
+              <TabsContent value="email">
+                <EmailProviderConfig slug={slug} emailProvider={emailProvider} onProviderChange={setEmailProvider} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
 

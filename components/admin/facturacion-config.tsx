@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { TutorialArca } from "@/components/admin/integraciones/tutoriales"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -215,6 +216,9 @@ export function FacturacionConfig({ tenantId }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-8">
+        {/* Guía paso a paso: abierta hasta que el certificado esté cargado. */}
+        <TutorialArca ambiente={form.ambiente === "produccion" ? "produccion" : "homologacion"} abierto={!listo} />
+
         {!cifradoOk && (
           <p className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
