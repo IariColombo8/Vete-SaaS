@@ -26,7 +26,7 @@ export function NextAppointmentCard({
   )[0];
 
   return (
-    <Card className="border-0 bg-gradient-to-br from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900 shadow-sm">
+    <Card className="border-0 bg-primary shadow-sm">
       <CardContent className="p-3 sm:p-4">
         <div className="flex items-start gap-2 sm:gap-3">
           <div className="p-2 sm:p-2.5 rounded-xl bg-white/20 backdrop-blur-sm">
@@ -51,7 +51,7 @@ export function NextAppointmentCard({
             </p>
             <Button
               onClick={() => onViewDetails(proximoTurno)}
-              className="mt-2 sm:mt-3 w-full bg-white text-slate-800 hover:bg-white/90 font-bold shadow-lg text-xs sm:text-sm h-8 sm:h-9"
+              className="mt-2 sm:mt-3 w-full bg-card text-foreground hover:bg-white/90 font-bold shadow-lg text-xs sm:text-sm h-8 sm:h-9"
             >
               Ver Detalles y Aceptar
               <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1.5" />
