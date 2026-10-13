@@ -187,8 +187,8 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="relative">
-          <div className="h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-spin rounded-full border-2 sm:border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500" />
-          <div className="absolute inset-0 h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-ping rounded-full border-2 sm:border-4 border-indigo-400 opacity-20" />
+          <div className="h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-spin rounded-full border-2 sm:border-4 border-border border-t-primary" />
+          <div className="absolute inset-0 h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-ping rounded-full border-2 sm:border-4 border-primary opacity-20" />
         </div>
       </div>
     );
@@ -229,17 +229,17 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
             <CardHeader className="pb-1.5 sm:pb-2 lg:pb-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className="p-1 sm:p-1.5 lg:p-2 rounded-md sm:rounded-lg bg-slate-700 dark:bg-slate-600 shadow-lg">
+                  <div className="p-1 sm:p-1.5 lg:p-2 rounded-md sm:rounded-lg bg-primary shadow-lg">
                     <CalendarIcon
                       className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-white"
                       strokeWidth={2.5}
                     />
                   </div>
                   <div>
-                    <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-slate-900 dark:text-white">
+                    <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-foreground">
                       Calendario
                     </CardTitle>
-                    <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                    <CardDescription className="text-xs text-muted-foreground">
                       Selecciona una fecha
                     </CardDescription>
                   </div>
@@ -280,16 +280,16 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
         </div>
 
         <div className="lg:col-span-8">
-          <div className="mb-2 sm:mb-3 pb-2 border-b border-slate-200 dark:border-slate-800">
-            <p className="text-sm sm:text-base lg:text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <div className="mb-2 sm:mb-3 pb-2 border-b border-border">
+            <p className="text-sm sm:text-base lg:text-lg font-bold text-foreground mb-2">
               Vista
             </p>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "timeline" | "grid")}>
-              <TabsList className="h-9 bg-slate-200/80 dark:bg-slate-800/80">
-                <TabsTrigger value="timeline" className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">
+              <TabsList className="h-9">
+                <TabsTrigger value="timeline" className="text-xs">
                   Vista Timeline
                 </TabsTrigger>
-                <TabsTrigger value="grid" className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">
+                <TabsTrigger value="grid" className="text-xs">
                   Vista Grid
                 </TabsTrigger>
               </TabsList>
@@ -300,11 +300,11 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
                 onValueChange={(v) => setTimelineMode(v as "date" | "full")}
                 className="mt-2"
               >
-                <TabsList className="h-9 bg-slate-200/80 dark:bg-slate-800/80">
-                  <TabsTrigger value="date" className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">
+                <TabsList className="h-9">
+                  <TabsTrigger value="date" className="text-xs">
                     Vista por Fecha
                   </TabsTrigger>
-                  <TabsTrigger value="full" className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">
+                  <TabsTrigger value="full" className="text-xs">
                     Historial Completo
                   </TabsTrigger>
                 </TabsList>
@@ -349,16 +349,16 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
       <Dialog open={pendientesDialogOpen} onOpenChange={setPendientesDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-base font-bold text-foreground">
               Turnos pendientes
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               {turnosPendientes.length} pendientes ordenados por fecha
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
             {turnosPendientes.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-6">
+              <p className="text-xs text-muted-foreground text-center py-6">
                 No hay turnos pendientes
               </p>
             ) : (
@@ -375,13 +375,13 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
                 return (
                   <div
                     key={turno.id}
-                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/50 border border-border"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                      <p className="text-xs font-semibold text-foreground truncate">
                         {turno.mascota?.nombre || "Sin nombre"} · {turno.cliente?.nombre || "Cliente"}
                       </p>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                      <p className="text-[11px] text-muted-foreground">
                         {fecha} {horaStr && `· ${horaStr}`}
                       </p>
                     </div>
@@ -410,10 +410,10 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
       <Dialog open={!!generateHistoriaTurno} onOpenChange={(open) => !open && setGenerateHistoriaTurno(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-base font-bold text-foreground">
               Nota clínica rápida
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               {generateHistoriaTurno
                 ? `${generateHistoriaTurno.cliente?.nombre ?? ""} – ${generateHistoriaTurno.mascota?.nombre ?? ""}`
                 : ""}
@@ -480,7 +480,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
               onClick={saveNotaRapida}
               disabled={savingNota || readOnly}
               title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-primary hover:bg-primary/90"
             >
               {savingNota ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar y marcar turno completado
