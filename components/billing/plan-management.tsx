@@ -49,14 +49,17 @@ export function PlanManagement({ tenantId }: Props) {
   const { toast } = useToast()
   const [estado, setEstado] = useState<EstadoBilling | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [errorCarga, setErrorCarga] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<PlanId | "cancelar" | "sync" | null>(null)
   const [confirmar, setConfirmar] = useState<"cancelar" | PlanId | null>(null)
 
   const cargar = useCallback(
     async (sync = false) => {
       try {
+        setErrorCarga(null)
         setEstado(await getEstadoBilling(tenantId, sync))
       } catch (error) {
+        setErrorCarga(error instanceof Error ? error.message : "No se pudo leer el estado del plan")
         toast({
           title: "No se pudo leer el plan",
           description: error instanceof Error ? error.message : undefined,
@@ -104,10 +107,24 @@ export function PlanManagement({ tenantId }: Props) {
     }
   }
 
-  if (cargando || !estado) {
+  if (cargando) {
     return (
       <div className="flex min-h-[30vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Sin estado y sin estar cargando: la lectura falló. Antes quedaba el
+  // spinner para siempre y el error solo pasaba por un toast que se iba.
+  if (!estado) {
+    return (
+      <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3 text-center">
+        <p className="text-sm font-semibold text-foreground">No se pudo leer el plan</p>
+        <p className="max-w-md text-xs text-muted-foreground">{errorCarga}</p>
+        <Button variant="outline" size="sm" onClick={() => { setCargando(true); void cargar() }}>
+          <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
+        </Button>
       </div>
     )
   }
