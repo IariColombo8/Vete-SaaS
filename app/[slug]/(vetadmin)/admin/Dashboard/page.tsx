@@ -128,11 +128,7 @@ export default function DashboardPage() {
           )
         })()}
 
-        {/* Graficos */}
-        <div data-tour="metricas">
-          <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/admin/Turnos`)} />
-        </div>
-
+        {/* Ventas primero: es lo que el dueño mira al abrir el panel */}
         {mostrarVentas && (
           <DashboardVentas
             tenantId={slug}
@@ -140,6 +136,11 @@ export default function DashboardPage() {
             onNavigateToPos={() => router.push(`/${slug}/admin/Vender`)}
           />
         )}
+
+        {/* Turnos y clínica */}
+        <div data-tour="metricas">
+          <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/admin/Turnos`)} />
+        </div>
       </div>
       <Toaster />
     </>
