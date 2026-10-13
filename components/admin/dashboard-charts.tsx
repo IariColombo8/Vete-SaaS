@@ -55,7 +55,15 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { serieHorarios, serieUltimosDias, serieUltimosMeses } from "@/lib/dashboard/metricas";
+import {
+  contarMascotasUnicas,
+  mascotasPorEspecie,
+  resumenEstados,
+  serieHorarios,
+  serieUltimosDias,
+  serieUltimosMeses,
+  tasaPorcentaje,
+} from "@/lib/dashboard/metricas";
 
 interface DashboardChartsProps {
   tenantId: string;
@@ -118,7 +126,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       <div className="space-y-6" aria-busy="true" aria-label="Cargando métricas">
         <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-[150px] rounded-xl" />
+            <Skeleton key={i} className="h-[118px] rounded-xl" />
           ))}
         </div>
         <div className="grid gap-4 lg:grid-cols-12">
@@ -139,40 +147,22 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
   const turnosPorDiaData = serieUltimosDias(fechasTurnos, 30, hoy);
   const diasConActividad = new Set(fechasTurnos).size;
 
-  const mascotasPorTipo = turnos.reduce((acc, turno) => {
-    if (turno.mascota?.tipo) {
-      const tipo = turno.mascota.tipo;
-      acc[tipo] = (acc[tipo] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  // Mascotas: se cuentan mascotas distintas (por id, o por nombre en turnos
+  // viejos sin id), no turnos. Un perro con cinco turnos es un perro.
+  const mascotasDeTurnos = turnos.map((t) => ({
+    id: t.mascotaId,
+    nombre: t.mascota?.nombre ?? "",
+    tipo: t.mascota?.tipo ?? "",
+  }));
+  const mascotasPorTipoData = mascotasPorEspecie(mascotasDeTurnos);
+  const mascotasUnicas = contarMascotasUnicas(mascotasDeTurnos);
 
-  const mascotasPorTipoData = Object.entries(mascotasPorTipo)
-    .map(([tipo, cantidad]) => ({
-      tipo: tipo
-        .toLowerCase()
-        .split(" ")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" "),
-      cantidad,
-    }))
-    .sort((a, b) => b.cantidad - a.cantidad); // Ordenar por cantidad descendente
+  const estadosTurnos = resumenEstados(turnos.map((t) => t.estado));
+  const totalClientes = clientes?.length || 0;
 
-  const estadosTurnos = {
-    pendiente: turnos.filter((t) => t.estado === "pendiente").length,
-    completado: turnos.filter((t) => t.estado === "completado").length,
-    cancelado: turnos.filter((t) => t.estado === "cancelado").length,
-  };
-
-  // Nuevas métricas
-  const mascotasUnicas = new Set(
-    turnos.filter((t) => t.mascota?.nombre).map((t) => t.mascota.nombre)
-  ).size;
-  const totalClientes = clientes?.length || 0; // Total de clientes en Firestore
-
-  // Turnos pendientes para el modal
+  // Turnos por atender para el modal: pendientes y confirmados
   const turnosPendientes = (turnos || [])
-    .filter((t) => t?.estado === "pendiente")
+    .filter((t) => t?.estado === "pendiente" || t?.estado === "confirmado")
     .sort((a, b) => {
       const fechaA = a?.turno?.fecha || "";
       const fechaB = b?.turno?.fecha || "";
@@ -183,27 +173,10 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
   const turnosPorMesData = serieUltimosMeses(fechasTurnos, 6, hoy);
   const turnosPorHorarioData = serieHorarios(horasTurnos);
 
-  const estadosTurnosData = [
-    {
-      estado: "Completados",
-      cantidad: estadosTurnos.completado,
-      fill: "#10b981",
-    },
-    {
-      estado: "Pendientes",
-      cantidad: estadosTurnos.pendiente,
-      fill: "#f59e0b",
-    },
-    {
-      estado: "Cancelados",
-      cantidad: estadosTurnos.cancelado,
-      fill: "#6366f1",
-    },
-  ];
-
   // Radial chart data
   const radialData = [
     { name: "Completados", value: estadosTurnos.completado, fill: "#10b981" },
+    { name: "Confirmados", value: estadosTurnos.confirmado, fill: "#0ea5e9" },
     { name: "Pendientes", value: estadosTurnos.pendiente, fill: "#f59e0b" },
     { name: "Cancelados", value: estadosTurnos.cancelado, fill: "#6366f1" },
   ];
@@ -219,14 +192,10 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
   ];
 
   const totalTurnos = turnos.length;
-  const tasaCompletado =
-    totalTurnos > 0
-      ? ((estadosTurnos.completado / totalTurnos) * 100).toFixed(1)
-      : 0;
-  const tasaCancelacion =
-    totalTurnos > 0
-      ? ((estadosTurnos.cancelado / totalTurnos) * 100).toFixed(1)
-      : 0;
+  // Tasas sobre los turnos ya resueltos: un turno pendiente o confirmado
+  // todavía no es ni un éxito ni una cancelación.
+  const tasaCompletado = tasaPorcentaje(estadosTurnos.completado, estadosTurnos.resueltos);
+  const tasaCancelacion = tasaPorcentaje(estadosTurnos.cancelado, estadosTurnos.resueltos);
   const promedioTurnosDia = (diasConActividad > 0 ? totalTurnos / diasConActividad : 0).toFixed(1);
 
   // Servicios más solicitados (top 6)
@@ -250,57 +219,57 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
     <div>
 
       {/* KPI Cards Premium */}
-      <div className="grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 mb-8">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 mb-6">
         {/* Total Turnos */}
-        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="group relative overflow-hidden gap-2 py-4 transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
-                <Calendar className="h-5 w-5 text-white" strokeWidth={2.5} />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+                <Calendar className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-accent">
+              <div className="px-2 py-0.5 rounded-full bg-accent">
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-foreground mb-1">
+          <CardContent className="px-4">
+            <div className="text-2xl font-black text-foreground leading-tight">
               {totalTurnos}
             </div>
             <p className="text-xs font-semibold text-muted-foreground">
               Total Turnos
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[10px] text-muted-foreground mt-0.5">
               Todos los registros
             </p>
           </CardContent>
         </Card>
 
         {/* Pendientes */}
-        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="group relative overflow-hidden gap-2 py-4 transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
-                <Clock className="h-5 w-5 text-white" strokeWidth={2.5} />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
+                <Clock className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/50">
+              <div className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50">
                 <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-foreground mb-1">
-              {estadosTurnos.pendiente}
+          <CardContent className="px-4">
+            <div className="text-2xl font-black text-foreground leading-tight">
+              {estadosTurnos.porAtender}
             </div>
             <p className="text-xs font-semibold text-muted-foreground">
-              Pendientes
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
               Por atender
             </p>
-            {estadosTurnos.pendiente > 0 && turnosPendientes && turnosPendientes.length > 0 && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Pendientes y confirmados
+            </p>
+            {turnosPendientes.length > 0 && (
               <>
                 <button
                   className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 underline font-medium"
@@ -315,10 +284,10 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                       <DialogTitle className="text-base font-bold text-foreground">
-                        Turnos pendientes
+                        Turnos por atender
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">
-                        {turnosPendientes?.length || 0} pendientes ordenados por fecha
+                        {turnosPendientes.length} pendientes o confirmados, ordenados por fecha
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
@@ -377,107 +346,107 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         </Card>
 
         {/* Completados */}
-        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="group relative overflow-hidden gap-2 py-4 transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
                 <CheckCircle2
-                  className="h-5 w-5 text-white"
+                  className="h-4 w-4 text-white"
                   strokeWidth={2.5}
                 />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-accent">
+              <div className="px-2 py-0.5 rounded-full bg-accent">
                 <Heart className="h-3.5 w-3.5 text-primary" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-foreground mb-1">
+          <CardContent className="px-4">
+            <div className="text-2xl font-black text-foreground leading-tight">
               {estadosTurnos.completado}
             </div>
             <p className="text-xs font-semibold text-muted-foreground">
               Completados
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[10px] text-muted-foreground mt-0.5">
               Exitosamente
             </p>
           </CardContent>
         </Card>
 
         {/* Tasa de Éxito */}
-        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="group relative overflow-hidden gap-2 py-4 transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg">
-                <TrendingUp className="h-5 w-5 text-white" strokeWidth={2.5} />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg">
+                <TrendingUp className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-900/50">
+              <div className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/50">
                 <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-foreground mb-1">
+          <CardContent className="px-4">
+            <div className="text-2xl font-black text-foreground leading-tight">
               {tasaCompletado}%
             </div>
             <p className="text-xs font-semibold text-muted-foreground">
               Tasa de Éxito
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Completados
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Sobre turnos resueltos
             </p>
           </CardContent>
         </Card>
 
         {/* Mascotas Únicas */}
-        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="group relative overflow-hidden gap-2 py-4 transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 shadow-lg">
-                <PawPrint className="h-5 w-5 text-white" strokeWidth={2.5} />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 shadow-lg">
+                <PawPrint className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-pink-100 dark:bg-pink-900/50">
+              <div className="px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/50">
                 <Heart className="h-3.5 w-3.5 text-pink-600 dark:text-pink-400" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-foreground mb-1">
+          <CardContent className="px-4">
+            <div className="text-2xl font-black text-foreground leading-tight">
               {mascotasUnicas}
             </div>
             <p className="text-xs font-semibold text-muted-foreground">
               Mascotas
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[10px] text-muted-foreground mt-0.5">
               Únicas registradas
             </p>
           </CardContent>
         </Card>
 
         {/* Clientes Únicos */}
-        <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="group relative overflow-hidden gap-2 py-4 transition-shadow hover:shadow-md">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                <Users className="h-5 w-5 text-white" strokeWidth={2.5} />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                <Users className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50">
+              <div className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50">
                 <Activity className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-foreground mb-1">
+          <CardContent className="px-4">
+            <div className="text-2xl font-black text-foreground leading-tight">
               {totalClientes}
             </div>
             <p className="text-xs font-semibold text-muted-foreground">
               Clientes
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[10px] text-muted-foreground mt-0.5">
               Activos totales
             </p>
           </CardContent>
@@ -610,13 +579,21 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 <Tooltip content={<TooltipGrafico />} />
               </RadialBarChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-3 gap-3 mt-4 w-full">
+            <div className="grid grid-cols-4 gap-2 mt-4 w-full">
               <div className="text-center p-2 rounded-lg bg-accent">
                 <div className="text-xl font-black text-primary">
                   {estadosTurnos.completado}
                 </div>
                 <div className="text-[10px] font-semibold text-muted-foreground">
                   Completados
+                </div>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-sky-50 dark:bg-sky-900/20">
+                <div className="text-xl font-black text-sky-600 dark:text-sky-400">
+                  {estadosTurnos.confirmado}
+                </div>
+                <div className="text-[10px] font-semibold text-muted-foreground">
+                  Confirmados
                 </div>
               </div>
               <div className="text-center p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
@@ -654,7 +631,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   Tipos de Mascotas
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Por especie
+                  Mascotas distintas por especie
                 </CardDescription>
               </div>
             </div>
@@ -665,7 +642,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 <Pie
                   data={mascotasPorTipoData}
                   dataKey="cantidad"
-                  nameKey="tipo"
+                  nameKey="etiqueta"
                   cx="50%"
                   cy="50%"
                   outerRadius={70}
@@ -692,7 +669,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   iconType="circle"
                   wrapperStyle={{ fontSize: "13px", fontWeight: 600 }}
                   formatter={(value: string, entry: any) => {
-                    const data = mascotasPorTipoData.find((d) => d.tipo === value);
+                    const data = mascotasPorTipoData.find((d) => d.etiqueta === value);
                     const total = mascotasPorTipoData.reduce(
                       (sum, d) => sum + d.cantidad,
                       0
@@ -900,7 +877,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   Métricas clave
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Tasas sobre el total de turnos
+                  Sobre turnos ya resueltos (completados + cancelados)
                 </CardDescription>
               </div>
             </div>

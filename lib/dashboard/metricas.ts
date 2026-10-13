@@ -99,3 +99,82 @@ export function serieHorarios(horas: string[]): PuntoSerie[] {
   }
   return serie
 }
+
+export interface ResumenEstados {
+  pendiente: number
+  confirmado: number
+  completado: number
+  cancelado: number
+  /** Pendientes + confirmados: todavía no se atendieron. */
+  porAtender: number
+  /** Completados + cancelados: ya tienen desenlace. Base de las tasas. */
+  resueltos: number
+}
+
+/**
+ * Cuenta los turnos por estado. "confirmado" existe en el enum de Postgres y
+ * antes no se contaba en ningún lado: el total no cuadraba con la suma de
+ * estados y un turno confirmado no aparecía como "por atender".
+ */
+export function resumenEstados(estados: string[]): ResumenEstados {
+  const r = { pendiente: 0, confirmado: 0, completado: 0, cancelado: 0 }
+  for (const e of estados) if (e in r) r[e as keyof typeof r]++
+  return {
+    ...r,
+    porAtender: r.pendiente + r.confirmado,
+    resueltos: r.completado + r.cancelado,
+  }
+}
+
+/** Porcentaje con un decimal ("0.0" si no hay base): las tasas de éxito y
+ *  cancelación se miden sobre los turnos resueltos, no sobre los futuros. */
+export function tasaPorcentaje(parte: number, base: number): string {
+  return (base > 0 ? (parte / base) * 100 : 0).toFixed(1)
+}
+
+export interface MascotaTurno {
+  id?: string
+  nombre: string
+  tipo: string
+}
+
+/** Identidad de una mascota en un turno: el id si lo tiene, si no el nombre. */
+function claveMascota(m: MascotaTurno): string | null {
+  if (m.id) return `id:${m.id}`
+  const nombre = m.nombre.trim().toLowerCase()
+  return nombre ? `nombre:${nombre}` : null
+}
+
+/** Cantidad de mascotas distintas con turno (antes se contaba por nombre:
+ *  dos perros llamados "Toby" eran uno solo). */
+export function contarMascotasUnicas(mascotas: MascotaTurno[]): number {
+  const claves = new Set<string>()
+  for (const m of mascotas) {
+    const clave = claveMascota(m)
+    if (clave) claves.add(clave)
+  }
+  return claves.size
+}
+
+/**
+ * Mascotas distintas por especie, de mayor a menor. Cuenta mascotas, no turnos:
+ * un perro con cinco turnos es un perro. "perro" y "Perro" son la misma especie.
+ */
+export function mascotasPorEspecie(mascotas: MascotaTurno[]): PuntoSerie[] {
+  const vistas = new Set<string>()
+  const conteo = new Map<string, number>()
+  for (const m of mascotas) {
+    const tipo = m.tipo.trim().toLowerCase()
+    const clave = claveMascota(m)
+    if (!tipo || !clave || vistas.has(clave)) continue
+    vistas.add(clave)
+    conteo.set(tipo, (conteo.get(tipo) ?? 0) + 1)
+  }
+  return [...conteo.entries()]
+    .map(([tipo, cantidad]) => ({
+      clave: tipo,
+      etiqueta: tipo.split(" ").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" "),
+      cantidad,
+    }))
+    .sort((a, b) => b.cantidad - a.cantidad)
+}

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { claveDia, serieHorarios, serieUltimosDias, serieUltimosMeses } from "./metricas"
+import {
+  claveDia,
+  contarMascotasUnicas,
+  mascotasPorEspecie,
+  resumenEstados,
+  serieHorarios,
+  serieUltimosDias,
+  serieUltimosMeses,
+  tasaPorcentaje,
+} from "./metricas"
 
 const hoy = new Date(2026, 9, 12) // 12 de octubre de 2026
 
@@ -76,5 +85,43 @@ describe("serieHorarios", () => {
 describe("claveDia", () => {
   it("usa la fecha local con dos dígitos", () => {
     expect(claveDia(new Date(2026, 0, 5))).toBe("2026-01-05")
+  })
+})
+
+describe("resumenEstados", () => {
+  it("cuenta los confirmados y los suma como por atender", () => {
+    const r = resumenEstados(["pendiente", "confirmado", "confirmado", "completado", "cancelado", "raro"])
+    expect(r).toEqual({
+      pendiente: 1, confirmado: 2, completado: 1, cancelado: 1, porAtender: 3, resueltos: 2,
+    })
+  })
+})
+
+describe("tasaPorcentaje", () => {
+  it("mide sobre la base dada y no explota con base cero", () => {
+    expect(tasaPorcentaje(1, 2)).toBe("50.0")
+    expect(tasaPorcentaje(0, 0)).toBe("0.0")
+  })
+})
+
+describe("mascotas", () => {
+  const mascotas = [
+    { id: "a", nombre: "Toby", tipo: "Perro" },
+    { id: "a", nombre: "Toby", tipo: "perro" }, // mismo perro, segundo turno
+    { id: "b", nombre: "Toby", tipo: "perro" }, // otro perro con el mismo nombre
+    { nombre: "Michi", tipo: "Gato" }, // turno viejo sin id
+    { nombre: "michi ", tipo: "gato" }, // el mismo gato
+    { id: "c", nombre: "", tipo: "" }, // sin especie: no entra al gráfico
+  ]
+
+  it("cuenta mascotas distintas por id y, si no hay id, por nombre", () => {
+    expect(contarMascotasUnicas(mascotas)).toBe(4)
+  })
+
+  it("agrupa por especie contando mascotas, no turnos", () => {
+    expect(mascotasPorEspecie(mascotas)).toEqual([
+      { clave: "perro", etiqueta: "Perro", cantidad: 2 },
+      { clave: "gato", etiqueta: "Gato", cantidad: 1 },
+    ])
   })
 })
