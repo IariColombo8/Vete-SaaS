@@ -19,7 +19,6 @@ import {
   Edit,
   Trash2,
   CalendarIcon,
-  Clock,
   Users,
   Phone,
   MapPin,
@@ -30,6 +29,7 @@ import {
 } from "lucide-react";
 
 import { IconoMascota } from "@/components/admin/icono-mascota";
+import { EstadoTurnoBadge } from "@/components/admin/estado-badge";
 
 interface TurnoDetailsModalProps {
   open: boolean;
@@ -44,41 +44,6 @@ interface TurnoDetailsModalProps {
   onDelete: (turnoId: string) => void;
   onGenerateHistoria?: (turno: Turno) => void;
 }
-
-const getEstadoBadge = (estado: string) => {
-  switch (estado) {
-    case "pendiente":
-      return (
-        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 border-0">
-          <Clock className="h-3 w-3 mr-1" />
-          Pendiente
-        </Badge>
-      );
-    case "confirmado":
-      return (
-        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950/50 dark:text-blue-300 border-0">
-          <CalendarCheck className="h-3 w-3 mr-1" />
-          Confirmado
-        </Badge>
-      );
-    case "completado":
-      return (
-        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 border-0">
-          <CheckCircle2 className="h-3 w-3 mr-1" />
-          Completado
-        </Badge>
-      );
-    case "cancelado":
-      return (
-        <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-400 border-0">
-          <XCircle className="h-3 w-3 mr-1" />
-          Cancelado
-        </Badge>
-      );
-    default:
-      return <Badge variant="outline">{estado}</Badge>;
-  }
-};
 
 export function TurnoDetailsModal({
   open,
@@ -111,7 +76,7 @@ export function TurnoDetailsModal({
           {/* Estado Badge */}
           <div className="flex items-center justify-center">
             <div className="scale-110 sm:scale-125">
-              {getEstadoBadge(turno.estado)}
+              <EstadoTurnoBadge estado={turno.estado} />
             </div>
           </div>
 
@@ -262,7 +227,7 @@ export function TurnoDetailsModal({
                 <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-0.5 sm:mb-1">
                   Estado
                 </p>
-                <div className="mt-1">{getEstadoBadge(turno.estado)}</div>
+                <div className="mt-1"><EstadoTurnoBadge estado={turno.estado} /></div>
               </div>
             </div>
             <div className="mt-2 sm:mt-3">

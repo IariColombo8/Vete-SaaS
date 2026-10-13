@@ -4,8 +4,9 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, PawPrint, AlertCircle, CheckCircle2, XCircle, Dog, Cat, Bird } from "lucide-react"
+import { Clock, PawPrint, AlertCircle, Dog, Cat, Bird } from "lucide-react"
 import type { Turno } from "@/lib/supabase/queries"
+import { EstadoTurnoBadge } from "@/components/admin/estado-badge"
 
 function getMascotaIcon(tipo: string) {
   const t = tipo?.toLowerCase() || ""
@@ -37,34 +38,6 @@ export function TimelineView({
       slots.push(`${String(hour).padStart(2, "0")}:00`)
     }
     return slots
-  }
-
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case "pendiente":
-        return (
-          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[11px] sm:text-xs">
-            <Clock className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-            Pendiente
-          </Badge>
-        )
-      case "completado":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 border-0 text-[11px] sm:text-xs">
-            <CheckCircle2 className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-            Completado
-          </Badge>
-        )
-      case "cancelado":
-        return (
-          <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-400 border-0 text-[11px] sm:text-xs">
-            <XCircle className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-            Cancelado
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{estado}</Badge>
-    }
   }
 
   const timeSlots = getTimeSlots()
@@ -126,7 +99,7 @@ export function TimelineView({
             </div>
           </div>
           <div className="flex flex-col items-end gap-1 sm:gap-2">
-            {getEstadoBadge(turno.estado)}
+            <EstadoTurnoBadge estado={turno.estado} />
             <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
               {getHora(turno) || "—"}
             </span>

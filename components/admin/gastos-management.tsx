@@ -32,6 +32,7 @@ import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 import type { Caja, Gasto, GastoFijo } from "@/lib/supabase/types"
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
+import { EstadoBadge } from "@/components/admin/estado-badge"
 
 interface Props {
   tenantId: string
@@ -259,9 +260,7 @@ export function GastosManagement({ tenantId }: Props) {
                         </div>
 
                         {pago ? (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                            <Check className="mr-1 h-3 w-3" /> Pagado
-                          </Badge>
+                          <EstadoBadge tono="ok" icono={Check}>Pagado</EstadoBadge>
                         ) : (
                           <Button
                             size="sm"

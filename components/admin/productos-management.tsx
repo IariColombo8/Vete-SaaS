@@ -52,6 +52,7 @@ import { formatCurrency, formatCantidad } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
+import { EstadoBadge } from "@/components/admin/estado-badge"
 
 const POR_PAGINA = 10
 // Tope razonable para "seleccionar todos": ningún catálogo real tiene más
@@ -688,9 +689,7 @@ export function ProductosManagement({ tenantId }: Props) {
                               )}
                               {!p.activo && <Badge variant="outline">Dado de baja</Badge>}
                               {p.revisar && (
-                                <Badge variant="outline" className="border-amber-500 text-amber-600">
-                                  <AlertTriangle className="mr-1 h-3 w-3" /> A revisar
-                                </Badge>
+                                <EstadoBadge tono="aviso" icono={AlertTriangle}>A revisar</EstadoBadge>
                               )}
                             </div>
                           </div>
@@ -758,16 +757,14 @@ export function ProductosManagement({ tenantId }: Props) {
                             <span className="flex items-center justify-end gap-1.5">
                               <span className={cn(
                                 "font-semibold",
-                                estado === "agotado" && "text-red-600",
-                                estado === "bajo" && "text-amber-600",
+                                estado === "agotado" && "text-destructive",
+                                estado === "bajo" && "text-warning-soft-foreground",
                               )}>
                                 {formatCantidad(p.stock)}
                               </span>
                               <span className="text-xs text-muted-foreground">{p.unidad}</span>
                               {estado === "bajo" && (
-                                <Badge variant="outline" className="border-amber-500 text-amber-600">
-                                  Bajo
-                                </Badge>
+                                <EstadoBadge tono="aviso">Bajo</EstadoBadge>
                               )}
                             </span>
                             {estado === "agotado" && (

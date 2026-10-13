@@ -8,8 +8,6 @@ import {
   Clock,
   Phone,
   MapPin,
-  CheckCircle2,
-  XCircle,
   AlertCircle,
   Dog,
   Cat,
@@ -18,6 +16,7 @@ import {
   Calendar,
 } from "lucide-react";
 import type { Turno } from "@/lib/supabase/queries";
+import { EstadoTurnoBadge } from "@/components/admin/estado-badge";
 
 function getMascotaIcon(tipo: string) {
   const t = tipo?.toLowerCase() || "";
@@ -48,34 +47,6 @@ export function GridView({
   gridMode = "date",
   onGridModeChange,
 }: GridViewProps) {
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case "pendiente":
-        return (
-          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[11px] sm:text-xs">
-            <Clock className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-            Pendiente
-          </Badge>
-        );
-      case "completado":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 border-0 text-[11px] sm:text-xs">
-            <CheckCircle2 className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-            Completado
-          </Badge>
-        );
-      case "cancelado":
-        return (
-          <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-400 border-0 text-[11px] sm:text-xs">
-            <XCircle className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-            Cancelado
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{estado}</Badge>;
-    }
-  };
-
   const now = new Date();
   const isToday = selectedDate === now.toISOString().split("T")[0];
 
@@ -196,7 +167,7 @@ export function GridView({
                   {turno.cliente.nombre}
                 </h3>
                 <div className="flex flex-wrap items-center gap-1 shrink-0">
-                  {getEstadoBadge(turno.estado)}
+                  <EstadoTurnoBadge estado={turno.estado} />
                   {isUrgent && (
                     <Badge className="bg-rose-500 text-white border-0 px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-[11px] font-bold">
                       <AlertCircle className="h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5" />

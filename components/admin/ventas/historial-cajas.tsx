@@ -7,12 +7,12 @@ import { toast } from "sonner"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getVentasDeCaja } from "@/lib/supabase/ventas"
 import { descargarCajaPDF, type EmisorCaja } from "@/lib/ventas/caja-pdf"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { Caja } from "@/lib/supabase/types"
+import { EstadoBadge } from "@/components/admin/estado-badge"
 
 interface Props {
   tenantId: string
@@ -86,7 +86,7 @@ export function HistorialCajas({ tenantId, cajas, cargando, emisor }: Props) {
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-sm">
                   {abierta ? (
-                    <Badge className="bg-emerald-600 hover:bg-emerald-600">Abierta</Badge>
+                    <EstadoBadge tono="ok">Abierta</EstadoBadge>
                   ) : (
                     formatDateTime(caja.cierreAt)
                   )}

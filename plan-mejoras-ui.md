@@ -10,7 +10,15 @@
 > **Fase 2 hecha** (2026-10-12): tildes en Configuración y Tienda virtual; los dos
 > `confirm()` (eliminar promoción y eliminar turno) pasaron a `AlertDialog`;
 > `aria-label` en los 16 botones de solo ícono de Libreta y calendario;
-> `styles/globals.css` borrado. Pendientes: Fases 3, 4 y Fase 5 puntos 2–4.
+> `styles/globals.css` borrado.
+>
+> **Fase 3 hecha** (2026-10-12): `--sidebar-*` con la paleta de la marca en claro y
+> oscuro (fuera el azul violeta); tokens `--success`/`--warning`/`--info` (+ `-soft`
+> y `-soft-foreground`) y `--destructive-soft`; `components/admin/estado-badge.tsx`
+> (`EstadoBadge` + `EstadoTurnoBadge`) en agenda, detalle de turno, perfil del
+> cliente, productos (stock / a revisar), gastos (pagado), cajas (abierta) y
+> ventas (anulada / pago cta. cte.). Pendientes: Fase 4 y Fase 5 puntos 2–4.
+> Nota Fase 4: el calendario de Turnos sigue con `indigo`/violeta fijo.
 >
 > Lo hecho en la Fase 1:
 > - `components/ui/ayuda.tsx` + `lib/ayuda/textos.ts`: 19 cartelitos en Caja, Vender,

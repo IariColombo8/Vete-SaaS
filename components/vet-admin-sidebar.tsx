@@ -138,7 +138,7 @@ export function VetAdminSidebar({ slug, vetNombre, role, onSalir }: Props) {
                         <Link href={href} onClick={cerrarEnMobile}>
                           <Icon
                             className={
-                              activo ? "text-emerald-600 dark:text-emerald-400" : undefined
+                              activo ? "text-sidebar-primary" : undefined
                             }
                           />
                           <span>{label}</span>

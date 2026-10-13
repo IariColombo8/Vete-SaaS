@@ -20,7 +20,6 @@ import {
   Wallet,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,6 +34,7 @@ import { getTurnosByClienteId } from "@/lib/supabase/turnos"
 import { getVentas } from "@/lib/supabase/ventas"
 import { getMovimientosCliente, type MovimientoCtaCte } from "@/lib/supabase/cuentaCorriente"
 import { cuitValido } from "@/lib/facturacion/comprobante"
+import { EstadoBadge, EstadoTurnoBadge } from "@/components/admin/estado-badge"
 
 export type ClientePerfil = Cliente & { mascotas?: Mascota[]; historialDatos?: HistorialDato[] }
 
@@ -50,13 +50,6 @@ interface Props {
   onAgregarMascota: (dni: string) => void
   /** Avisar al padre que cambiaron datos fiscales (para refrescar la lista). */
   onClienteActualizado?: (cliente: ClientePerfil) => void
-}
-
-const ESTADO_TURNO: Record<Turno["estado"], string> = {
-  pendiente: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  confirmado: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
-  completado: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-  cancelado: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
 }
 
 function iniciales(nombre: string): string {
@@ -399,7 +392,7 @@ export function ClientePerfilDialog({
                             <p className="truncate">{t.servicio || "Consulta"} · <span className="text-muted-foreground">{t.mascota.nombre}</span></p>
                             {t.diagnostico && <p className="truncate text-xs text-muted-foreground">{t.diagnostico}</p>}
                           </div>
-                          <Badge className={`${ESTADO_TURNO[t.estado]} border-0 capitalize`}>{t.estado}</Badge>
+                          <EstadoTurnoBadge estado={t.estado} />
                         </li>
                       ))}
                     </ul>
@@ -425,7 +418,7 @@ export function ClientePerfilDialog({
                               {(v.items ?? []).map((i) => i.nombre).join(", ") || v.medioPago}
                             </p>
                             <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(v.total)}</span>
-                            {v.estado === "anulada" && <Badge variant="outline">Anulada</Badge>}
+                            {v.estado === "anulada" && <EstadoBadge tono="peligro">Anulada</EstadoBadge>}
                           </li>
                         ))}
                       </ul>

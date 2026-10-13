@@ -11,7 +11,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { anularVenta } from "@/lib/supabase/ventas"
@@ -22,6 +21,7 @@ import { MEDIOS_PAGO, type Venta } from "@/lib/supabase/types"
 import type { Comprobante, EstadoFacturacion } from "@/lib/supabase/comprobantes"
 import { FacturarButton } from "@/components/admin/pos/facturar-button"
 import { COLOR_MEDIO_PAGO } from "./colores-medio-pago"
+import { EstadoBadge } from "@/components/admin/estado-badge"
 
 interface Props {
   ventas: Venta[]
@@ -100,11 +100,9 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
                   </TableCell>
                   <TableCell className="text-sm">
                     {anulada ? (
-                      <Badge variant="destructive">Anulada</Badge>
+                      <EstadoBadge tono="peligro">Anulada</EstadoBadge>
                     ) : venta.esPagoCtaCte ? (
-                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
-                        Pago cta. cte.
-                      </span>
+                      <EstadoBadge tono="info">Pago cta. cte.</EstadoBadge>
                     ) : (
                       <span className="flex items-center gap-1">
                         <span
