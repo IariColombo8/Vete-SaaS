@@ -8,6 +8,10 @@ import {
   serieUltimosDias,
   serieUltimosMeses,
   tasaPorcentaje,
+  inicioVentana,
+  primerDiaDelMes,
+  resumenVentas,
+  serieVentasUltimosDias,
 } from "./metricas"
 
 const hoy = new Date(2026, 9, 12) // 12 de octubre de 2026
@@ -123,5 +127,43 @@ describe("mascotas", () => {
       { clave: "perro", etiqueta: "Perro", cantidad: 2 },
       { clave: "gato", etiqueta: "Gato", cantidad: 1 },
     ])
+  })
+})
+
+describe("ventas", () => {
+  const porDia = [
+    { fecha: "2026-09-10", total: 1000, ventas: 1 }, // fuera de los 30 días
+    { fecha: "2026-09-30", total: 5000, ventas: 2 }, // en los 30 días, mes anterior
+    { fecha: "2026-10-03", total: 8000, ventas: 4 },
+    { fecha: "2026-10-12", total: 2000, ventas: 1 }, // hoy
+  ]
+
+  it("inicioVentana y primerDiaDelMes", () => {
+    expect(inicioVentana(30, hoy)).toBe("2026-09-13")
+    expect(primerDiaDelMes(hoy)).toBe("2026-10-01")
+  })
+
+  it("serieVentasUltimosDias rellena con ceros y respeta la ventana", () => {
+    const serie = serieVentasUltimosDias(porDia, 30, hoy)
+    expect(serie).toHaveLength(30)
+    const porClave = Object.fromEntries(serie.map((p) => [p.clave, p]))
+    expect(porClave["2026-09-30"].total).toBe(5000)
+    expect(porClave["2026-09-30"].ventas).toBe(2)
+    expect(porClave["2026-10-11"].total).toBe(0)
+    expect(porClave["2026-09-10"]).toBeUndefined()
+  })
+
+  it("resumenVentas separa hoy, mes y últimos 30 días", () => {
+    const r = resumenVentas(porDia, hoy)
+    expect(r.hoy).toEqual({ total: 2000, ventas: 1 })
+    expect(r.mes).toEqual({ total: 10000, ventas: 5, ticketPromedio: 2000 })
+    expect(r.ultimos30).toEqual({ total: 15000, ventas: 7 })
+    expect(r.mejorDiaMes?.fecha).toBe("2026-10-03")
+  })
+
+  it("resumenVentas sin ventas no divide por cero", () => {
+    const r = resumenVentas([], hoy)
+    expect(r.mes.ticketPromedio).toBe(0)
+    expect(r.mejorDiaMes).toBeNull()
   })
 })

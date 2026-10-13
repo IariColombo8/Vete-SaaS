@@ -55,6 +55,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePaletaGraficos } from "@/components/admin/ventas/paleta";
 import {
   contarMascotasUnicas,
   mascotasPorEspecie,
@@ -100,6 +101,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendientesDialogOpen, setPendientesDialogOpen] = useState(false);
+  const paleta = usePaletaGraficos();
 
   useEffect(() => {
     if (!tenantId) return;
@@ -497,19 +499,19 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
+                  stroke={paleta.grilla}
                   strokeOpacity={0.3}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="etiqueta"
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
-                  axisLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}
+                  tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 600 }}
+                  axisLine={{ stroke: paleta.grilla, strokeWidth: 1 }}
                   tickLine={false}
                 />
                 <YAxis allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
-                  axisLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}
+                  tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 600 }}
+                  axisLine={{ stroke: paleta.grilla, strokeWidth: 1 }}
                   tickLine={false}
                 />
                 <Tooltip content={<TooltipGrafico />} />
@@ -571,7 +573,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
               >
                 <RadialBar
                   minAngle={15}
-                  background={{ fill: "#f1f5f9" }}
+                  background={{ fill: paleta.grilla, fillOpacity: 0.5 }}
                   clockWise
                   dataKey="value"
                   cornerRadius={10}
@@ -720,19 +722,19 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
+                  stroke={paleta.grilla}
                   strokeOpacity={0.3}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="etiqueta"
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
-                  axisLine={{ stroke: "#cbd5e1" }}
+                  tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 700 }}
+                  axisLine={{ stroke: paleta.grilla }}
                   tickLine={false}
                 />
                 <YAxis allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
-                  axisLine={{ stroke: "#cbd5e1" }}
+                  tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 600 }}
+                  axisLine={{ stroke: paleta.grilla }}
                   tickLine={false}
                 />
                 <Tooltip content={<TooltipGrafico />} />
@@ -779,20 +781,20 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
+                  stroke={paleta.grilla}
                   strokeOpacity={0.3}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="etiqueta"
-                  tick={{ fontSize: 10, fill: "#64748b", fontWeight: 600 }}
-                  axisLine={{ stroke: "#cbd5e1" }}
+                  tick={{ fontSize: 10, fill: paleta.eje, fontWeight: 600 }}
+                  axisLine={{ stroke: paleta.grilla }}
                   tickLine={false}
                   interval={1}
                 />
                 <YAxis allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
-                  axisLine={{ stroke: "#cbd5e1" }}
+                  tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 600 }}
+                  axisLine={{ stroke: paleta.grilla }}
                   tickLine={false}
                   domain={[0, "dataMax + 1"]}
                 />
@@ -854,9 +856,9 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   layout="vertical"
                   margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.3} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={false} allowDecimals={false} />
-                  <YAxis type="category" dataKey="servicio" width={110} tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={paleta.grilla} strokeOpacity={0.3} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 600 }} axisLine={{ stroke: paleta.grilla }} tickLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="servicio" width={110} tick={{ fontSize: 11, fill: paleta.eje, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<TooltipGrafico />} />
                   <Bar dataKey="cantidad" fill="#f59e0b" radius={[0, 8, 8, 0]} barSize={22} />
                 </BarChart>

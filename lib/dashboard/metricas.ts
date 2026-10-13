@@ -178,3 +178,84 @@ export function mascotasPorEspecie(mascotas: MascotaTurno[]): PuntoSerie[] {
     }))
     .sort((a, b) => b.cantidad - a.cantidad)
 }
+
+// ---------------------------------------------------------------------------
+// Ventas
+// ---------------------------------------------------------------------------
+
+/** Un día de ventas tal como lo devuelve `getMetricasVentas().porDia`. */
+export interface VentasDia {
+  fecha: string
+  total: number
+  ventas: number
+}
+
+export interface PuntoVentas extends PuntoSerie {
+  total: number
+  /** Cantidad de ventas del día; `cantidad` (de PuntoSerie) vale lo mismo. */
+  ventas: number
+}
+
+/** Primer día del mes de `hoy`, como "YYYY-MM-01". */
+export function primerDiaDelMes(hoy: Date): string {
+  return `${hoy.getFullYear()}-${dosDigitos(hoy.getMonth() + 1)}-01`
+}
+
+/** "YYYY-MM-DD" de hace `dias - 1` días: el inicio de una ventana de `dias` días que termina hoy. */
+export function inicioVentana(dias: number, hoy: Date): string {
+  return claveDia(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - (dias - 1)))
+}
+
+/**
+ * Facturación por día en los últimos `dias` días calendario terminando en
+ * `hoy`, con cero en los días sin ventas.
+ */
+export function serieVentasUltimosDias(porDia: VentasDia[], dias: number, hoy: Date): PuntoVentas[] {
+  const indice = new Map(porDia.map((d) => [d.fecha, d]))
+  return serieUltimosDias([], dias, hoy).map((p) => {
+    const dia = indice.get(p.clave)
+    return { ...p, total: dia?.total ?? 0, ventas: dia?.ventas ?? 0, cantidad: dia?.ventas ?? 0 }
+  })
+}
+
+export interface TotalVentas {
+  total: number
+  ventas: number
+}
+
+export interface ResumenVentas {
+  hoy: TotalVentas
+  mes: TotalVentas & { ticketPromedio: number }
+  ultimos30: TotalVentas
+  /** Día con más facturación del mes, o null si no hubo ventas. */
+  mejorDiaMes: VentasDia | null
+}
+
+function sumar(dias: VentasDia[]): TotalVentas {
+  return dias.reduce(
+    (acc, d) => ({ total: acc.total + d.total, ventas: acc.ventas + d.ventas }),
+    { total: 0, ventas: 0 },
+  )
+}
+
+/** Totales de hoy, del mes en curso y de los últimos 30 días a partir de la serie diaria. */
+export function resumenVentas(porDia: VentasDia[], hoy: Date): ResumenVentas {
+  const claveHoy = claveDia(hoy)
+  const desdeMes = primerDiaDelMes(hoy)
+  const desde30 = inicioVentana(30, hoy)
+  const hastaHoy = porDia.filter((d) => d.fecha <= claveHoy)
+
+  const delMes = hastaHoy.filter((d) => d.fecha >= desdeMes)
+  const mes = sumar(delMes)
+  const mejorDiaMes = delMes.reduce<VentasDia | null>(
+    (mejor, d) => (d.total > 0 && (!mejor || d.total > mejor.total) ? d : mejor),
+    null,
+  )
+
+  return {
+    hoy: sumar(hastaHoy.filter((d) => d.fecha === claveHoy)),
+    mes: { ...mes, ticketPromedio: mes.ventas > 0 ? mes.total / mes.ventas : 0 },
+    ultimos30: sumar(hastaHoy.filter((d) => d.fecha >= desde30)),
+    mejorDiaMes,
+  }
+}

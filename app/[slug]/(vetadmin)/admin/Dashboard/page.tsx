@@ -4,9 +4,10 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
+import { DashboardVentas } from "@/components/admin/dashboard-ventas"
 import { getTenantConfig, getTurnosDelMes } from "@/lib/supabase/queries"
 import type { TenantConfig } from "@/lib/supabase/queries"
-import { getPlanLimits } from "@/lib/plans"
+import { getPlanLimits, planAllows } from "@/lib/plans"
 import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button"
 import { getEstadoBilling } from "@/components/billing/use-billing"
 import { Ayuda } from "@/components/ui/ayuda"
@@ -60,6 +61,9 @@ export default function DashboardPage() {
   const plan = config?.plan ?? "basico"
   const pi = planInfo[plan] ?? planInfo.basico
   const maxTurnos = getPlanLimits(plan).maxTurnosMes
+  // Hasta que carga la config no se sabe el plan: la sección aparece recién
+  // entonces, en vez de mostrarse y desaparecer.
+  const mostrarVentas = config !== null && planAllows(plan, "ventas")
 
   return (
     <>
@@ -128,6 +132,14 @@ export default function DashboardPage() {
         <div data-tour="metricas">
           <DashboardCharts tenantId={slug} onNavigateToTurnos={() => router.push(`/${slug}/admin/Turnos`)} />
         </div>
+
+        {mostrarVentas && (
+          <DashboardVentas
+            tenantId={slug}
+            onNavigateToVentas={() => router.push(`/${slug}/admin/Ventas`)}
+            onNavigateToPos={() => router.push(`/${slug}/admin/Vender`)}
+          />
+        )}
       </div>
       <Toaster />
     </>
