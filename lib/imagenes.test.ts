@@ -6,12 +6,12 @@ const LOGO = "https://abc.supabase.co/storage/v1/object/public/veterinarias/vipv
 describe("imagenSupabase", () => {
   it("pasa al endpoint de transformación con ancho y calidad", () => {
     expect(imagenSupabase(LOGO, 200)).toBe(
-      "https://abc.supabase.co/storage/v1/render/image/public/veterinarias/vipvet/logo/1-logo.png?width=200&quality=75",
+      "https://abc.supabase.co/storage/v1/render/image/public/veterinarias/vipvet/logo/1-logo.png?width=200&quality=75&resize=contain",
     )
   })
 
   it("respeta una query existente y la calidad pedida", () => {
-    expect(imagenSupabase(`${LOGO}?v=2`, 100, 60)).toMatch(/\?v=2&width=100&quality=60$/)
+    expect(imagenSupabase(`${LOGO}?v=2`, 100, 60)).toMatch(/\?v=2&width=100&quality=60&resize=contain$/)
   })
 
   it("deja intactas las URLs que no son del bucket", () => {

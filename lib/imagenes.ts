@@ -20,7 +20,9 @@ export function imagenSupabase(url: string, ancho: number, calidad = 75): string
   if (!esImagenSupabase(url)) return url
   const base = url.replace(ORIGINAL, RENDER)
   const separador = base.includes("?") ? "&" : "?"
-  return `${base}${separador}width=${ancho}&quality=${calidad}`
+  // resize=contain: escala proporcional. Sin eso (cover por defecto) con solo
+  // `width` Supabase mantiene el alto original y devuelve la imagen recortada.
+  return `${base}${separador}width=${ancho}&quality=${calidad}&resize=contain`
 }
 
 /** `srcset` con descriptores de ancho, o undefined si no es del bucket. */

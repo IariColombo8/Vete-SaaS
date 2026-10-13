@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ChevronLeft, ChevronRight, Search, SlidersHorizontal, Sparkles } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, SlidersHorizontal, Sparkles } from "lucide-react"
+import { Paw, Bone, CatFace } from "@/components/landing/pet-art"
 import { getTenant, getTenantConfig } from "@/lib/supabase/queries"
 import { getProductosPublicados, getProductosPublicadosPorIds } from "@/lib/supabase/productos"
 import { getPromocionesPublicadas } from "@/lib/supabase/promociones"
@@ -117,10 +118,10 @@ export default function ProductosPublicosPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+      <div className="flex min-h-screen items-center justify-center bg-cream">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-14 w-14 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin" />
-          <span className="text-sm text-slate-500 font-medium animate-pulse">Cargando catálogo...</span>
+          <div className="h-14 w-14 rounded-full border-4 border-coral/20 border-t-coral animate-spin" />
+          <span className="text-sm text-ink-muted font-medium animate-pulse">Cargando catálogo...</span>
         </div>
       </div>
     )
@@ -134,41 +135,40 @@ export default function ProductosPublicosPage() {
   const nombre = config?.nombre || slug
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <main className="min-h-screen bg-cream text-ink">
       {/* ╔══════════════════════════════════════════════════╗
           ║                    HEADER                        ║
           ╚══════════════════════════════════════════════════╝ */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950">
-        <div className="vet-blob vet-blob-1" />
-        <div className="vet-blob vet-blob-2" />
+      {/* Mismo lenguaje cálido que la página principal de la veterinaria. */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-coral-ink via-coral to-teal-ink">
+        <div className="paw-pattern pointer-events-none absolute inset-0 opacity-[0.08]" />
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)",
-            backgroundSize: "36px 36px",
-          }}
+          className="warm-blob h-[420px] w-[420px] -top-32 -right-20 opacity-70"
+          style={{ background: "radial-gradient(circle closest-side, rgba(245,166,35,0.35), transparent 100%)" }}
         />
+        <Paw className="paw-wiggle pointer-events-none absolute right-[10%] bottom-4 h-16 w-16 text-white/20 sm:h-24 sm:w-24" />
+        <Bone className="pointer-events-none absolute left-[55%] top-6 hidden h-10 w-10 text-white/20 rotate-12 sm:block" />
 
         <div className="container relative max-w-6xl mx-auto px-6 pt-10 pb-16">
           <Button
             variant="ghost"
-            className="mb-8 -ml-3 text-white/60 hover:text-white hover:bg-white/10"
+            className="mb-8 -ml-3 text-white/80 hover:text-white hover:bg-white/15"
             onClick={() => router.push(`/${slug}`)}
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver a {nombre}
           </Button>
 
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-xl px-4 py-1.5 mb-5">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-            <span className="text-xs font-bold text-emerald-300 tracking-[0.15em] uppercase">
-              Catálogo
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 backdrop-blur-xl px-4 py-1.5 mb-5">
+            <Sparkles className="h-3.5 w-3.5 text-amber" />
+            <span className="text-xs font-bold text-white tracking-[0.15em] uppercase">
+              Vidriera de {nombre}
             </span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight">
-            Productos y{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
-              promociones
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-white tracking-tight">
+            Mimos y cosas ricas{" "}
+            <span className="relative inline-block whitespace-nowrap text-amber">
+              para llevar a casa
             </span>
           </h1>
         </div>
@@ -181,7 +181,7 @@ export default function ProductosPublicosPage() {
             ╚══════════════════════════════════════════════════╝ */}
         {hayPromos && (
           <section className="mb-14">
-            <h2 className="mb-5 text-lg font-bold text-slate-900 dark:text-white">Promociones destacadas</h2>
+            <h2 className="mb-5 font-display text-2xl font-semibold text-ink">Promociones destacadas</h2>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {promocionesFiltradas.map((p) => (
                 <PromocionTarjeta
@@ -199,7 +199,7 @@ export default function ProductosPublicosPage() {
         {hayProductos && (
           <section>
             <div className="mb-5 flex items-baseline justify-between">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Productos</h2>
+              <h2 className="font-display text-2xl font-semibold text-ink">Productos</h2>
               <span className="text-sm text-slate-400">{productosFiltrados.length} resultados</span>
             </div>
 
@@ -217,7 +217,7 @@ export default function ProductosPublicosPage() {
                         <Button variant="outline" className="rounded-full gap-2">
                           <SlidersHorizontal className="h-4 w-4" />
                           Filtros
-                          {hayFiltrosActivos && <span className="h-2 w-2 rounded-full bg-emerald-500" />}
+                          {hayFiltrosActivos && <span className="h-2 w-2 rounded-full bg-coral" />}
                         </Button>
                       </SheetTrigger>
                       <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
@@ -316,16 +316,15 @@ export default function ProductosPublicosPage() {
 
 function EstadoVacio({ texto, onLimpiar }: { texto: string; onLimpiar?: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200
-                    dark:border-slate-800 py-20 text-center">
-      <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
-        <Search className="h-6 w-6 text-slate-300 dark:text-slate-700" />
+    <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-warm-border bg-white/60 py-20 text-center">
+      <div className="h-16 w-16 rounded-full bg-coral-soft flex items-center justify-center">
+        <CatFace className="h-9 w-9 text-coral" />
       </div>
-      <p className="text-slate-400 dark:text-slate-600 max-w-xs">{texto}</p>
+      <p className="text-ink-muted max-w-xs">{texto}</p>
       {onLimpiar && (
         <button
           onClick={onLimpiar}
-          className="text-sm font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
+          className="text-sm font-semibold text-coral hover:underline"
         >
           Limpiar filtros
         </button>

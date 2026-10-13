@@ -32,13 +32,13 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter") onClick() } : undefined}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-warm-border bg-white
                  shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300
-                 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-[0_20px_40px_-16px_rgba(16,185,129,0.35)]
-                 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-500/50 cursor-pointer text-left"
+                 hover:-translate-y-1 hover:border-coral/40 hover:shadow-[0_24px_44px_-20px_rgba(13,116,169,0.35)]
+                 cursor-pointer text-left"
     >
       {/* Media */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-white p-4 dark:bg-slate-900">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-white p-4">
         <img
           src={imagen}
           alt={p.nombre}
@@ -63,31 +63,31 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
 
       {/* Cuerpo */}
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="mb-3 line-clamp-3 text-xs font-semibold leading-snug text-slate-900 transition-colors duration-200 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
+        <h3 className="mb-3 line-clamp-3 text-xs font-semibold leading-snug text-ink transition-colors duration-200 group-hover:text-coral">
           {p.nombre}
         </h3>
 
         <div className="mt-auto">
           {enOferta ? (
             <div className="space-y-1">
-              <span className="block text-xs text-slate-400 line-through dark:text-slate-500">
+              <span className="block text-xs text-ink-muted line-through">
                 {formatCurrency(p.precio)}
               </span>
               <div className="flex items-end gap-2">
-                <span className="text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
+                <span className="text-2xl font-extrabold tracking-tight text-coral">
                   {formatCurrency(final)}
                 </span>
                 {sufijoUnidad && (
-                  <span className="pb-1 text-xs font-medium text-slate-400">{sufijoUnidad.trim()}</span>
+                  <span className="pb-1 text-xs font-medium text-ink-muted">{sufijoUnidad.trim()}</span>
                 )}
               </div>
               {ahorro > 0 && (
-                <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                <span className="inline-block rounded-md bg-teal-soft px-2 py-0.5 text-[11px] font-bold text-teal-ink">
                   Ahorrás {formatCurrency(ahorro)}
                 </span>
               )}
               {contador && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-orange-600 dark:text-orange-400">
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-coral-ink">
                   <Clock className="h-3 w-3" />
                   {contador}
                 </span>
@@ -95,11 +95,11 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
             </div>
           ) : (
             <div className="flex items-end gap-2">
-              <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <span className="text-2xl font-extrabold tracking-tight text-ink">
                 {formatCurrency(p.precio)}
               </span>
               {sufijoUnidad && (
-                <span className="pb-1 text-xs font-medium text-slate-400">{sufijoUnidad.trim()}</span>
+                <span className="pb-1 text-xs font-medium text-ink-muted">{sufijoUnidad.trim()}</span>
               )}
             </div>
           )}
@@ -107,7 +107,7 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
       </div>
 
       {/* Línea de acento inferior que aparece en hover */}
-      <div className="h-1 w-full origin-left scale-x-0 bg-gradient-to-r from-emerald-500 to-teal-400 transition-transform duration-300 group-hover:scale-x-100" />
+      <div className="h-1 w-full origin-left scale-x-0 bg-gradient-to-r from-coral to-teal transition-transform duration-300 group-hover:scale-x-100" />
     </div>
   )
 }

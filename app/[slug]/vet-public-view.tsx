@@ -1,21 +1,26 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback, Children, type ReactNode } from "react"
+import { useEffect, useState, useRef, Children, type ReactNode } from "react"
 import { useParams, useRouter } from "next/navigation"
-import type { TenantConfig, ServicioTenant, HorarioTenant, Modalidad } from "@/lib/supabase/queries"
+import type { TenantConfig, ServicioTenant, HorarioTenant } from "@/lib/supabase/queries"
 import { diaToWeekdays, formatDiasLabel } from "@/lib/turnos/horarios"
 import { Button } from "@/components/ui/button"
 import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
-  Loader2, ChevronLeft, ChevronRight, ArrowRight,
-  Heart, Shield, Star, Home, PawPrint, UserPlus, Gift, ShoppingBag, Info, Code2,
-
+  ChevronLeft, ChevronRight, ArrowRight,
+  Shield, Star, Home, PawPrint, UserPlus, Gift, ShoppingBag, Info, Code2, Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { tieneOferta } from "@/lib/productos/precios"
 import { normalizePlan, PLANS } from "@/lib/plans"
 import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
+import { SERVITEC } from "@/lib/marca"
+import { FOTOS_DEFAULT_DESKTOP, FOTOS_DEFAULT_MOBILE } from "./fotos-default"
+import {
+  ANCHOS_HERO, ANCHOS_HERO_MOBILE, ANCHOS_LOGO, SIZES_LOGO_HERO, imagenSupabase, srcSetSupabase,
+} from "@/lib/imagenes"
+import { Paw, DogFace, CatFace, Bone, HeartPulse } from "@/components/landing/pet-art"
 
 // Todo lo que no está en el hero se carga en chunks aparte y sin SSR: la
 // vidriera, promos y sorteos recién existen cuando llega la consulta a
@@ -30,11 +35,6 @@ const SorteoBanner = dynamic(() => import("@/components/public/sorteo-banner").t
 const SorteoTeaser = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoTeaser), { ssr: false })
 const SorteosHistorial = dynamic(() => import("@/components/public/sorteos-historial").then((m) => m.SorteosHistorial), { ssr: false })
 const RegistroClienteDialog = dynamic(() => import("@/components/turnos/RegistroClienteDialog").then((m) => m.RegistroClienteDialog), { ssr: false })
-import { SERVITEC } from "@/lib/marca"
-import { FOTOS_DEFAULT_DESKTOP, FOTOS_DEFAULT_MOBILE } from "./fotos-default"
-import {
-  ANCHOS_HERO, ANCHOS_HERO_MOBILE, ANCHOS_LOGO, SIZES_LOGO_HERO, imagenSupabase, srcSetSupabase,
-} from "@/lib/imagenes"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
 
@@ -54,10 +54,21 @@ const HORARIOS_DEFAULT: HorarioTenant[] = [
 ]
 
 const FEATURES = [
-  { icon: Heart, label: "Amor por los animales", desc: "Cada paciente es tratado con cariño" },
+  { icon: HeartPulse, label: "Amor por los animales", desc: "Cada paciente es tratado con cariño" },
   { icon: Shield, label: "Profesionales matriculados", desc: "Equipo con experiencia comprobada" },
   { icon: Star, label: "Tecnologia moderna", desc: "Equipamiento de ultima generacion" },
 ]
+
+/**
+ * Tonos cálidos que se van alternando en tarjetas e íconos (mismos tokens de
+ * marca que la landing: `--color-coral`, `--color-teal`, `--color-amber`).
+ * Como texto solo se usan los tonos "ink", que cumplen contraste AA.
+ */
+const TONOS = [
+  { fondo: "bg-coral-soft", texto: "text-coral", borde: "hover:border-coral/40" },
+  { fondo: "bg-teal-soft", texto: "text-teal-ink", borde: "hover:border-teal/40" },
+  { fondo: "bg-amber/15", texto: "text-ink", borde: "hover:border-amber/50" },
+] as const
 
 /* ═══════════════════════════ MAPA ═══════════════════════════ */
 
@@ -187,18 +198,20 @@ function HeroCarousel({ fotosDesktop, fotosMobile }: { fotosDesktop: string[]; f
         )
       })}
 
-      {/* Overlay con gradiente dramático */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/50 via-transparent to-teal-950/30" />
+      {/* Velo cálido: oscurece lo justo para leer el nombre y se funde en
+          crema hacia abajo, donde arranca el resto de la página. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/75 via-ink/35 to-ink/60" />
+      <div className="absolute inset-0 bg-gradient-to-r from-coral-ink/40 via-transparent to-teal-ink/30" />
 
       {/* Dots + controles */}
       {len > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3">
+        <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3">
           <button
+            type="button"
             aria-label="Anterior"
             onClick={() => setIdx(c => (c - 1 + len) % len)}
-            className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center
-                       hover:bg-white/20 transition-all duration-300 hover:scale-110 border border-white/10"
+            className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center
+                       hover:bg-white/30 transition-all duration-300 hover:scale-110 border border-white/20"
           >
             <ChevronLeft className="h-5 w-5 text-white" />
           </button>
@@ -216,18 +229,19 @@ function HeroCarousel({ fotosDesktop, fotosMobile }: { fotosDesktop: string[]; f
                 <span
                   className={`block rounded-full transition-all duration-500 ${
                     i === idx
-                      ? "w-8 h-2.5 bg-emerald-400"
-                      : "w-2.5 h-2.5 bg-white/30 hover:bg-white/50"
+                      ? "w-8 h-2.5 bg-amber"
+                      : "w-2.5 h-2.5 bg-white/40 hover:bg-white/70"
                   }`}
                 />
               </button>
             ))}
           </div>
           <button
+            type="button"
             aria-label="Siguiente"
             onClick={() => setIdx(c => (c + 1) % len)}
-            className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center
-                       hover:bg-white/20 transition-all duration-300 hover:scale-110 border border-white/10"
+            className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center
+                       hover:bg-white/30 transition-all duration-300 hover:scale-110 border border-white/20"
           >
             <ChevronRight className="h-5 w-5 text-white" />
           </button>
@@ -237,54 +251,70 @@ function HeroCarousel({ fotosDesktop, fotosMobile }: { fotosDesktop: string[]; f
   )
 }
 
-/* ═══════════════════════ GENERATIVE HERO ═══════════════════════ */
+/* ═══════════════════════ HERO SIN FOTOS ═══════════════════════ */
 
+/** Fondo cálido con ilustraciones cuando la veterinaria todavía no subió fotos. */
 function GenerativeHero() {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950">
-      <div className="vet-blob vet-blob-1" />
-      <div className="vet-blob vet-blob-2" />
-      <div className="vet-blob vet-blob-3" />
-      <div className="vet-blob vet-blob-4" />
-      {/* Grid pattern overlay */}
-      <div className="absolute inset-0" style={{
-        backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
-        backgroundSize: "40px 40px",
-      }} />
+    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-coral-ink via-coral to-teal-ink">
+      <div className="paw-pattern absolute inset-0 opacity-[0.08]" />
+      <div
+        className="warm-blob h-[560px] w-[560px] -top-40 -left-32 opacity-70"
+        style={{ background: "radial-gradient(circle closest-side, rgba(255,255,255,0.22), transparent 100%)", animation: "warmFloat1 22s ease-in-out infinite alternate" }}
+      />
+      <div
+        className="warm-blob h-[480px] w-[480px] -bottom-32 -right-24 opacity-60"
+        style={{ background: "radial-gradient(circle closest-side, rgba(245,166,35,0.35), transparent 100%)", animation: "warmFloat2 26s ease-in-out infinite alternate" }}
+      />
+      <DogFace className="float-soft-slow absolute -left-6 bottom-10 h-44 w-44 text-white/15 sm:h-64 sm:w-64" />
+      <CatFace className="float-soft absolute -right-4 top-16 h-40 w-40 text-white/15 sm:h-56 sm:w-56" />
+      <Bone className="absolute left-[12%] top-[14%] h-14 w-14 text-white/20 rotate-[-18deg]" />
+      <Paw className="paw-wiggle absolute right-[14%] bottom-[18%] h-20 w-20 text-white/20" />
     </div>
+  )
+}
+
+/* ═══════════════════════ ONDA DIVISORIA ═══════════════════════ */
+
+/** Borde ondulado en crema para que el hero se funda con el resto de la página. */
+function Onda({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 1440 90"
+      preserveAspectRatio="none"
+      aria-hidden
+      className={`block w-full h-12 sm:h-20 ${className}`}
+    >
+      <path
+        d="M0 60 C 240 100 480 10 720 40 C 960 70 1200 95 1440 50 L1440 90 L0 90 Z"
+        fill="currentColor"
+      />
+    </svg>
   )
 }
 
 /* ═══════════════════════ SERVICE CARD ═══════════════════════ */
 
 function ServiceCard({ s, i }: { s: ServicioTenant; i: number }) {
+  const tono = TONOS[i % TONOS.length]
   return (
-    <Reveal delay={i * 100} direction={i % 2 === 0 ? "left" : "right"}>
-      <div className="group relative h-full rounded-3xl p-[1px] bg-gradient-to-br from-emerald-500/20 via-transparent to-teal-500/20
-                      hover:from-emerald-500/40 hover:to-teal-500/40 transition-all duration-700">
-        <div className="relative h-full rounded-3xl bg-white dark:bg-slate-900 p-7 overflow-hidden
-                        transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-emerald-500/10">
-          {/* Glow background */}
-          <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-emerald-400/0 group-hover:bg-emerald-400/10
-                          blur-2xl transition-all duration-700" />
-
-          <div className="relative">
-            {/* Emoji container con fondo */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30
-                            flex items-center justify-center mb-5 transition-all duration-500
-                            group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg group-hover:shadow-emerald-500/20">
-              <span className="text-3xl">{s.emoji}</span>
-            </div>
-            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors duration-300">
-              {s.nombre}
-            </h3>
-            {s.descripcion && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                {s.descripcion}
-              </p>
-            )}
-          </div>
+    <Reveal delay={i * 90} direction="up">
+      <div
+        className={`group relative h-full overflow-hidden rounded-3xl border border-warm-border bg-white p-6 sm:p-7
+                    transition-all duration-500 hover:-translate-y-1.5 hover:rotate-[-0.6deg]
+                    hover:shadow-[0_28px_50px_-28px_rgba(45,42,38,0.35)] ${tono.borde}`}
+      >
+        <Paw className="pointer-events-none absolute -right-4 -bottom-5 h-24 w-24 text-coral/[0.06] rotate-12 transition-transform duration-700 group-hover:rotate-[30deg]" />
+        <div
+          className={`mb-5 flex h-16 w-16 items-center justify-center rounded-[1.4rem] ${tono.fondo}
+                      transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6`}
+        >
+          <span className="text-3xl" aria-hidden>{s.emoji}</span>
         </div>
+        <h3 className="font-display text-xl font-semibold text-ink mb-2">{s.nombre}</h3>
+        {s.descripcion && (
+          <p className="text-sm text-ink-muted leading-relaxed">{s.descripcion}</p>
+        )}
       </div>
     </Reveal>
   )
@@ -293,19 +323,21 @@ function ServiceCard({ s, i }: { s: ServicioTenant; i: number }) {
 /* ═══════════════════════ FEATURE PILL ═══════════════════════ */
 
 function FeaturePill({ icon: Icon, label, desc, i }: {
-  icon: typeof Heart; label: string; desc: string; i: number
+  icon: React.ComponentType<{ className?: string }>; label: string; desc: string; i: number
 }) {
+  const tono = TONOS[i % TONOS.length]
   return (
-    <Reveal delay={200 + i * 150} direction="up">
-      <div className="flex items-start gap-4 group">
-        <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500
-                        flex items-center justify-center shadow-lg shadow-emerald-500/20
-                        transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6">
-          <Icon className="h-5 w-5 text-white" />
+    <Reveal delay={150 + i * 120} direction="up">
+      <div className="group flex items-start gap-4">
+        <div
+          className={`shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl ${tono.fondo} ${tono.texto}
+                      transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6`}
+        >
+          <Icon className="h-6 w-6" />
         </div>
         <div>
-          <p className="font-bold text-slate-900 dark:text-white text-sm">{label}</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{desc}</p>
+          <p className="font-display text-base font-semibold text-ink leading-tight">{label}</p>
+          <p className="text-sm text-ink-muted mt-1">{desc}</p>
         </div>
       </div>
     </Reveal>
@@ -343,11 +375,11 @@ function VidrieraCarrusel({ children }: { children: ReactNode }) {
           type="button"
           aria-label="Anterior"
           onClick={() => desplazar(-1)}
-          className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-x-4 -translate-y-1/2 items-center justify-center
-                     rounded-full bg-white shadow-lg ring-1 ring-slate-900/5 transition-transform duration-300
-                     hover:scale-110 dark:bg-slate-800"
+          className="absolute left-0 top-1/2 z-10 flex h-11 w-11 -translate-x-4 -translate-y-1/2 items-center justify-center
+                     rounded-full bg-white shadow-lg ring-1 ring-warm-border transition-transform duration-300
+                     hover:scale-110 hover:bg-coral-soft"
         >
-          <ChevronLeft className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+          <ChevronLeft className="h-5 w-5 text-coral" />
         </button>
 
         <div
@@ -367,11 +399,11 @@ function VidrieraCarrusel({ children }: { children: ReactNode }) {
           type="button"
           aria-label="Siguiente"
           onClick={() => desplazar(1)}
-          className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 translate-x-4 items-center justify-center
-                     rounded-full bg-white shadow-lg ring-1 ring-slate-900/5 transition-transform duration-300
-                     hover:scale-110 dark:bg-slate-800"
+          className="absolute right-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 translate-x-4 items-center justify-center
+                     rounded-full bg-white shadow-lg ring-1 ring-warm-border transition-transform duration-300
+                     hover:scale-110 hover:bg-coral-soft"
         >
-          <ChevronRight className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+          <ChevronRight className="h-5 w-5 text-coral" />
         </button>
       </div>
     </div>
@@ -434,15 +466,15 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
   /* ── 404 ── */
   if (!exists) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-950">
-        <div className="w-24 h-24 rounded-full bg-slate-900 flex items-center justify-center">
-          <Stethoscope className="h-10 w-10 text-slate-700" />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4">
+        <div className="w-24 h-24 rounded-full bg-coral-soft flex items-center justify-center">
+          <Stethoscope className="h-10 w-10 text-coral" />
         </div>
         <div className="text-center">
-          <p className="text-white font-bold text-xl mb-1">Veterinaria no encontrada</p>
-          <p className="text-slate-500 text-sm">El enlace puede estar incorrecto o la veterinaria ya no existe.</p>
+          <p className="font-display text-ink font-semibold text-2xl mb-1">Veterinaria no encontrada</p>
+          <p className="text-ink-muted text-sm">El enlace puede estar incorrecto o la veterinaria ya no existe.</p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/")} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+        <Button variant="outline" onClick={() => router.push("/")} className="rounded-full border-warm-border text-ink hover:bg-white">
           Volver al inicio
         </Button>
       </div>
@@ -481,16 +513,23 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
   const promocionDestacada = [...promociones].sort(
     (a, b) => Number(!!b.imagenUrl) - Number(!!a.imagenUrl),
   )[0]
+  const atiendeDomicilio = modalidad === "domicilio" || modalidad === "ambos"
+  const atiendeLocal = modalidad === "local" || modalidad === "ambos"
 
   return (
-    <main className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
+    <main className="min-h-screen bg-cream overflow-x-hidden text-ink">
 
       {/* ╔══════════════════════════════════════════════════╗
           ║                     HERO                        ║
           ╚══════════════════════════════════════════════════╝ */}
-      <section className="relative h-[100svh] sm:h-auto sm:min-h-screen flex items-center justify-center overflow-hidden">
+      <section id="top" className="relative h-[100svh] sm:h-auto sm:min-h-screen flex items-center justify-center overflow-hidden">
         {/* Background */}
         {hayFotos ? <HeroCarousel fotosDesktop={fotosDesktop} fotosMobile={fotosMobile} /> : <GenerativeHero />}
+
+        {/* Patitas flotando por encima de la foto */}
+        <Paw className="paw-wiggle pointer-events-none absolute left-4 top-24 h-12 w-12 text-white/20 sm:left-10 sm:top-28 sm:h-20 sm:w-20" />
+        <Paw className="float-soft pointer-events-none absolute right-6 top-40 h-8 w-8 text-amber/40 sm:right-16 sm:h-12 sm:w-12" />
+        <Bone className="float-soft-slow pointer-events-none absolute left-[8%] bottom-[22%] hidden h-12 w-12 text-white/20 rotate-12 sm:block" />
 
         {/* Contenido central */}
         <div
@@ -510,18 +549,18 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
                 alt={`Logo de ${nombre}`}
                 fetchPriority="high"
                 decoding="async"
-                className="w-16 h-16 sm:w-48 sm:h-48 rounded-2xl sm:rounded-[2rem] shadow-2xl shadow-black/40 ring-2 ring-white/20 object-cover"
+                className="w-16 h-16 sm:w-48 sm:h-48 rounded-2xl sm:rounded-[2rem] shadow-2xl shadow-black/40 ring-4 ring-white/30 object-cover rotate-[-2deg]"
               />
             </div>
           )}
 
           {/* Badge */}
           <div
-            className="vet-hero-in inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-xl px-3 py-1 sm:px-5 sm:py-2 mb-2 sm:mb-8"
+            className="vet-hero-in inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 backdrop-blur-xl px-3 py-1 sm:px-5 sm:py-2 mb-2 sm:mb-8"
             style={{ animationDelay: "0.1s" }}
           >
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] sm:text-xs font-bold text-emerald-300 tracking-[0.15em] uppercase">
+            <Paw className="h-3.5 w-3.5 text-amber" />
+            <span className="text-[10px] sm:text-xs font-bold text-white tracking-[0.15em] uppercase">
               Veterinaria
             </span>
           </div>
@@ -529,7 +568,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
           {/* Nombre ENORME */}
           <h1
             // El nombre es el LCP: demora mínima, así el navegador lo pinta enseguida.
-            className="vet-hero-in text-3xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none mb-2 sm:mb-6 tracking-tight"
+            className="vet-hero-in font-display text-4xl sm:text-7xl md:text-8xl lg:text-9xl font-semibold text-white leading-[0.95] mb-2 sm:mb-6 tracking-tight"
             style={{ animationDelay: "0.15s", textShadow: "0 4px 60px rgba(0,0,0,0.5)" }}
           >
             {nombre}
@@ -537,7 +576,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
 
           {/* Slogan */}
           <p
-            className="vet-hero-in text-sm sm:text-2xl md:text-3xl text-white/80 font-light mb-1.5 sm:mb-4 max-w-2xl leading-snug px-2"
+            className="vet-hero-in text-base sm:text-2xl md:text-3xl text-white/90 font-light mb-1.5 sm:mb-4 max-w-2xl leading-snug px-2"
             style={{ animationDelay: "0.3s" }}
           >
             {slogan}
@@ -545,7 +584,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
 
           {/* Descripción */}
           <p
-            className="vet-hero-in hidden sm:block text-base sm:text-lg text-white/50 mb-12 max-w-lg"
+            className="vet-hero-in hidden sm:block text-base sm:text-lg text-white/70 mb-12 max-w-lg"
             style={{ animationDelay: "0.45s" }}
           >
             {descripcion}
@@ -558,9 +597,9 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
           >
             <Button
               size="lg"
-              className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
-                         shadow-2xl shadow-emerald-500/30 border-0
-                         transition-all duration-300 hover:shadow-emerald-400/40 hover:scale-105"
+              className="w-full sm:w-auto bg-coral hover:bg-coral-ink text-white font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
+                         shadow-2xl shadow-coral/40 border-0
+                         transition-all duration-300 hover:scale-105"
               onClick={() => router.push(`/${slug}/turno`)}
             >
               <CalendarPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
@@ -571,7 +610,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             <Button
               size="lg"
               variant="outline"
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
+              className="w-full sm:w-auto bg-white/15 hover:bg-white/25 text-white border-2 border-white/40 font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
                          backdrop-blur-md transition-all duration-300 hover:scale-105"
               onClick={() => setRegistroAbierto(true)}
             >
@@ -590,7 +629,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             <Button
               variant="ghost"
               size="lg"
-              className="w-full sm:w-auto text-white/80 hover:text-white hover:bg-white/10 font-semibold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full"
+              className="w-full sm:w-auto text-white/90 hover:text-white hover:bg-white/15 font-semibold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full"
               onClick={() => router.push(`/${slug}/mi-historia`)}
             >
               <PawPrint className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
@@ -598,6 +637,9 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             </Button>
           </div>
         </div>
+
+        {/* Onda crema que funde el hero con la página */}
+        <Onda className="absolute bottom-0 left-0 z-20 text-cream" />
       </section>
 
       {/* ╔══════════════════════════════════════════════════╗
@@ -608,21 +650,15 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
       {/* ╔══════════════════════════════════════════════════╗
           ║               FEATURES STRIP                     ║
           ╚══════════════════════════════════════════════════╝ */}
-      <section className="py-16 bg-slate-50 dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800">
+      <section className="relative bg-cream pt-6 pb-14 sm:pt-10 sm:pb-20">
         <div className="container max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.label}
-                className={
-                  i === FEATURES.length - 1 && FEATURES.length % 2 !== 0
-                    ? "col-span-2 sm:col-span-1 flex justify-center [&>*]:max-w-xs"
-                    : undefined
-                }
-              >
-                <FeaturePill {...f} i={i} />
-              </div>
-            ))}
+          <div className="relative rounded-[2rem] border border-warm-border bg-white p-6 sm:p-10 shadow-[0_30px_60px_-40px_rgba(45,42,38,0.35)]">
+            <Paw className="pointer-events-none absolute -top-5 right-8 h-12 w-12 text-coral/15 rotate-12" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {FEATURES.map((f, i) => (
+                <FeaturePill key={f.label} {...f} i={i} />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -630,34 +666,38 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
       {/* ╔══════════════════════════════════════════════════╗
           ║                  SERVICIOS                       ║
           ╚══════════════════════════════════════════════════╝ */}
-      <section className="py-28 bg-white dark:bg-slate-950 relative">
-        {/* Fondo decorativo */}
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(16,185,129,0.06),transparent)] pointer-events-none" />
+      <section className="relative overflow-hidden bg-white py-20 sm:py-28">
+        <div className="paw-pattern pointer-events-none absolute inset-0 opacity-[0.035]" />
+        <CatFace className="pointer-events-none absolute -right-10 top-10 hidden h-56 w-56 text-teal/10 lg:block" />
+        <DogFace className="pointer-events-none absolute -left-12 bottom-6 hidden h-60 w-60 text-coral/10 lg:block" />
 
         <div className="container max-w-6xl mx-auto px-6 relative">
           <Reveal>
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-4 py-1.5 mb-5">
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.15em]">
+            <div className="text-center mb-14">
+              <div className="inline-flex items-center gap-2 rounded-full bg-coral-soft px-4 py-1.5 mb-5">
+                <Paw className="h-3.5 w-3.5 text-coral" />
+                <span className="text-xs font-bold text-coral uppercase tracking-[0.15em]">
                   Servicios
                 </span>
               </div>
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-4">
+              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-ink tracking-tight mb-4">
                 Todo lo que tu mascota<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">
+                <span className="relative inline-block text-coral">
                   necesita
+                  <svg className="absolute -bottom-1 left-0 w-full text-amber/70" viewBox="0 0 320 14" fill="none" aria-hidden>
+                    <path d="M3 9C90 3 230 3 317 7" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                  </svg>
                 </span>
               </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              <p className="text-ink-muted max-w-md mx-auto">
                 Ofrecemos una amplia gama de servicios para mantener a tu compañero sano y feliz.
               </p>
             </div>
           </Reveal>
 
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex flex-wrap justify-center gap-5 sm:gap-6">
             {servicios.map((s, i) => (
-              <div key={i} className="w-[calc(50%-12px)] lg:w-[calc(25%-18px)]">
+              <div key={i} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)]">
                 <ServiceCard s={s} i={i} />
               </div>
             ))}
@@ -669,20 +709,21 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
           ║           PRODUCTOS (promos primero)             ║
           ╚══════════════════════════════════════════════════╝ */}
       {(muestraProductos || muestraPromociones) && (
-        <section className="py-28 bg-slate-50 dark:bg-slate-900 relative">
+        <section className="relative overflow-hidden bg-cream-deep py-20 sm:py-28">
+          <Bone className="pointer-events-none absolute right-[6%] top-10 h-16 w-16 text-amber/30 rotate-12" />
+          <Paw className="pointer-events-none absolute left-[4%] bottom-12 h-24 w-24 text-coral/[0.07] -rotate-12" />
           <div className="container max-w-6xl mx-auto px-6 relative">
             <Reveal>
-              <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-4 py-1.5 mb-5">
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.15em]">
-                    Productos
+              <div className="text-center mb-14">
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber/20 px-4 py-1.5 mb-5">
+                  <Sparkles className="h-3.5 w-3.5 text-ink" />
+                  <span className="text-xs font-bold text-ink uppercase tracking-[0.15em]">
+                    Vidriera
                   </span>
                 </div>
-                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-4">
-                  Todo lo que tu mascota<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">
-                    puede necesitar
-                  </span>
+                <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-ink tracking-tight mb-4">
+                  Mimos y cosas ricas<br />
+                  <span className="text-coral">para llevar a casa</span>
                 </h2>
               </div>
             </Reveal>
@@ -702,10 +743,10 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             <div className="flex justify-center">
               <Button
                 size="lg"
-                variant="outline"
-                className="rounded-full font-bold border-2"
+                className="rounded-full font-bold bg-coral hover:bg-coral-ink text-white shadow-lg shadow-coral/25 h-12 px-8"
                 onClick={() => router.push(`/${slug}/productos`)}
               >
+                <ShoppingBag className="mr-2 h-4 w-4" />
                 Ver todos los productos
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -723,89 +764,107 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
       {/* ╔══════════════════════════════════════════════════╗
           ║              HORARIOS + CONTACTO                 ║
           ╚══════════════════════════════════════════════════╝ */}
-      <section className="bg-white dark:bg-slate-950 py-14 sm:py-20">
+      <section className="relative bg-cream py-16 sm:py-24">
         <div className="container max-w-6xl mx-auto px-6">
+          <Reveal>
+            <div className="text-center mb-10 sm:mb-14">
+              <div className="inline-flex items-center gap-2 rounded-full bg-teal-soft px-4 py-1.5 mb-5">
+                <Clock className="h-3.5 w-3.5 text-teal-ink" />
+                <span className="text-xs font-bold text-teal-ink uppercase tracking-[0.15em]">
+                  Te esperamos
+                </span>
+              </div>
+              <h2 className="font-display text-4xl sm:text-5xl font-semibold text-ink tracking-tight">
+                Horarios y cómo llegar
+              </h2>
+            </div>
+          </Reveal>
+
           <div className="grid lg:grid-cols-2 gap-6 items-stretch">
 
             {/* ── IZQUIERDA: Contacto y Horarios en una sola tarjeta ── */}
             <Reveal>
-              <div className="relative h-full rounded-3xl p-[1px] bg-gradient-to-br from-emerald-500/20 via-transparent to-teal-500/20">
-                <div className="h-full rounded-3xl bg-white dark:bg-slate-900 overflow-hidden">
-                  <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800 h-full">
+              <div className="relative h-full overflow-hidden rounded-[2rem] border border-warm-border bg-white shadow-[0_30px_60px_-40px_rgba(45,42,38,0.35)]">
+                <Paw className="pointer-events-none absolute -right-6 -bottom-8 h-32 w-32 text-coral/[0.06] rotate-12" />
+                <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-warm-border h-full">
 
-                    {/* CONTACTO */}
-                    <div className="p-6 sm:p-7 flex flex-col">
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500
-                                        flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                          <MapPin className="h-5 w-5 text-white" />
-                        </div>
-                        <h3 className="font-bold text-slate-900 dark:text-white">Contacto</h3>
+                  {/* CONTACTO */}
+                  <div className="p-6 sm:p-7 flex flex-col">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="shrink-0 w-11 h-11 rounded-2xl bg-coral-soft flex items-center justify-center">
+                        <MapPin className="h-5 w-5 text-coral" />
                       </div>
+                      <h3 className="font-display text-lg font-semibold text-ink">Contacto</h3>
+                    </div>
 
-                      {(modalidad === "domicilio" || modalidad === "ambos") && (
-                        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mb-4">
-                          <Home className="h-3 w-3" />
-                          {modalidad === "domicilio" ? "Atendemos a domicilio" : "Local y domicilio"}
-                        </span>
+                    {atiendeDomicilio && (
+                      <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-teal-soft px-3 py-1 text-[11px] font-semibold text-teal-ink mb-4">
+                        <Home className="h-3 w-3" />
+                        {modalidad === "domicilio" ? "Atendemos a domicilio" : "Local y domicilio"}
+                      </span>
+                    )}
+
+                    <div className="space-y-3 flex-1">
+                      {atiendeLocal && direccion && (
+                        <div className="text-sm">
+                          <p className="font-semibold text-ink">{direccion}</p>
+                          {ciudad && <p className="text-ink-muted text-xs mt-0.5">{ciudad}</p>}
+                        </div>
                       )}
-
-                      <div className="space-y-3 flex-1">
-                        {(modalidad === "local" || modalidad === "ambos") && direccion && (
-                          <div className="text-sm">
-                            <p className="font-semibold text-slate-800 dark:text-slate-100">{direccion}</p>
-                            {ciudad && <p className="text-slate-400 text-xs mt-0.5">{ciudad}</p>}
-                          </div>
-                        )}
-                        {email && (
-                          <a href={`mailto:${email}`} className="block text-sm font-semibold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors break-all">
-                            {email}
-                          </a>
-                        )}
-                        {!(direccion || email || modalidad === "domicilio" || modalidad === "ambos") && (
-                          <p className="text-slate-400 italic text-xs">Datos de contacto no configurados aun.</p>
-                        )}
-                      </div>
-
-                      <Button
-                        className="mt-6 w-full bg-emerald-500 hover:bg-emerald-400 text-white
-                                   font-bold h-11 rounded-full text-sm border-0 shadow-lg shadow-emerald-500/20"
-                        onClick={() => router.push(`/${slug}/turno`)}
-                      >
-                        <CalendarPlus className="mr-2 h-4 w-4" />
-                        Reservar turno
-                      </Button>
+                      {telefono && (
+                        <a href={`tel:${telefono}`} className="flex items-center gap-2 text-sm font-semibold text-ink hover:text-coral transition-colors">
+                          <Phone className="h-4 w-4 text-coral" />
+                          {telefono}
+                        </a>
+                      )}
+                      {email && (
+                        <a href={`mailto:${email}`} className="flex items-center gap-2 text-sm font-semibold text-ink hover:text-coral transition-colors break-all">
+                          <Mail className="h-4 w-4 text-coral" />
+                          {email}
+                        </a>
+                      )}
+                      {!(direccion || email || telefono || atiendeDomicilio) && (
+                        <p className="text-ink-muted italic text-xs">Datos de contacto no configurados aun.</p>
+                      )}
                     </div>
 
-                    {/* HORARIOS */}
-                    <div className="p-6 sm:p-7">
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500
-                                        flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                          <Clock className="h-5 w-5 text-white" />
-                        </div>
-                        <h3 className="font-bold text-slate-900 dark:text-white">Horarios</h3>
-                      </div>
-                      <div className="space-y-2.5">
-                        {horarios.map((h, i) => (
-                          <div key={i} className="flex items-center justify-between gap-3 text-sm">
-                            <span className="font-medium text-slate-600 dark:text-slate-300 min-w-0">
-                              {formatDiasLabel(diaToWeekdays(h.dia)) || h.dia}
-                              {h.nombre && <span className="text-slate-400"> ({h.nombre})</span>}
-                            </span>
-                            {h.cerrado ? (
-                              <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-400">Cerrado</span>
-                            ) : (
-                              <span className="shrink-0 whitespace-nowrap font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                {h.apertura} – {h.cierre}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
+                    <Button
+                      className="mt-6 w-full bg-coral hover:bg-coral-ink text-white
+                                 font-bold h-11 rounded-full text-sm border-0 shadow-lg shadow-coral/25"
+                      onClick={() => router.push(`/${slug}/turno`)}
+                    >
+                      <CalendarPlus className="mr-2 h-4 w-4" />
+                      Reservar turno
+                    </Button>
                   </div>
+
+                  {/* HORARIOS */}
+                  <div className="p-6 sm:p-7">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="shrink-0 w-11 h-11 rounded-2xl bg-teal-soft flex items-center justify-center">
+                        <Clock className="h-5 w-5 text-teal-ink" />
+                      </div>
+                      <h3 className="font-display text-lg font-semibold text-ink">Horarios</h3>
+                    </div>
+                    <div className="space-y-2.5">
+                      {horarios.map((h, i) => (
+                        <div key={i} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="font-medium text-ink min-w-0">
+                            {formatDiasLabel(diaToWeekdays(h.dia)) || h.dia}
+                            {h.nombre && <span className="text-ink-muted"> ({h.nombre})</span>}
+                          </span>
+                          {h.cerrado ? (
+                            <span className="shrink-0 whitespace-nowrap rounded-full bg-cream px-2.5 py-0.5 text-[11px] font-semibold text-ink-muted">Cerrado</span>
+                          ) : (
+                            <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-soft px-2.5 py-0.5 font-mono text-xs font-semibold text-teal-ink">
+                              {h.apertura} – {h.cierre}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </Reveal>
@@ -814,7 +873,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             <Reveal delay={200} direction="right">
               <div className="h-full min-h-[280px]">
                 {muestraMapa && srcMapa ? (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 h-full min-h-[280px]">
+                  <div className="h-full min-h-[280px] overflow-hidden rounded-[2rem] border-4 border-white shadow-[0_30px_60px_-40px_rgba(45,42,38,0.35)] ring-1 ring-warm-border">
                     <iframe
                       src={srcMapa}
                       className="w-full h-full border-0"
@@ -825,10 +884,18 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
                     />
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-slate-200 dark:border-white/10 h-full min-h-[280px]
-                                  bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-2 p-6">
-                    <Stethoscope className="h-6 w-6 text-slate-300 dark:text-slate-700" />
-                    <p className="text-slate-400 dark:text-slate-600 text-center text-xs max-w-xs">
+                  <div className="relative h-full min-h-[280px] overflow-hidden rounded-[2rem] border border-warm-border bg-white
+                                  flex flex-col items-center justify-center gap-3 p-8 text-center">
+                    <div className="paw-pattern pointer-events-none absolute inset-0 opacity-[0.05]" />
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-coral-soft">
+                      {modalidad === "domicilio"
+                        ? <Home className="h-9 w-9 text-coral" />
+                        : <DogFace className="h-12 w-12 text-coral" />}
+                    </div>
+                    <p className="relative font-display text-lg font-semibold text-ink">
+                      {modalidad === "domicilio" ? "Vamos hasta tu casa" : "Pronto, el mapa"}
+                    </p>
+                    <p className="relative text-ink-muted text-sm max-w-xs">
                       {modalidad === "domicilio"
                         ? "Nos acercamos a tu domicilio para atender a tu mascota."
                         : "Agrega tu ubicacion de Google Maps desde la configuracion."}
@@ -844,17 +911,19 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
       {/* ╔══════════════════════════════════════════════════╗
           ║                    FOOTER                        ║
           ╚══════════════════════════════════════════════════╝ */}
-      <footer className="bg-slate-950 border-t border-slate-800/30">
-        <div className="container max-w-6xl mx-auto px-6 py-8">
+      <footer className="relative overflow-hidden bg-ink text-white">
+        <div className="paw-pattern pointer-events-none absolute inset-0 opacity-[0.05]" />
+        <Onda className="relative text-cream rotate-180" />
+        <div className="container max-w-6xl mx-auto px-6 py-10 relative">
           <div className="flex items-center gap-3 mb-2">
             {logo ? (
-              <img src={imagenSupabase(logo, 80)} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10" />
+              <img src={imagenSupabase(logo, 80)} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/15" />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
-                <Stethoscope className="h-5 w-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-coral flex items-center justify-center shrink-0">
+                <Paw className="h-5 w-5 text-white" />
               </div>
             )}
-            <span className="font-bold text-white text-lg">{nombre}</span>
+            <span className="font-display font-semibold text-white text-xl">{nombre}</span>
           </div>
 
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
@@ -864,26 +933,26 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             {/* CONTACTO */}
             <div>
               <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
-                <MapPin className="h-4 w-4 text-emerald-500 shrink-0" />
+                <MapPin className="h-4 w-4 text-amber shrink-0" />
                 Contacto y ubicacion
               </h4>
-              <p className="text-sm text-slate-400 leading-relaxed mb-4">{descripcion}</p>
+              <p className="text-sm text-white/70 leading-relaxed mb-4">{descripcion}</p>
               <div className="space-y-2.5 text-sm">
                 {direccion && (
-                  <div className="flex items-start gap-2.5 text-slate-400">
-                    <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
+                  <div className="flex items-start gap-2.5 text-white/70">
+                    <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-amber" />
                     <span>{direccion}{ciudad ? `, ${ciudad}` : ""}</span>
                   </div>
                 )}
                 {telefono && (
-                  <a href={`tel:${telefono}`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
-                    <Phone className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <a href={`tel:${telefono}`} className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
+                    <Phone className="h-4 w-4 shrink-0 text-amber" />
                     {telefono}
                   </a>
                 )}
                 {email && (
-                  <a href={`mailto:${email}`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors break-all">
-                    <Mail className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <a href={`mailto:${email}`} className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors break-all">
+                    <Mail className="h-4 w-4 shrink-0 text-amber" />
                     {email}
                   </a>
                 )}
@@ -893,42 +962,41 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             {/* PARA CLIENTES */}
             <div>
               <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
-                <PawPrint className="h-4 w-4 text-emerald-500 shrink-0" />
+                <PawPrint className="h-4 w-4 text-amber shrink-0" />
                 Para clientes
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <Link href={`/${slug}/turno`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                  <Link href={`/${slug}/turno`} className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
                     <CalendarPlus className="h-4 w-4 shrink-0" />
                     Sacar turno
                   </Link>
                 </li>
                 <li>
-                  <RegistroClienteDialog
-                    tenantId={slug}
-                    trigger={
-                      <button type="button" className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
-                        <UserPlus className="h-4 w-4 shrink-0" />
-                        Registrarme como cliente
-                      </button>
-                    }
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setRegistroAbierto(true)}
+                    className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors"
+                  >
+                    <UserPlus className="h-4 w-4 shrink-0" />
+                    Registrarme como cliente
+                  </button>
                 </li>
                 <li>
-                  <Link href={`/${slug}/mi-historia`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                  <Link href={`/${slug}/mi-historia`} className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
                     <PawPrint className="h-4 w-4 shrink-0" />
                     Historia clinica de mi mascota
                   </Link>
                 </li>
                 <li>
-                  <Link href={`/${slug}/productos`} className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                  <Link href={`/${slug}/productos`} className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
                     <ShoppingBag className="h-4 w-4 shrink-0" />
                     Productos
                   </Link>
                 </li>
                 {sorteoActivo && (
                   <li>
-                    <a href="#top" className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+                    <a href="#top" className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
                       <Gift className="h-4 w-4 shrink-0" />
                       Sorteo activo: {sorteoActivo.nombre}
                     </a>
@@ -942,15 +1010,15 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             {/* QUE ES VETPANEL */}
             <div>
               <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
-                <Info className="h-4 w-4 text-emerald-500 shrink-0" />
+                <Info className="h-4 w-4 text-amber shrink-0" />
                 Sobre VetPanel
               </h4>
-              <p className="text-sm text-slate-400 leading-relaxed mb-3">
-                <Link href="/" className="text-emerald-500 font-semibold hover:text-emerald-400 transition-colors">VetPanel</Link>{" "}
+              <p className="text-sm text-white/70 leading-relaxed mb-3">
+                <Link href="/" className="text-amber font-semibold hover:text-white transition-colors">VetPanel</Link>{" "}
                 es la plataforma que le da a esta veterinaria su web, turnos online, historia clinica
                 digital y punto de venta.
               </p>
-              <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors">
+              <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/85 hover:text-white transition-colors">
                 Conoce VetPanel
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -959,10 +1027,10 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
             {/* SERVITEC */}
             <div>
               <h4 className="flex items-center gap-2.5 font-semibold text-white mb-4">
-                <Code2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <Code2 className="h-4 w-4 text-amber shrink-0" />
                 Desarrollado por ServiTec
               </h4>
-              <p className="text-sm text-slate-400 leading-relaxed mb-3">
+              <p className="text-sm text-white/70 leading-relaxed mb-3">
                 <span className="text-white font-semibold">SERVITEC</span> es el estudio de desarrollo
                 detras de VetPanel: diseño, software y soporte tecnico a medida.
               </p>
@@ -970,7 +1038,7 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
                 href={SERVITEC.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/85 hover:text-white transition-colors"
               >
                 {SERVITEC.dominio}
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -980,17 +1048,18 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
           </div>
         </div>
 
-        <div className="border-t border-slate-800/30">
+        <div className="relative border-t border-white/10">
           <div className="container max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-white/70">
               © {new Date().getFullYear()} {nombre}. Pagina hecha con{" "}
-              <Link href="/" className="text-emerald-500 font-semibold hover:text-emerald-400 transition-colors">VetPanel</Link>
+              <Link href="/" className="text-amber font-semibold hover:text-white transition-colors">VetPanel</Link>
+              {" "}🐾
             </p>
             <a
               href={SERVITEC.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-extralight uppercase tracking-[0.4em] text-slate-400
+              className="text-xs font-extralight uppercase tracking-[0.4em] text-white/70
                          hover:text-white transition-all duration-500"
               style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
             >

@@ -38,14 +38,14 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter") onClick() } : undefined}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-emerald-200/70 bg-white
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-warm-border bg-white
                  cursor-pointer text-left
                  shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300
-                 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-[0_24px_48px_-18px_rgba(16,185,129,0.45)]
-                 dark:border-emerald-500/20 dark:bg-slate-900 dark:hover:border-emerald-500/60"
+                 hover:-translate-y-1 hover:border-coral/40 hover:shadow-[0_24px_48px_-18px_rgba(13,116,169,0.35)]
+                 "
     >
       {/* Cinta superior de promo */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-2 text-white">
+      <div className="flex items-center justify-between bg-gradient-to-r from-coral to-teal-ink px-4 py-2 text-white">
         <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
           <Tag className="h-3.5 w-3.5" />
           Promoción
@@ -55,7 +55,7 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
 
       {/* Media: mismo aspect-square que ProductoTarjeta, para que ambas
           queden del mismo tamaño una al lado de la otra en la grilla. */}
-      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-cream to-cream-deep">
         <img
           src={imagen}
           alt={p.nombre}
@@ -67,32 +67,32 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
 
       {/* Cuerpo */}
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="mb-2 line-clamp-1 text-[15px] font-semibold text-slate-900 transition-colors duration-200 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
+        <h3 className="mb-2 line-clamp-1 text-[15px] font-semibold text-ink transition-colors duration-200 group-hover:text-coral">
           {p.nombre}
         </h3>
 
         {p.descripcion && (
-          <p className="mb-3 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mb-3 line-clamp-2 text-xs text-ink-muted">
             {p.descripcion}
           </p>
         )}
 
         <div className="mt-auto">
           {hayDescuento && (
-            <span className="block text-xs text-slate-400 line-through dark:text-slate-500">
+            <span className="block text-xs text-ink-muted line-through">
               {formatCurrency(precioListaTotal)}
             </span>
           )}
-          <span className="block text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
+          <span className="block text-2xl font-extrabold tracking-tight text-coral">
             {formatCurrency(p.precioFinal)}
           </span>
           {ahorro > 0 && (
-            <span className="mt-1 inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+            <span className="mt-1 inline-block rounded-md bg-teal-soft px-2 py-0.5 text-[11px] font-bold text-teal-ink">
               Ahorrás {formatCurrency(ahorro)}
             </span>
           )}
           {contador && (
-            <span className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-orange-600 dark:text-orange-400">
+            <span className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-coral-ink">
               <Clock className="h-3 w-3" />
               {contador}
             </span>
@@ -100,7 +100,7 @@ export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Pro
         </div>
       </div>
 
-      <div className="h-1 w-full origin-left scale-x-0 bg-gradient-to-r from-emerald-500 to-teal-400 transition-transform duration-300 group-hover:scale-x-100" />
+      <div className="h-1 w-full origin-left scale-x-0 bg-gradient-to-r from-coral to-teal transition-transform duration-300 group-hover:scale-x-100" />
     </div>
   )
 }

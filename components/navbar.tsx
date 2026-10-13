@@ -254,8 +254,8 @@ function VetPublicNavbar() {
           <button onClick={() => router.push(`/${slug}`)} className="flex items-center gap-2.5">
             {tenant?.logo
               ? <img src={imagenSupabase(tenant.logo, 64)} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
-              : <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                  <Stethoscope className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              : <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-coral-soft">
+                  <Stethoscope className="h-4 w-4 text-coral" />
                 </div>
             }
             <span className="font-bold text-sm">{tenant?.nombre ?? ""}</span>
@@ -263,7 +263,7 @@ function VetPublicNavbar() {
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="rounded-full bg-coral hover:bg-coral-ink text-white font-semibold shadow-lg shadow-coral/25"
               onClick={() => router.push(`/${slug}/turno`)}
             >
               Sacar turno
