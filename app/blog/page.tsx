@@ -44,7 +44,7 @@ export default function BlogIndexPage() {
                 className="block rounded-2xl border border-slate-800 bg-slate-900/50 p-6 hover:border-emerald-500/40 transition-colors group"
               >
                 {post.date && (
-                  <p className="text-xs text-slate-500 mb-2">
+                  <p className="text-xs text-slate-400 mb-2">
                     {new Date(post.date + "T00:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 )}

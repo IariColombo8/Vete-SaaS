@@ -40,7 +40,9 @@ export const metadata: Metadata = {
 
 // Secciones interactivas below-the-fold: SSR (ssr:true por defecto, contenido en
 // el HTML) pero con su JS en chunks separados, para no bloquear la hidratación
-// del hero y mejorar el LCP en mobile.
+// del hero y mejorar el LCP en mobile. Son las únicas que usan Motion: así la
+// librería (~35 KB) no entra en el JS inicial. Las secciones estáticas animan
+// con `reveal.tsx` (CSS + IntersectionObserver).
 const ProductScrolly = dynamic(() =>
   import("@/components/landing/product-scrolly").then((m) => m.ProductScrolly),
 )

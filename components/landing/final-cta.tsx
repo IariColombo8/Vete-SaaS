@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { track } from "@vercel/analytics"
 import { ArrowRight } from "lucide-react"
-import { Reveal, Magnetic } from "@/components/landing/motion"
+import { Reveal } from "@/components/landing/reveal"
+import { Magnetic } from "@/components/landing/motion"
 import { Paw, Bone } from "@/components/landing/pet-art"
 
 export function FinalCta() {
@@ -29,7 +30,7 @@ export function FinalCta() {
               </button>
             </Link>
           </Magnetic>
-          <p className="mt-4 text-xs text-white/70">Después, Básico $50.000/mes o Pro $80.000/mes · Cancelás cuando quieras</p>
+          <p className="mt-4 text-xs text-white/90">Después, Básico $50.000/mes o Pro $80.000/mes · Cancelás cuando quieras</p>
         </Reveal>
       </div>
     </section>

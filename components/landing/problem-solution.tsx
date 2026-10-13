@@ -1,5 +1,5 @@
 import { X, Check } from "lucide-react"
-import { Reveal } from "@/components/landing/motion"
+import { Reveal } from "@/components/landing/reveal"
 import { Paw } from "@/components/landing/pet-art"
 
 const ANTES = [

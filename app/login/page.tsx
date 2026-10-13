@@ -89,7 +89,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-sm space-y-5">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/25">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-700 shadow-lg shadow-emerald-600/25">
             <PawPrint className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">VetPanel</h1>
@@ -106,7 +106,7 @@ export default function LoginPage() {
               </p>
               <div className="space-y-2 pt-2">
                 <Button
-                  className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="h-11 w-full bg-emerald-700 text-white hover:bg-emerald-800"
                   onClick={() => router.push("/registro")}
                 >
                   <Store className="mr-2 h-4 w-4" />
@@ -122,7 +122,7 @@ export default function LoginPage() {
             {/* Google: opción principal, protagonista */}
             <Button
               onClick={handleGoogleSignIn}
-              className="h-12 w-full bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700"
+              className="h-12 w-full bg-emerald-700 text-base font-medium text-white hover:bg-emerald-800"
               disabled={loading}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
@@ -183,7 +183,7 @@ export default function LoginPage() {
 
         <p className="text-center text-xs text-muted-foreground">
           ¿Querés sumar tu veterinaria?{" "}
-          <Link href="/registro" className="font-medium text-emerald-600 hover:underline">
+          <Link href="/registro" className="font-medium text-emerald-700 hover:underline">
             Registrate acá
           </Link>
         </p>

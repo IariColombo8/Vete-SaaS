@@ -4,7 +4,7 @@ import Link from "next/link"
 import { track } from "@vercel/analytics"
 import { Check, Star } from "lucide-react"
 import { PLAN_LIST, TRIAL_DIAS, formatPrecioPlan } from "@/lib/plans"
-import { Reveal } from "@/components/landing/motion"
+import { Reveal } from "@/components/landing/reveal"
 
 const DESCRIPCIONES: Record<string, string> = {
   basico: "La clínica completa",

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback, Children, type ReactNode } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { getTenant, getTenantConfig } from "@/lib/supabase/queries"
 import type { TenantConfig, ServicioTenant, HorarioTenant, Modalidad } from "@/lib/supabase/queries"
 import { diaToWeekdays, formatDiasLabel } from "@/lib/turnos/horarios"
 import { Button } from "@/components/ui/button"
@@ -13,33 +12,31 @@ import {
 
 } from "lucide-react"
 import Link from "next/link"
-import { getProductosPublicados, getProductosPublicadosPorIds } from "@/lib/supabase/productos"
-import { getPromocionesPublicadas } from "@/lib/supabase/promociones"
-import { getSorteoActivo, getSorteosFinalizadosPublicados } from "@/lib/supabase/sorteos"
+import dynamic from "next/dynamic"
 import { tieneOferta } from "@/lib/productos/precios"
 import { normalizePlan, PLANS } from "@/lib/plans"
-import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
-import { PromocionTarjeta } from "@/components/public/promocion-tarjeta"
-import { DetalleDialog } from "@/components/public/detalle-dialog"
-import { SorteoBanner, SorteoTeaser } from "@/components/public/sorteo-banner"
-import { SorteosHistorial } from "@/components/public/sorteos-historial"
-import { RegistroClienteDialog } from "@/components/turnos/RegistroClienteDialog"
 import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
+
+// Todo lo que no está en el hero se carga en chunks aparte y sin SSR: la
+// vidriera, promos y sorteos recién existen cuando llega la consulta a
+// Supabase (en el cliente), y los diálogos se abren con un click. Con los
+// imports estáticos la página pública cargaba ~340 KB de JS comprimido antes
+// de pintar (Supabase, Radix Dialog, sonner, date-fns...), y Lighthouse lo suma
+// todo al LCP en móvil. Ahora el JS inicial es el del hero.
+const ProductoTarjeta = dynamic(() => import("@/components/public/producto-tarjeta").then((m) => m.ProductoTarjeta), { ssr: false })
+const PromocionTarjeta = dynamic(() => import("@/components/public/promocion-tarjeta").then((m) => m.PromocionTarjeta), { ssr: false })
+const DetalleDialog = dynamic(() => import("@/components/public/detalle-dialog").then((m) => m.DetalleDialog), { ssr: false })
+const SorteoBanner = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoBanner), { ssr: false })
+const SorteoTeaser = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoTeaser), { ssr: false })
+const SorteosHistorial = dynamic(() => import("@/components/public/sorteos-historial").then((m) => m.SorteosHistorial), { ssr: false })
+const RegistroClienteDialog = dynamic(() => import("@/components/turnos/RegistroClienteDialog").then((m) => m.RegistroClienteDialog), { ssr: false })
 import { SERVITEC } from "@/lib/marca"
+import { FOTOS_DEFAULT_DESKTOP, FOTOS_DEFAULT_MOBILE } from "./fotos-default"
+import {
+  ANCHOS_HERO, ANCHOS_HERO_MOBILE, ANCHOS_LOGO, SIZES_LOGO_HERO, imagenSupabase, srcSetSupabase,
+} from "@/lib/imagenes"
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
-
-const FOTOS_DEFAULT_DESKTOP = [
-  "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=1400&q=80",
-  "https://www.laclinicaveterinaria.com/wp-content/uploads/2022/02/Captura-de-pantalla-2022-02-02-a-las-13.49.23_resultado-scaled.webp",
-]
-
-const FOTOS_DEFAULT_MOBILE = [
-  "https://images.unsplash.com/photo-1510771463146-e89e6e86560e?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTncqvCAsIT8bP5iYEVJ9VDXejE2HdoqN8hPA&s",
-  "https://img.freepik.com/foto-gratis/perro-pequeno-es-adorable_23-2149016873.jpg",
-]
 
 const SERVICIOS_DEFAULT: ServicioTenant[] = [
   { emoji: "🩺", nombre: "Consulta general", descripcion: "Revision completa de tu mascota con profesionales dedicados" },
@@ -61,6 +58,29 @@ const FEATURES = [
   { icon: Shield, label: "Profesionales matriculados", desc: "Equipo con experiencia comprobada" },
   { icon: Star, label: "Tecnologia moderna", desc: "Equipamiento de ultima generacion" },
 ]
+
+/* ═══════════════════════════ MAPA ═══════════════════════════ */
+
+/**
+ * Resuelve el `src` del iframe del mapa. En Configuración se puede pegar una
+ * dirección, un link, o el código `<iframe …>` que da Google Maps: de ese
+ * código se toma solo el `src`, y únicamente si apunta a Google Maps. Antes
+ * el HTML pegado se insertaba tal cual en la página pública.
+ */
+function srcDeMapa(valor: string): string | null {
+  if (!valor.includes("<iframe")) {
+    return `https://maps.google.com/maps?q=${encodeURIComponent(valor)}&output=embed`
+  }
+  const src = valor.match(/src=["']([^"']+)["']/i)?.[1]
+  if (!src) return null
+  try {
+    const url = new URL(src)
+    const esGoogleMaps = /(^|\.)google\.[a-z.]+$/.test(url.hostname) && url.pathname.startsWith("/maps")
+    return esGoogleMaps ? url.toString() : null
+  } catch {
+    return null
+  }
+}
 
 /* ═══════════════════ INTERSECTION OBSERVER ═══════════════════ */
 
@@ -112,30 +132,20 @@ function Reveal({
   )
 }
 
-/* ═══════════════════════ MOBILE DETECT ═══════════════════════ */
-
-function useIsMobile(breakpoint = 768) {
-  const [mobile, setMobile] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
-    setMobile(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setMobile(e.matches)
-    mq.addEventListener("change", handler)
-    return () => mq.removeEventListener("change", handler)
-  }, [breakpoint])
-  return mobile
-}
-
 /* ═══════════════════════ HERO CAROUSEL ═══════════════════════ */
 
 function HeroCarousel({ fotosDesktop, fotosMobile }: { fotosDesktop: string[]; fotosMobile: string[] }) {
-  const isMobile = useIsMobile()
-  const fotos = isMobile && fotosMobile.length > 0 ? fotosMobile : fotosDesktop
+  // Un slide por foto; si celular y escritorio tienen distinta cantidad, se
+  // ciclan. Cuál se muestra lo decide el navegador con <picture>, ya en el
+  // HTML del servidor: antes lo decidía JS después de hidratar, así que en el
+  // celular se descargaba primero la foto de escritorio y recién después la
+  // correcta, y la primera (el LCP) no se podía precargar.
+  const len = Math.max(fotosDesktop.length, fotosMobile.length)
+  const slides = Array.from({ length: len }, (_, i) => ({
+    desktop: fotosDesktop.length ? fotosDesktop[i % fotosDesktop.length] : undefined,
+    mobile: fotosMobile.length ? fotosMobile[i % fotosMobile.length] : undefined,
+  }))
   const [idx, setIdx] = useState(0)
-  const len = fotos.length
-
-  // Reset index cuando cambia el set de fotos
-  useEffect(() => { setIdx(0) }, [isMobile])
 
   useEffect(() => {
     if (len <= 1) return
@@ -145,21 +155,37 @@ function HeroCarousel({ fotosDesktop, fotosMobile }: { fotosDesktop: string[]; f
 
   return (
     <div className="absolute inset-0">
-      {fotos.map((url, i) => (
-        <img
-          key={url}
-          src={url}
-          alt=""
-          loading={i === 0 ? "eager" : "lazy"}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: i === idx ? 1 : 0,
-            transition: "opacity 1.5s ease-in-out",
-            // Parallax-like zoom lento en la imagen activa
-            transform: i === idx ? "scale(1.05)" : "scale(1)",
-          }}
-        />
-      ))}
+      {slides.map(({ desktop, mobile }, i) => {
+        const principal = desktop ?? mobile
+        return (
+        <picture key={i} className="contents">
+          {/* Fotos del bucket: srcset con variantes escaladas por Supabase; externas: tal cual. */}
+          {mobile && desktop && mobile !== desktop && (
+            <source
+              media="(max-width: 767px)"
+              srcSet={srcSetSupabase(mobile, ANCHOS_HERO_MOBILE) ?? mobile}
+              sizes="100vw"
+            />
+          )}
+          <img
+            src={principal}
+            srcSet={principal ? srcSetSupabase(principal, ANCHOS_HERO) : undefined}
+            sizes="100vw"
+            alt=""
+            loading={i === 0 ? "eager" : "lazy"}
+            fetchPriority={i === 0 ? "high" : "auto"}
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: i === idx ? 1 : 0,
+              transition: "opacity 1.5s ease-in-out",
+              // Parallax-like zoom lento en la imagen activa
+              transform: i === idx ? "scale(1.05)" : "scale(1)",
+            }}
+          />
+        </picture>
+        )
+      })}
 
       {/* Overlay con gradiente dramático */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
@@ -177,17 +203,24 @@ function HeroCarousel({ fotosDesktop, fotosMobile }: { fotosDesktop: string[]; f
             <ChevronLeft className="h-5 w-5 text-white" />
           </button>
           <div className="flex gap-2">
-            {fotos.map((_, i) => (
+            {slides.map((_, i) => (
+              // Área táctil de 24 px (mínimo accesible); el punto visible sigue chico.
               <button
                 key={i}
+                type="button"
                 aria-label={`Foto ${i + 1}`}
+                aria-current={i === idx ? "true" : undefined}
                 onClick={() => setIdx(i)}
-                className={`rounded-full transition-all duration-500 ${
-                  i === idx
-                    ? "w-8 h-2.5 bg-emerald-400"
-                    : "w-2.5 h-2.5 bg-white/30 hover:bg-white/50"
-                }`}
-              />
+                className="flex h-6 min-w-6 items-center justify-center"
+              >
+                <span
+                  className={`block rounded-full transition-all duration-500 ${
+                    i === idx
+                      ? "w-8 h-2.5 bg-emerald-400"
+                      : "w-2.5 h-2.5 bg-white/30 hover:bg-white/50"
+                  }`}
+                />
+              </button>
             ))}
           </div>
           <button
@@ -272,7 +305,7 @@ function FeaturePill({ icon: Icon, label, desc, i }: {
         </div>
         <div>
           <p className="font-bold text-slate-900 dark:text-white text-sm">{label}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{desc}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{desc}</p>
         </div>
       </div>
     </Reveal>
@@ -347,14 +380,14 @@ function VidrieraCarrusel({ children }: { children: ReactNode }) {
 
 /* ═══════════════════════ MAIN PAGE ═══════════════════════ */
 
-export default function VetPublicPage() {
+export default function VetPublicPage({ configInicial }: { configInicial: TenantConfig | null }) {
   const params = useParams()
   const slug = params.slug as string
   const router = useRouter()
-  const [exists, setExists] = useState(false)
-  const [config, setConfig] = useState<TenantConfig | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [heroVisible, setHeroVisible] = useState(false)
+  // La config llega del servidor (`page.tsx` ya la leyó para el SEO): el hero
+  // sale en el HTML inicial en vez de esperar un spinner + fetch en el cliente.
+  const config = configInicial
+  const exists = config !== null
   const [productos, setProductos] = useState<Producto[]>([])
   const [promociones, setPromociones] = useState<Promocion[]>([])
   const [productosDePromos, setProductosDePromos] = useState<Record<string, Producto>>({})
@@ -362,43 +395,41 @@ export default function VetPublicPage() {
   const [promocionSeleccionada, setPromocionSeleccionada] = useState<Promocion | null>(null)
   const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
   const [sorteosFinalizados, setSorteosFinalizados] = useState<Sorteo[]>([])
+  // El botón "Registrarme como cliente" sale en el HTML; el diálogo (formulario,
+  // Supabase, Radix) se descarga recién al primer click.
+  const [registroAbierto, setRegistroAbierto] = useState(false)
 
+  // Vidriera, promos y sorteos van debajo del pliegue: se cargan en el cliente
+  // sin frenar el hero. Si la veterinaria no existe, no hay nada que pedir.
   useEffect(() => {
+    if (!exists) return
+    let vigente = true
+    // El cliente de Supabase (~65 KB) se importa recién acá, fuera del JS inicial.
     Promise.all([
-      getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug),
-      getSorteoActivo(slug), getSorteosFinalizadosPublicados(slug),
-    ]).then(
-      async ([t, cfg, prods, promos, sorteo, historial]) => {
-        setExists(!!t)
-        setConfig(cfg)
+      import("@/lib/supabase/productos"),
+      import("@/lib/supabase/promociones"),
+      import("@/lib/supabase/sorteos"),
+    ])
+      .then(async ([productos, promociones, sorteos]) => {
+        const [prods, promos, sorteo, historial] = await Promise.all([
+          productos.getProductosPublicados(slug), promociones.getPromocionesPublicadas(slug),
+          sorteos.getSorteoActivo(slug), sorteos.getSorteosFinalizadosPublicados(slug),
+        ])
+        if (!vigente) return
         setProductos(prods)
         setPromociones(promos)
         setSorteoActivo(sorteo)
         setSorteosFinalizados(historial)
-        setLoading(false)
-        requestAnimationFrame(() => setTimeout(() => setHeroVisible(true), 100))
 
         const ids = Array.from(new Set(promos.flatMap((p) => p.items.map((i) => i.productoId))))
-        const productosPromo = await getProductosPublicadosPorIds(slug, ids)
-        setProductosDePromos(Object.fromEntries(productosPromo.map((p) => [p.id, p])))
-      },
-    )
-  }, [slug])
-
-  /* ── LOADING ── */
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin" />
-            <Stethoscope className="h-6 w-6 text-emerald-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <span className="text-sm text-slate-500 font-medium animate-pulse">Cargando veterinaria...</span>
-        </div>
-      </div>
-    )
-  }
+        const productosPromo = await productos.getProductosPublicadosPorIds(slug, ids)
+        if (vigente) setProductosDePromos(Object.fromEntries(productosPromo.map((p) => [p.id, p])))
+      })
+      .catch((error) => console.error("[vet-public] No se pudo cargar la vidriera:", error))
+    return () => {
+      vigente = false
+    }
+  }, [slug, exists])
 
   /* ── 404 ── */
   if (!exists) {
@@ -433,7 +464,8 @@ export default function VetPublicPage() {
   const modalidad   = config?.modalidad ?? "local"
   const googleMapsUrl = config?.googleMapsUrl
   const hayFotos    = fotosDesktop.length > 0 || fotosMobile.length > 0
-  const muestraMapa = (modalidad === "local" || modalidad === "ambos") && googleMapsUrl
+  const srcMapa     = googleMapsUrl ? srcDeMapa(googleMapsUrl) : null
+  const muestraMapa = (modalidad === "local" || modalidad === "ambos") && !!srcMapa
   const tieneFeatureProductos = PLANS[normalizePlan(config?.plan)].features.productos
   const muestraProductos = tieneFeatureProductos && productos.length > 0
   const tieneFeaturePromos = PLANS[normalizePlan(config?.plan)].features.promosSorteos
@@ -462,26 +494,22 @@ export default function VetPublicPage() {
 
         {/* Contenido central */}
         <div
-          className="relative z-10 container max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-32 flex flex-col items-center justify-center text-center h-full sm:h-auto"
-          style={{
-            opacity: heroVisible ? 1 : 0,
-            transform: heroVisible ? "none" : "translateY(50px)",
-            transition: "all 1.2s cubic-bezier(.16,1,.3,1)",
-          }}
+          className="vet-hero-in relative z-10 container max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-32 flex flex-col items-center justify-center text-center h-full sm:h-auto"
         >
           {/* Logo */}
           {logo && (
             <div
-              className="mb-3 sm:mb-8"
-              style={{
-                opacity: heroVisible ? 1 : 0,
-                transform: heroVisible ? "scale(1)" : "scale(0.7)",
-                transition: "all 1s cubic-bezier(.16,1,.3,1) 0.2s",
-              }}
+              className="vet-hero-in mb-3 sm:mb-8"
+              style={{ animationDelay: "0.1s" }}
             >
+              {/* En celular el logo suele ser el LCP: prioridad alta y precarga desde page.tsx. */}
               <img
-                src={logo}
+                src={imagenSupabase(logo, 384)}
+                srcSet={srcSetSupabase(logo, ANCHOS_LOGO)}
+                sizes={SIZES_LOGO_HERO}
                 alt={`Logo de ${nombre}`}
+                fetchPriority="high"
+                decoding="async"
                 className="w-16 h-16 sm:w-48 sm:h-48 rounded-2xl sm:rounded-[2rem] shadow-2xl shadow-black/40 ring-2 ring-white/20 object-cover"
               />
             </div>
@@ -489,12 +517,8 @@ export default function VetPublicPage() {
 
           {/* Badge */}
           <div
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-xl px-3 py-1 sm:px-5 sm:py-2 mb-2 sm:mb-8"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "none" : "translateY(20px)",
-              transition: "all 0.8s cubic-bezier(.16,1,.3,1) 0.3s",
-            }}
+            className="vet-hero-in inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-xl px-3 py-1 sm:px-5 sm:py-2 mb-2 sm:mb-8"
+            style={{ animationDelay: "0.1s" }}
           >
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[10px] sm:text-xs font-bold text-emerald-300 tracking-[0.15em] uppercase">
@@ -504,52 +528,37 @@ export default function VetPublicPage() {
 
           {/* Nombre ENORME */}
           <h1
-            className="text-3xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none mb-2 sm:mb-6 tracking-tight"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "none" : "translateY(30px) scale(0.95)",
-              transition: "all 1s cubic-bezier(.16,1,.3,1) 0.4s",
-              textShadow: "0 4px 60px rgba(0,0,0,0.5)",
-            }}
+            // El nombre es el LCP: demora mínima, así el navegador lo pinta enseguida.
+            className="vet-hero-in text-3xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none mb-2 sm:mb-6 tracking-tight"
+            style={{ animationDelay: "0.15s", textShadow: "0 4px 60px rgba(0,0,0,0.5)" }}
           >
             {nombre}
           </h1>
 
           {/* Slogan */}
           <p
-            className="text-sm sm:text-2xl md:text-3xl text-white/80 font-light mb-1.5 sm:mb-4 max-w-2xl leading-snug px-2"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "none" : "translateY(20px)",
-              transition: "all 0.8s cubic-bezier(.16,1,.3,1) 0.6s",
-            }}
+            className="vet-hero-in text-sm sm:text-2xl md:text-3xl text-white/80 font-light mb-1.5 sm:mb-4 max-w-2xl leading-snug px-2"
+            style={{ animationDelay: "0.3s" }}
           >
             {slogan}
           </p>
 
           {/* Descripción */}
           <p
-            className="hidden sm:block text-base sm:text-lg text-white/50 mb-12 max-w-lg"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transition: "opacity 0.8s ease 0.8s",
-            }}
+            className="vet-hero-in hidden sm:block text-base sm:text-lg text-white/50 mb-12 max-w-lg"
+            style={{ animationDelay: "0.45s" }}
           >
             {descripcion}
           </p>
 
           {/* CTAs */}
           <div
-            className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mt-4 sm:mt-0 w-full sm:w-auto px-4 sm:px-0"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "none" : "translateY(20px)",
-              transition: "all 0.8s cubic-bezier(.16,1,.3,1) 0.9s",
-            }}
+            className="vet-hero-in flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mt-4 sm:mt-0 w-full sm:w-auto px-4 sm:px-0"
+            style={{ animationDelay: "0.55s" }}
           >
             <Button
               size="lg"
-              className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
+              className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
                          shadow-2xl shadow-emerald-500/30 border-0
                          transition-all duration-300 hover:shadow-emerald-400/40 hover:scale-105"
               onClick={() => router.push(`/${slug}/turno`)}
@@ -559,7 +568,24 @@ export default function VetPublicPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
 
-            <RegistroClienteDialog tenantId={slug} />
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold text-sm sm:text-lg h-11 sm:h-14 px-6 sm:px-10 rounded-full
+                         backdrop-blur-md transition-all duration-300 hover:scale-105"
+              onClick={() => setRegistroAbierto(true)}
+            >
+              <UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              Registrarme como cliente
+            </Button>
+            {registroAbierto && (
+              <RegistroClienteDialog
+                tenantId={slug}
+                trigger={null}
+                open={registroAbierto}
+                onOpenChange={setRegistroAbierto}
+              />
+            )}
 
             <Button
               variant="ghost"
@@ -787,23 +813,16 @@ export default function VetPublicPage() {
             {/* ── DERECHA: Mapa o placeholder ── */}
             <Reveal delay={200} direction="right">
               <div className="h-full min-h-[280px]">
-                {muestraMapa ? (
+                {muestraMapa && srcMapa ? (
                   <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 h-full min-h-[280px]">
-                    {googleMapsUrl.includes("<iframe") ? (
-                      <div
-                        className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
-                        dangerouslySetInnerHTML={{ __html: googleMapsUrl }}
-                      />
-                    ) : (
-                      <iframe
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent(googleMapsUrl)}&output=embed`}
-                        className="w-full h-full border-0"
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        title="Ubicacion"
-                      />
-                    )}
+                    <iframe
+                      src={srcMapa}
+                      className="w-full h-full border-0"
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title={`Ubicación de ${nombre} en Google Maps`}
+                    />
                   </div>
                 ) : (
                   <div className="rounded-xl border border-slate-200 dark:border-white/10 h-full min-h-[280px]
@@ -829,7 +848,7 @@ export default function VetPublicPage() {
         <div className="container max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center gap-3 mb-2">
             {logo ? (
-              <img src={logo} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10" />
+              <img src={imagenSupabase(logo, 80)} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10" />
             ) : (
               <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
                 <Stethoscope className="h-5 w-5 text-white" />
@@ -963,7 +982,7 @@ export default function VetPublicPage() {
 
         <div className="border-t border-slate-800/30">
           <div className="container max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               © {new Date().getFullYear()} {nombre}. Pagina hecha con{" "}
               <Link href="/" className="text-emerald-500 font-semibold hover:text-emerald-400 transition-colors">VetPanel</Link>
             </p>
@@ -971,7 +990,7 @@ export default function VetPublicPage() {
               href={SERVITEC.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-extralight uppercase tracking-[0.4em] text-slate-500
+              className="text-xs font-extralight uppercase tracking-[0.4em] text-slate-400
                          hover:text-white transition-all duration-500"
               style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
             >

@@ -118,10 +118,14 @@
   /* Paleta cálida de marca (landing pet-friendly) */
   --color-cream: #fff9f3;
   --color-cream-deep: #fdf0e6;
-  --color-coral: #128ecc;
-  --color-coral-ink: #0d6ea3;
+  /* coral/teal: tonos ajustados para contraste AA (>= 4.5:1) como texto chico
+     sobre blanco, cream y sus fondos "soft", y con texto blanco encima. Los
+     tonos vivos originales (#128ecc, #14b8a6) no llegaban (3.6:1 y 2.5:1). */
+  --color-coral: #0d74a9;
+  --color-coral-ink: #0a5c88;
   --color-coral-soft: #eaf6fc;
   --color-teal: #14b8a6;
+  --color-teal-ink: #0a7468;
   --color-teal-soft: #e6faf6;
   --color-amber: #f5a623;
   --color-ink: #2d2a26;
@@ -195,6 +199,19 @@
 
 /* ═══════════════ Vet Public Page Animations ═══════════════ */
 
+/* Entrada del hero de la página pública: CSS puro, así corre desde el primer
+   paint del HTML del servidor (antes dependía de un estado de React y el hero
+   quedaba invisible hasta hidratar). */
+/* Arranca en 0.01 y no en 0 a propósito: con opacidad 0 Chrome no registra el
+   nombre de la veterinaria como candidato a LCP (la animación corre en el
+   compositor y el texto nunca se vuelve a pintar), y PSI termina midiendo el
+   logo chico en su lugar. */
+@keyframes vetHeroIn {
+  from { opacity: 0.01; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
+.vet-hero-in { animation: vetHeroIn 0.9s cubic-bezier(.16,1,.3,1) both; }
+
 .vet-blob {
   position: absolute;
   border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
@@ -250,12 +267,13 @@
   background-size: 150px 150px;
 }
 
-/* Blobs orgánicos suaves para el hero cálido. */
+/* Blobs orgánicos suaves para el hero cálido. Sin filter: blur(): el gradiente
+   radial (closest-side, en hero.tsx) ya se funde en el borde, y el blur de
+   70 px sobre dos capas de ~500 px era lo más caro de rasterizar del primer
+   cuadro en móvil. */
 .warm-blob {
   position: absolute;
-  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
-  filter: blur(70px);
-  will-change: transform;
+  border-radius: 50%;
 }
 @keyframes warmFloat1 {
   0%   { transform: translate(0, 0) rotate(0deg); }
@@ -267,6 +285,20 @@
   50%  { transform: translate(-26px, 20px) rotate(-7deg); }
   100% { transform: translate(20px, -24px) rotate(5deg); }
 }
+
+/* Entrada de la ventana de producto del hero (antes la hacía Motion). */
+@keyframes heroMockIn {
+  from { opacity: 0; transform: translateY(36px) rotate(-2deg); }
+  to   { opacity: 1; transform: translateY(0) rotate(-1.5deg); }
+}
+.hero-mock-in { animation: heroMockIn 0.8s cubic-bezier(.16,1,.3,1) 0.2s both; }
+
+/* Cambio de pantalla de la ventana de producto en "Cómo funciona". */
+@keyframes scrollyMockIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.scrolly-mock-in { animation: scrollyMockIn 0.35s cubic-bezier(.16,1,.3,1) both; }
 
 /* Flotación de las tarjetas/ilustraciones del hero. */
 @keyframes softFloat {

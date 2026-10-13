@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { motion, AnimatePresence, useReducedMotion } from "motion/react"
+import { useEffect, useRef, useState } from "react"
 import { CalendarCheck, BellRing, ClipboardList, MessageCircle } from "lucide-react"
 import { ProductMock, type MockScreen } from "@/components/landing/product-mock"
 
@@ -44,9 +43,33 @@ const STEPS: Step[] = [
   },
 ]
 
+/**
+ * Sección "cómo funciona": los pasos se activan al cruzar la franja central
+ * de la pantalla (IntersectionObserver con márgenes del 45 %) y la ventana de
+ * producto, pegada en escritorio, cambia con un fundido en CSS. Antes usaba
+ * Motion (onViewportEnter + AnimatePresence); sin la librería la landing
+ * se ahorra ~40 KB de JS inicial.
+ */
 export function ProductScrolly() {
   const [active, setActive] = useState(0)
-  const reduce = useReducedMotion()
+  const [reduce, setReduce] = useState(false)
+  const pasosRef = useRef<(HTMLDivElement | null)[]>([])
+
+  useEffect(() => {
+    setReduce(window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const i = pasosRef.current.indexOf(entry.target as HTMLDivElement)
+          if (i >= 0) setActive(i)
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px" },
+    )
+    for (const el of pasosRef.current) if (el) obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
 
   return (
     <section className="relative bg-white py-24">
@@ -68,12 +91,14 @@ export function ProductScrolly() {
               const Icon = step.icon
               const isActive = active === i
               return (
-                <motion.div
+                <div
                   key={i}
-                  onViewportEnter={() => setActive(i)}
-                  viewport={{ margin: "-45% 0px -45% 0px" }}
-                  animate={{ opacity: reduce || isActive ? 1 : 0.4 }}
-                  transition={{ duration: 0.3 }}
+                  ref={(el) => {
+                    pasosRef.current[i] = el
+                  }}
+                  // El paso activo se destaca por color, no por opacidad: con opacity 0.4
+                  // el texto atenuado no llegaba al contraste mínimo (y en celular se
+                  // ven los cuatro pasos a la vez).
                   className="lg:min-h-[72vh] flex flex-col justify-center py-10 lg:py-0"
                 >
                   <div className="mb-5 flex items-center gap-3">
@@ -84,11 +109,19 @@ export function ProductScrolly() {
                     >
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="text-xs font-bold uppercase tracking-widest text-coral">
+                    <span
+                      className={`text-xs font-bold uppercase tracking-widest transition-colors ${
+                        isActive ? "text-coral" : "text-ink-muted"
+                      }`}
+                    >
                       Paso {i + 1} · {step.kicker}
                     </span>
                   </div>
-                  <h3 className="font-display text-2xl sm:text-3xl font-semibold text-ink mb-3 max-w-md">
+                  <h3
+                    className={`font-display text-2xl sm:text-3xl font-semibold mb-3 max-w-md transition-colors duration-300 ${
+                      isActive ? "text-ink" : "text-ink-muted"
+                    }`}
+                  >
                     {step.title}
                   </h3>
                   <p className="text-ink-muted leading-relaxed max-w-md">{step.desc}</p>
@@ -97,7 +130,7 @@ export function ProductScrolly() {
                   <div className="lg:hidden mt-8 max-w-sm">
                     <ProductMock screen={step.screen} />
                   </div>
-                </motion.div>
+                </div>
               )
             })}
           </div>
@@ -108,18 +141,11 @@ export function ProductScrolly() {
               <div className="relative w-full max-w-md mx-auto">
                 {/* halo */}
                 <div className="pointer-events-none absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-coral/10 to-teal/10 blur-2xl" />
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={active}
-                    initial={reduce ? false : { opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reduce ? undefined : { opacity: 0, y: -14 }}
-                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    className="relative"
-                  >
-                    <ProductMock screen={STEPS[active].screen} />
-                  </motion.div>
-                </AnimatePresence>
+                {/* key={active}: al cambiar de paso se remonta y corre la
+                    animación de entrada (scrolly-mock-in en globals.css). */}
+                <div key={active} className={reduce ? "relative" : "scrolly-mock-in relative"}>
+                  <ProductMock screen={STEPS[active].screen} />
+                </div>
 
                 {/* indicador de progreso */}
                 <div className="mt-6 flex justify-center gap-2">

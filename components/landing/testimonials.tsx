@@ -1,5 +1,5 @@
 import { Star } from "lucide-react"
-import { Reveal } from "@/components/landing/motion"
+import { Reveal } from "@/components/landing/reveal"
 import { DogFace, CatFace, Paw } from "@/components/landing/pet-art"
 
 const TESTIMONIALS = [
@@ -24,7 +24,7 @@ export function Testimonials() {
     <section className="bg-white py-24 border-y border-warm-border">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center mb-14">
-          <p className="text-sm font-semibold uppercase tracking-widest text-teal mb-3">Testimonios</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-teal-ink mb-3">Testimonios</p>
           <h2 className="font-display text-4xl sm:text-5xl font-semibold text-ink">
             Veterinarios que ya volvieron a casa temprano
           </h2>

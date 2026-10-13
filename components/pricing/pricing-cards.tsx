@@ -54,7 +54,7 @@ function styles(variant: PricingVariant) {
     badge: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white",
     title: "text-white",
     titleMuted: "text-slate-400",
-    desc: "text-slate-500",
+    desc: "text-slate-400",
     price: "text-white",
     priceMuted: "text-slate-400",
     period: "text-slate-400",
@@ -103,7 +103,8 @@ export function PricingCards({ ctaHref = "/registro", variant = "dark" }: Pricin
             )}
 
             <div className="mb-6">
-              <h3 className={`font-display text-xl font-semibold mb-1 ${titleTone}`}>{plan.nombre}</h3>
+              {/* h2: en /pricing van después del h1 y antes de "Comparación de planes". */}
+              <h2 className={`font-display text-xl font-semibold mb-1 ${titleTone}`}>{plan.nombre}</h2>
               <p className={`text-sm mb-4 ${s.desc}`}>{DESCRIPCIONES[plan.id]}</p>
               <div className="flex items-baseline gap-1">
                 <span className={`font-display text-4xl font-semibold ${priceTone}`}>{price}</span>

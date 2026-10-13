@@ -1,5 +1,5 @@
 import { CalendarDays, ClipboardList, MessageCircle, Users, Globe, QrCode } from "lucide-react"
-import { Reveal } from "@/components/landing/motion"
+import { Reveal } from "@/components/landing/reveal"
 import { Paw } from "@/components/landing/pet-art"
 
 export function FeaturesBento() {
@@ -56,7 +56,7 @@ export function FeaturesBento() {
                 tratamientos. Exportable a PDF y con QR público para el dueño.
               </p>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-soft px-3 py-1.5 text-xs font-semibold text-teal">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-soft px-3 py-1.5 text-xs font-semibold text-teal-ink">
                   <QrCode className="h-3.5 w-3.5" /> QR por mascota
                 </span>
                 <span className="rounded-full bg-cream px-3 py-1.5 text-xs font-medium text-ink-muted">PDF</span>

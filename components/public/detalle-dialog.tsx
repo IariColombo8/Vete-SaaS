@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog"
 import { precioFinal, tieneOferta, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
+import { imagenSupabase } from "@/lib/imagenes"
 import type { Producto, Promocion } from "@/lib/supabase/types"
 
 interface Props {
@@ -65,7 +66,7 @@ function BotonCerrar({ onClose }: { onClose: () => void }) {
 
 function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; logo?: string; onClose: () => void }) {
   const enOferta = tieneOferta(p)
-  const imagen = p.imagenUrl || logo || "/logo.png"
+  const imagen = imagenSupabase(p.imagenUrl || logo || "/logo-512.png", 800)
   const final = precioFinal(p)
   const descuento = enOferta && p.precio > 0 ? Math.round((1 - final / p.precio) * 100) : 0
   const ahorro = enOferta ? p.precio - final : 0
@@ -143,7 +144,7 @@ function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; l
 function DetallePromocion({
   promocion: p, productosDePromos, logo, onClose,
 }: { promocion: Promocion; productosDePromos: Record<string, Producto>; logo?: string; onClose: () => void }) {
-  const imagen = p.imagenUrl || logo || "/logo.png"
+  const imagen = imagenSupabase(p.imagenUrl || logo || "/logo-512.png", 800)
   const items = p.items.map((i) => ({ item: i, producto: productosDePromos[i.productoId] }))
   // "Sin la promo" usa el precio con oferta individual ya aplicada (precioFinal
   // de cada producto), no el de lista: si un producto además tiene su propia

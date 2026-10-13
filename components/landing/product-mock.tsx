@@ -148,7 +148,7 @@ function LibretaScreen() {
             <span className="text-sm font-medium text-ink">{v.name}</span>
             <span
               className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                v.ok ? "bg-teal-soft text-teal" : "bg-coral-soft text-coral"
+                v.ok ? "bg-teal-soft text-teal-ink" : "bg-coral-soft text-coral"
               }`}
             >
               {v.ok && <Check className="h-3 w-3" />}
@@ -172,7 +172,7 @@ function RecordatorioScreen() {
           <p className="text-sm font-semibold text-ink leading-tight">WhatsApp</p>
           <p className="text-[11px] text-ink-muted">Recordatorio automático</p>
         </div>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-teal-soft px-2.5 py-1 text-[11px] font-bold text-teal">
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-teal-soft px-2.5 py-1 text-[11px] font-bold text-teal-ink">
           <Check className="h-3 w-3" /> Enviado
         </span>
       </div>
@@ -185,7 +185,7 @@ function RecordatorioScreen() {
         <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-cream px-4 py-3 text-sm text-ink">
           La antiparasitaria vence pronto 💉 ¿La sumamos a la visita?
         </div>
-        <div className="ml-auto max-w-[70%] rounded-2xl rounded-tr-sm bg-teal px-4 py-3 text-sm text-white">
+        <div className="ml-auto max-w-[70%] rounded-2xl rounded-tr-sm bg-teal-ink px-4 py-3 text-sm text-white">
           ¡Dale, gracias! Ahí estamos 🐶
         </div>
       </div>

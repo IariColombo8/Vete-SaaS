@@ -3,14 +3,16 @@ import type { Metadata } from "next";
 import { Fraunces, DM_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Navbar } from "@/components/navbar";
-import { Toaster } from "@/components/ui/sonner";
+import { ToasterApp } from "@/components/toaster-app";
 import "./globals.css";
 
-// Fraunces: serif display para titulares. Pesos estáticos (600/700) en vez del
-// variable completo → archivo mucho más liviano y mejor LCP en mobile.
+// Fraunces: serif display para titulares. Un solo peso estático (600) en vez
+// del variable completo → archivo mucho más liviano y mejor LCP en mobile.
+// Toda la landing usa font-semibold con font-display; si hace falta el 700,
+// agregarlo acá (son ~18 KB más en el camino crítico de cada página).
 const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["600"],
   variable: "--font-fraunces",
   display: "swap",
 });
@@ -83,7 +85,7 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <Navbar />
         {children}
-        <Toaster richColors closeButton />
+        <ToasterApp />
         <Analytics />
       </body>
     </html>

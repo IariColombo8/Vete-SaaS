@@ -55,7 +55,7 @@ export default async function BlogPostPage({ params }: Props) {
 
         <header className="mb-8">
           {post.date && (
-            <p className="text-xs text-slate-500 mb-2">
+            <p className="text-xs text-slate-400 mb-2">
               {new Date(post.date + "T00:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}
               {post.author ? ` · ${post.author}` : ""}
             </p>

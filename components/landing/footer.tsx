@@ -29,7 +29,7 @@ export function SaasFooter() {
               Iniciar Sesión
             </Link>
           </div>
-          <div className="text-center text-xs text-ink-muted/70 md:text-right">
+          <div className="text-center text-xs text-ink-muted md:text-right">
             <p>© {new Date().getFullYear()} VetPanel · Hecho con cariño para las mascotas 🐾</p>
             <p className="mt-1">
               Desarrollado por{" "}

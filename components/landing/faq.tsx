@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence, useReducedMotion } from "motion/react"
 import { track } from "@vercel/analytics"
 import { Plus } from "lucide-react"
-import { Reveal } from "@/components/landing/motion"
+import { Reveal } from "@/components/landing/reveal"
 import { FAQS } from "@/lib/landing/faqs"
 
-function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
+// Acordeón con CSS puro (grid-template-rows 0fr → 1fr) en vez de Motion:
+// misma animación de altura, sin librería en el JS inicial de la landing.
+function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false)
-  const reduce = useReducedMotion()
 
   function toggle() {
     const next = !open
@@ -25,29 +25,23 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
         className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
       >
         <span className="font-display text-base sm:text-lg font-semibold text-ink">{q}</span>
-        <motion.span
-          animate={{ rotate: open ? 45 : 0 }}
-          transition={{ duration: 0.2 }}
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-            open ? "bg-coral text-white" : "bg-coral-soft text-coral"
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-[transform,background-color,color] duration-200 ${
+            open ? "rotate-45 bg-coral text-white" : "bg-coral-soft text-coral"
           }`}
         >
           <Plus className="h-4 w-4" />
-        </motion.span>
+        </span>
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={reduce ? false : { height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={reduce ? undefined : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <p className="px-6 pb-5 text-sm text-ink-muted leading-relaxed">{a}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        className="grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(.16,1,.3,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr", opacity: open ? 1 : 0 }}
+        aria-hidden={!open}
+      >
+        <div className="overflow-hidden">
+          <p className="px-6 pb-5 text-sm text-ink-muted leading-relaxed">{a}</p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -63,7 +57,7 @@ export function Faq() {
         <div className="space-y-3">
           {FAQS.map((f, i) => (
             <Reveal key={f.q} delay={i * 0.05}>
-              <FaqItem q={f.q} a={f.a} index={i} />
+              <FaqItem q={f.q} a={f.a} />
             </Reveal>
           ))}
         </div>

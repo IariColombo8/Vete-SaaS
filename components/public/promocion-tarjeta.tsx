@@ -1,6 +1,7 @@
 import { Tag, Clock } from "lucide-react"
 import { precioFinal, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
+import { imagenSupabase } from "@/lib/imagenes"
 import type { Producto, Promocion } from "@/lib/supabase/types"
 
 interface Props {
@@ -16,7 +17,8 @@ interface Props {
  */
 export function PromocionTarjeta({ promocion: p, productos, logo, onClick }: Props) {
   // Promo sin foto propia -> logo del tenant -> logo de VetPanel, en ese orden.
-  const imagen = p.imagenUrl || logo || "/logo.png"
+  // Escalada por Supabase a 480 px: la tarjeta mide ~300 px; el logo de respaldo es la versión chica.
+  const imagen = imagenSupabase(p.imagenUrl || logo || "/logo-512.png", 480)
   const items = p.items.map((i) => ({ item: i, producto: productos[i.productoId] }))
   // "Sin la promo" usa el precio con oferta individual ya aplicada (precioFinal),
   // no el de lista: si un producto además tiene su propia oferta activa, ese es

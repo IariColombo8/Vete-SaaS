@@ -207,7 +207,7 @@ export default function RegistroPage() {
 
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/25">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-700 shadow-lg shadow-emerald-600/25">
             <PawPrint className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-extrabold">Registrá tu veterinaria</h1>
@@ -221,7 +221,7 @@ export default function RegistroPage() {
           {(["login", "perfil", "listo"] as Step[]).map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors
-                ${step === s ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"}`}>
+                ${step === s ? "bg-emerald-700 text-white" : "bg-muted text-muted-foreground"}`}>
                 {i + 1}
               </div>
               {i < 2 && <div className="h-px w-8 bg-border" />}
@@ -239,7 +239,7 @@ export default function RegistroPage() {
             <CardContent className="space-y-4">
               <Button
                 onClick={handleGoogle}
-                className="h-12 w-full bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700"
+                className="h-12 w-full bg-emerald-700 text-base font-medium text-white hover:bg-emerald-800"
                 disabled={loading}
               >
                 <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
@@ -308,7 +308,7 @@ export default function RegistroPage() {
 
               <p className="text-center text-xs text-muted-foreground">
                 ¿Ya tenés cuenta?{" "}
-                <Link href="/login" className="text-emerald-600 hover:underline font-medium">
+                <Link href="/login" className="text-emerald-700 hover:underline font-medium">
                   Iniciar sesión
                 </Link>
               </p>
@@ -344,9 +344,9 @@ export default function RegistroPage() {
                       )}
                       {slugStatus === "available" && (
                         <>
-                          <Check className="h-3 w-3 text-emerald-600" />
-                          <span className="font-mono text-emerald-600">vetpanel.com.ar/{slugPreview}</span>
-                          <span className="text-emerald-600">— disponible</span>
+                          <Check className="h-3 w-3 text-emerald-700" />
+                          <span className="font-mono text-emerald-700">vetpanel.com.ar/{slugPreview}</span>
+                          <span className="text-emerald-700">— disponible</span>
                         </>
                       )}
                       {slugStatus === "taken" && (
@@ -424,7 +424,7 @@ export default function RegistroPage() {
           <Card className="border-emerald-500/30 bg-emerald-500/5">
             <CardContent className="pt-8 pb-8 text-center space-y-4">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                <Check className="h-8 w-8 text-emerald-600" />
+                <Check className="h-8 w-8 text-emerald-700" />
               </div>
               <div>
                 <h2 className="text-xl font-extrabold text-emerald-700 dark:text-emerald-400">
@@ -437,7 +437,7 @@ export default function RegistroPage() {
               </div>
               <div className="rounded-lg bg-muted p-3 text-sm font-mono text-left space-y-1">
                 <p className="text-xs text-muted-foreground">Tu link público:</p>
-                <p className="font-semibold text-emerald-600">/{slugPreview}</p>
+                <p className="font-semibold text-emerald-700">/{slugPreview}</p>
               </div>
               <Button className="w-full" onClick={() => router.push(`/${slugPreview}/onboarding`)}>
                 Configurar mi veterinaria

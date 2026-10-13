@@ -1,75 +1,16 @@
 "use client"
 
-import {
-  motion,
-  useReducedMotion,
-  useMotionValue,
-  useSpring,
-  useInView,
-  animate,
-  type Variants,
-} from "motion/react"
 import { useEffect, useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from "react"
 
-const EASE = [0.16, 1, 0.3, 1] as const
+/**
+ * Micro-animaciones de la landing sin librería. Antes usaban Motion, que
+ * pesaba ~40 KB comprimidos en el JS inicial de la landing y, al hidratar
+ * antes del primer pintado, Lighthouse lo sumaba entero al LCP en móvil.
+ * El Reveal al entrar en viewport vive en `reveal.tsx`.
+ */
 
-// ─── Reveal: fade + slide-up al entrar en viewport ──────────────────────────
-interface RevealProps {
-  children: ReactNode
-  className?: string
-  delay?: number
-  y?: number
-}
-
-export function Reveal({ children, className, delay = 0, y = 28 }: RevealProps) {
-  const reduce = useReducedMotion()
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y }}
-      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -8% 0px" }}
-      transition={{ duration: 0.6, ease: EASE, delay }}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-// ─── Stagger: cascada de hijos ───────────────────────────────────────────────
-const containerVariants: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
-}
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
-}
-
-export function Stagger({ children, className }: { children: ReactNode; className?: string }) {
-  const reduce = useReducedMotion()
-  if (reduce) return <div className={className}>{children}</div>
-  return (
-    <motion.div
-      className={className}
-      variants={containerVariants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "0px 0px -8% 0px" }}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-export function StaggerItem({ children, className }: { children: ReactNode; className?: string }) {
-  const reduce = useReducedMotion()
-  if (reduce) return <div className={className}>{children}</div>
-  return (
-    <motion.div className={className} variants={itemVariants}>
-      {children}
-    </motion.div>
-  )
+function prefiereMenosMovimiento() {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
 // ─── Magnetic: el elemento "persigue" sutilmente al cursor ───────────────────
@@ -82,34 +23,29 @@ export function Magnetic({
   className?: string
   strength?: number
 }) {
-  const reduce = useReducedMotion()
   const ref = useRef<HTMLDivElement>(null)
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const sx = useSpring(x, { stiffness: 220, damping: 16, mass: 0.4 })
-  const sy = useSpring(y, { stiffness: 220, damping: 16, mass: 0.4 })
 
   function onMove(e: ReactMouseEvent) {
-    if (reduce || !ref.current) return
-    const r = ref.current.getBoundingClientRect()
-    x.set((e.clientX - (r.left + r.width / 2)) * strength)
-    y.set((e.clientY - (r.top + r.height / 2)) * strength)
+    const el = ref.current
+    if (!el || prefiereMenosMovimiento()) return
+    const r = el.getBoundingClientRect()
+    const x = (e.clientX - (r.left + r.width / 2)) * strength
+    const y = (e.clientY - (r.top + r.height / 2)) * strength
+    el.style.transform = `translate(${x}px, ${y}px)`
   }
   function reset() {
-    x.set(0)
-    y.set(0)
+    if (ref.current) ref.current.style.transform = "translate(0px, 0px)"
   }
 
   return (
-    <motion.div
+    <div
       ref={ref}
       onMouseMove={onMove}
       onMouseLeave={reset}
-      style={{ x: sx, y: sy }}
-      className={`inline-block ${className ?? ""}`}
+      className={`inline-block transition-transform duration-300 ease-out ${className ?? ""}`}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }
 
@@ -129,20 +65,38 @@ export function CountUp({
   duration?: number
   className?: string
 }) {
-  const reduce = useReducedMotion()
   const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, margin: "0px 0px -12% 0px" })
-  const [display, setDisplay] = useState(reduce ? value : 0)
+  // En el HTML del servidor va el valor final: si el JS tarda, el número ya se lee.
+  const [display, setDisplay] = useState(value)
 
   useEffect(() => {
-    if (!inView || reduce) return
-    const controls = animate(0, value, {
-      duration,
-      ease: EASE,
-      onUpdate: (v) => setDisplay(v),
-    })
-    return () => controls.stop()
-  }, [inView, reduce, value, duration])
+    const el = ref.current
+    if (!el || prefiereMenosMovimiento()) return
+
+    let frame = 0
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        obs.disconnect()
+        const inicio = performance.now()
+        const ms = duration * 1000
+        const paso = (ahora: number) => {
+          const t = Math.min((ahora - inicio) / ms, 1)
+          const eased = 1 - Math.pow(1 - t, 3)
+          setDisplay(value * eased)
+          if (t < 1) frame = requestAnimationFrame(paso)
+        }
+        setDisplay(0)
+        frame = requestAnimationFrame(paso)
+      },
+      { rootMargin: "0px 0px -12% 0px" },
+    )
+    obs.observe(el)
+    return () => {
+      obs.disconnect()
+      cancelAnimationFrame(frame)
+    }
+  }, [value, duration])
 
   const text = display.toLocaleString("es-AR", {
     minimumFractionDigits: decimals,
@@ -155,19 +109,5 @@ export function CountUp({
       {text}
       {suffix}
     </span>
-  )
-}
-
-// ─── Marquee: cinta infinita (duplica el contenido) ──────────────────────────
-export function Marquee({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`marquee-mask overflow-hidden ${className ?? ""}`}>
-      <div className="marquee-track">
-        <div className="flex shrink-0">{children}</div>
-        <div className="flex shrink-0" aria-hidden>
-          {children}
-        </div>
-      </div>
-    </div>
   )
 }

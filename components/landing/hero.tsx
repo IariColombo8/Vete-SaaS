@@ -1,32 +1,61 @@
 "use client"
 
-import { useRef } from "react"
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react"
+import { useEffect, useRef } from "react"
 import { ShieldCheck, Zap, Globe, Star } from "lucide-react"
 import { HeroCta } from "@/components/hero-cta"
 import { ProductMock } from "@/components/landing/product-mock"
 import { Paw, Bone, CatFace, Vaccine } from "@/components/landing/pet-art"
 
+/**
+ * Parallax suave de la columna del producto (solo escritorio): se desplaza
+ * hasta 70 px hacia arriba a medida que el hero sale de pantalla. Un listener
+ * pasivo con rAF en vez de Motion: el hero está en el JS inicial y Motion
+ * (~35 KB) retrasaba el LCP en móvil sin aportar nada ahí (la columna ni se ve).
+ */
+function useParallaxHero(sectionRef: React.RefObject<HTMLElement | null>, targetRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const section = sectionRef.current
+    const target = targetRef.current
+    if (!section || !target) return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    if (!window.matchMedia("(min-width: 1024px)").matches) return
+
+    let pedido = 0
+    const aplicar = () => {
+      pedido = 0
+      const alto = section.offsetHeight || 1
+      const progreso = Math.min(Math.max(-section.getBoundingClientRect().top / alto, 0), 1)
+      target.style.transform = `translateY(${-70 * progreso}px)`
+    }
+    const onScroll = () => {
+      if (!pedido) pedido = requestAnimationFrame(aplicar)
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      if (pedido) cancelAnimationFrame(pedido)
+    }
+  }, [sectionRef, targetRef])
+}
+
 export function Hero() {
-  const reduce = useReducedMotion()
   const ref = useRef<HTMLElement>(null)
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"],
-  })
-  const yMock = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, -70])
+  const mockRef = useRef<HTMLDivElement>(null)
+  useParallaxHero(ref, mockRef)
 
   return (
     <section ref={ref} className="relative overflow-hidden bg-cream">
-      {/* Blobs cálidos */}
+      {/* Blobs cálidos: gradientes radiales que se funden solos en el borde
+          (closest-side), sin filter: blur(). El blur de 70 px sobre dos capas
+          de 460 px era lo más caro de rasterizar del primer cuadro. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          className="warm-blob h-[460px] w-[460px] -top-32 -right-24 opacity-60"
-          style={{ background: "radial-gradient(circle, rgba(255,107,92,0.30), transparent 70%)", animation: "warmFloat1 20s ease-in-out infinite alternate" }}
+          className="warm-blob h-[520px] w-[520px] -top-40 -right-32 opacity-60"
+          style={{ background: "radial-gradient(circle closest-side, rgba(255,107,92,0.30), rgba(255,107,92,0.12) 45%, transparent 100%)", animation: "warmFloat1 20s ease-in-out infinite alternate" }}
         />
         <div
-          className="warm-blob h-[420px] w-[420px] top-40 -left-28 opacity-50"
-          style={{ background: "radial-gradient(circle, rgba(20,184,166,0.28), transparent 70%)", animation: "warmFloat2 24s ease-in-out infinite alternate" }}
+          className="warm-blob h-[480px] w-[480px] top-36 -left-36 opacity-50"
+          style={{ background: "radial-gradient(circle closest-side, rgba(20,184,166,0.28), rgba(20,184,166,0.10) 45%, transparent 100%)", animation: "warmFloat2 24s ease-in-out infinite alternate" }}
         />
       </div>
       <div className="paw-pattern pointer-events-none absolute inset-0 opacity-[0.04]" />
@@ -88,19 +117,16 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Columna producto */}
-          <motion.div style={{ y: yMock }} className="relative hidden lg:block">
+          {/* Columna producto (solo escritorio) */}
+          <div ref={mockRef} className="relative hidden lg:block will-change-transform">
             <Paw className="paw-wiggle absolute -top-12 -right-6 h-40 w-40 text-coral/10" />
             <Bone className="absolute bottom-2 -left-10 h-16 w-16 text-amber/25 -rotate-12" />
 
-            <motion.div
-              initial={reduce ? false : { opacity: 0, y: 36, rotate: -2 }}
-              animate={reduce ? undefined : { opacity: 1, y: 0, rotate: -1.5 }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-              className="relative mx-auto max-w-md"
-            >
+            {/* Entrada con CSS (hero-mock-in en globals.css): mismo fade + subida
+                + leve rotación que antes hacía Motion. */}
+            <div className="hero-mock-in relative mx-auto max-w-md">
               <ProductMock screen="reservar" />
-            </motion.div>
+            </div>
 
             {/* Chip flotante: gato/vacuna */}
             <div className="float-soft-slow absolute -top-5 -left-8 flex items-center gap-2 rounded-2xl border border-warm-border bg-white px-3.5 py-2.5 shadow-xl rotate-[4deg]">
@@ -123,7 +149,7 @@ export function Hero() {
                 <p className="text-[11px] text-ink-muted mt-0.5">por WhatsApp, solo</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

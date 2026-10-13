@@ -70,7 +70,10 @@ export async function uploadFotoTenant(
   const path = `${tenantId}/${carpeta}/${timestamp}-${safeName}`
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, archivo, {
-    cacheControl: "3600",
+    // El path lleva timestamp y no se pisa (upsert: false): la URL es inmutable,
+    // así que el navegador puede cachearla un año. Con 1 h, cada visita a la
+    // página pública volvía a bajar el logo y las fotos del hero.
+    cacheControl: "31536000",
     upsert: false,
   })
   if (error) throw new Error(`No se pudo subir la foto: ${error.message}`)

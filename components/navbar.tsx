@@ -3,12 +3,18 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { signOut } from "@/lib/supabase/auth"
-import { resolveUserDashboard } from "@/lib/auth/resolveUserDashboard"
 import { useRouter, usePathname } from "next/navigation"
 import { Menu, X, Stethoscope, LayoutDashboard, Shield } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Paw } from "@/components/landing/pet-art"
+import { imagenSupabase } from "@/lib/imagenes"
+
+// El navbar está en todas las páginas: Supabase y el resolver de rol se
+// importan recién al usarlos para que no entren en el JS inicial de la
+// landing, el blog y precios (donde casi nunca hay sesión).
+const signOut = () => import("@/lib/supabase/auth").then((m) => m.signOut())
+const resolveUserDashboard = (uid: string) =>
+  import("@/lib/auth/resolveUserDashboard").then((m) => m.resolveUserDashboard(uid))
 
 /** Paleta del SaasNavbar según superficie: cálido en "/", oscuro en /pricing y /blog. */
 function navTheme(light: boolean) {
@@ -41,7 +47,9 @@ function navTheme(light: boolean) {
 // ─── SaaS Navbar (mostrado en "/", /pricing, /blog) ─────────────────────────
 function SaasNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { user } = useAuth()
+  // diferido: la sesión acá solo decide si mostrar "Mi panel"; no vale
+  // frenar el primer pintado de la landing para cargar Supabase.
+  const { user } = useAuth({ diferido: true })
   const pathname = usePathname()
   const [dashboardHref, setDashboardHref] = useState<string | null>(null)
 
@@ -66,7 +74,9 @@ function SaasNavbar() {
                 ? <Paw className="h-4 w-4 text-white" />
                 : <Stethoscope className="h-4 w-4 text-white" />}
             </div>
-            <span className={`text-lg font-bold tracking-tight ${light ? "font-display" : ""} ${t.brand}`}>
+            {/* En la landing el logotipo usa Fraunces 600: es el único peso que se
+                carga (el 700 sumaba 18 KB al camino crítico solo por este texto). */}
+            <span className={`text-lg tracking-tight ${light ? "font-display font-semibold" : "font-bold"} ${t.brand}`}>
               Vet<span className={t.brandAccent}>Panel</span>
             </span>
           </Link>
@@ -121,6 +131,8 @@ function SaasNavbar() {
             variant="ghost"
             size="icon"
             className={`md:hidden ${t.toggle}`}
+            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -241,7 +253,7 @@ function VetPublicNavbar() {
         <div className="flex h-14 items-center justify-between">
           <button onClick={() => router.push(`/${slug}`)} className="flex items-center gap-2.5">
             {tenant?.logo
-              ? <img src={tenant.logo} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
+              ? <img src={imagenSupabase(tenant.logo, 64)} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
               : <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
                   <Stethoscope className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>

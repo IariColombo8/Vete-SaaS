@@ -583,3 +583,57 @@ como una distribuidora, al mismo sistema).
 
 No se usan subdominios por tenant — el aislamiento es por fila (`tenant_id` +
 RLS) y por ruta (`/[slug]/...`), no por infraestructura separada.
+
+---
+
+## Rendimiento (PageSpeed) — decisiones
+
+Auditoría del 2026-10-12 con Lighthouse local (misma versión que PSI) sobre
+`npm run build` + `next start`. Lo que explica casi todo el puntaje en móvil:
+**Lantern suma al LCP todo JS que terminó de descargarse antes del primer
+pintado**, y en PSI todo el JS inicial llega en <300 ms. Por eso la palanca es
+el peso del JS inicial y lo que se ejecuta antes de pintar, no el "blur" ni
+detalles de pintura. Hoy el piso es React 19 + runtime de Next 16 (~103 KB gz).
+
+- **Sentry en diferido** (`instrumentation-client.ts`): era el chunk más pesado
+  del sitio (~150 KB gz, ~1 s de CPU en móvil) y se ejecutaba antes de pintar,
+  en todas las rutas, incluso sin DSN. Se importa cuando el navegador está
+  ocioso y solo con DSN; los errores previos se encolan y se reenvían.
+- **Supabase fuera del JS inicial de las páginas públicas.** `useAuth` importa
+  `lib/supabase/auth` con `import()`; con `{ diferido: true }` (navbar, hero)
+  espera a `requestIdleCallback`. En el panel se usa sin diferir. Navbar y
+  hero-cta importan `signOut`/`resolveUserDashboard` también en diferido.
+  **No volver a importar `lib/supabase/*` estáticamente desde algo que
+  renderice la landing, el blog, precios o el hero de `/[slug]`.**
+- **La landing no usa Motion.** `components/landing/reveal.tsx` (CSS +
+  IntersectionObserver) reemplaza al Reveal de Motion; FAQ, scrolly, Magnetic
+  y CountUp son CSS/rAF. `next/dynamic` desde un Server Component **no saca
+  nada del JS inicial** (Turbopack lo mete igual en el chunk de la página),
+  así que "cargar Motion en diferido" no servía: había que sacarlo.
+- **Sonner en diferido** (`components/toaster-app.tsx`): chunk aparte, `ssr:
+  false`; en landing/precios/blog se monta recién en idle. Un `toast()`
+  disparado antes de que monte se pierde (sonner no repite los previos).
+- **CTA del hero en el HTML del servidor** (`hero-cta.tsx`): antes era un
+  esqueleto hasta resolver la sesión. `<Link>` con clases, sin `<button>`
+  adentro de `<a>`.
+- **Página pública de cada veterinaria renderizada en el servidor:** `page.tsx`
+  pasa `configInicial` (solo campos públicos) a `vet-public-view.tsx`; sin
+  spinner ni segundo fetch. Fotos del hero con `<picture>` + `<source media>`
+  (antes JS elegía la foto tras hidratar y en celular se bajaban las dos) y
+  `<link rel="preload">` con el mismo `srcset`. Vidriera, promos, sorteos y
+  diálogos van con `dynamic(..., { ssr: false })` y Supabase se importa en el
+  efecto. Entrada del hero con CSS (`.vet-hero-in`); arranca en opacidad
+  **0.01**: con 0, Chrome nunca registra el nombre como candidato a LCP.
+- **Imágenes de Supabase Storage escaladas al vuelo** (`lib/imagenes.ts`):
+  el proyecto tiene habilitado `/storage/v1/render/image/public/…?width=`.
+  Logos a 128/256/384, fotos de hero a 768/1200/1600, tarjetas a 480. Las
+  subidas nuevas van con `cacheControl` de un año (paths inmutables).
+- **Contraste AA:** `--color-coral` pasó de `#128ecc` a `#0d74a9` (el original
+  daba 3.6:1 con texto blanco o sobre blanco) y hay `--color-teal-ink` para
+  teal como texto. En "Cómo funciona" el paso inactivo se atenúa por color, no
+  por `opacity: 0.4` (el texto atenuado no llegaba al mínimo).
+- **Fraunces solo en 600.** El 700 se usaba en un único texto del navbar;
+  cada peso son ~18 KB en el camino crítico de todas las páginas.
+- **No activar `experimental.inlineCss`** (ver comentario en `next.config.mjs`).
+- Medición: ver la memoria `lighthouse-local` (puertos, reintentos por
+  `NO_NAVSTART`, TBT inflado por la CPU de esta máquina).

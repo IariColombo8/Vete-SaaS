@@ -1,6 +1,7 @@
 import { Sparkles, Clock } from "lucide-react"
 import { precioFinal, tieneOferta, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
+import { imagenSupabase } from "@/lib/imagenes"
 import type { Producto } from "@/lib/supabase/types"
 
 interface Props {
@@ -17,7 +18,8 @@ interface Props {
 export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
   const enOferta = tieneOferta(p)
   // Producto sin foto propia -> logo del tenant -> logo de VetPanel, en ese orden.
-  const imagen = p.imagenUrl || logo || "/logo.png"
+  // Escalada por Supabase a 480 px: la tarjeta mide ~300 px; el logo de respaldo es la versión chica.
+  const imagen = imagenSupabase(p.imagenUrl || logo || "/logo-512.png", 480)
   const final = precioFinal(p)
   const descuento = enOferta && p.precio > 0 ? Math.round((1 - final / p.precio) * 100) : 0
   const ahorro = enOferta ? p.precio - final : 0
