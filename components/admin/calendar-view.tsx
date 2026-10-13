@@ -86,12 +86,12 @@ export function CalendarView({
             onClick={() => setSelectedDate(dateStr)}
             className={`w-full h-full p-0.5 sm:p-1 border rounded-lg sm:rounded-xl flex flex-col items-center justify-center relative transition-all duration-300 ${
               isBlocked
-                ? "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 opacity-50"
+                ? "bg-muted border-border opacity-50"
                 : isSelected
-                  ? "bg-gradient-to-br from-indigo-500 to-purple-600 border-indigo-400 shadow-lg shadow-indigo-500/50 scale-105"
+                  ? "bg-primary border-primary shadow-md scale-105"
                   : isToday
-                    ? "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-400 dark:border-emerald-600 ring-2 ring-emerald-400"
-                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md hover:scale-105"
+                    ? "bg-accent border-primary ring-2 ring-primary/40"
+                    : "bg-card border-border hover:border-primary/40 hover:shadow-md hover:scale-105"
             }`}
           >
             <span
@@ -99,8 +99,8 @@ export function CalendarView({
                 isSelected
                   ? "text-white"
                   : isToday
-                    ? "text-emerald-700 dark:text-emerald-300"
-                    : "text-slate-900 dark:text-white"
+                    ? "text-primary"
+                    : "text-foreground"
               }`}
             >
               {day}
@@ -114,13 +114,13 @@ export function CalendarView({
                       ? "bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300"
                       : ocupacionLevel === "medium"
                         ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
-                        : "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300"
+                        : "bg-accent text-primary"
                 }`}
               >
                 {turnosCount}
               </div>
             )}
-            {isBlocked && <Ban className="absolute top-0.5 right-0.5 h-2 w-2 sm:h-3 sm:w-3 text-slate-400" />}
+            {isBlocked && <Ban className="absolute top-0.5 right-0.5 h-2 w-2 sm:h-3 sm:w-3 text-muted-foreground" />}
           </button>
           <button aria-label={isBlocked ? "Habilitar fecha" : "Bloquear fecha"}
             onClick={(e) => {
@@ -128,7 +128,7 @@ export function CalendarView({
               onToggleBlockDate(dateStr)
             }}
             className={`absolute -top-1 -right-1 p-1 sm:p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
-              isBlocked ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
+              isBlocked ? "bg-success hover:bg-primary/90" : "bg-rose-500 hover:bg-rose-600"
             }`}
             title={isBlocked ? "Habilitar fecha" : "Bloquear fecha"}
           >
@@ -145,14 +145,14 @@ export function CalendarView({
     return (
       <div className="space-y-2 sm:space-y-3 lg:space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm sm:text-lg lg:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+          <h3 className="text-sm sm:text-lg lg:text-xl font-black text-primary">
             {monthNames[month]} {year}
           </h3>
           <div className="flex gap-1 sm:gap-2">
             <Button aria-label="Mes anterior"
               variant="outline"
               size="sm"
-              className="h-6 w-6 sm:h-8 sm:w-8 lg:h-9 lg:w-9 p-0 rounded-lg sm:rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent"
+              className="h-6 w-6 sm:h-8 sm:w-8 lg:h-9 lg:w-9 p-0 rounded-lg sm:rounded-xl border-border hover:bg-muted bg-transparent"
               onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
             >
               <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -160,7 +160,7 @@ export function CalendarView({
             <Button aria-label="Mes siguiente"
               variant="outline"
               size="sm"
-              className="h-6 w-6 sm:h-8 sm:w-8 lg:h-9 lg:w-9 p-0 rounded-lg sm:rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent"
+              className="h-6 w-6 sm:h-8 sm:w-8 lg:h-9 lg:w-9 p-0 rounded-lg sm:rounded-xl border-border hover:bg-muted bg-transparent"
               onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
             >
               <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -171,14 +171,14 @@ export function CalendarView({
           {["D", "L", "M", "X", "J", "V", "S"].map((day, idx) => (
             <div
               key={idx}
-              className="text-center text-xs font-bold text-slate-600 dark:text-slate-400 py-1 sm:py-2"
+              className="text-center text-xs font-bold text-muted-foreground py-1 sm:py-2"
             >
               {day}
             </div>
           ))}
           {days}
         </div>
-        <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+        <div className="space-y-2 pt-2 border-t border-border">
           <Button
             variant="outline"
             size="sm"
@@ -189,18 +189,18 @@ export function CalendarView({
             Gestionar Fechas
           </Button>
         </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs pt-2 border-t border-border">
           <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 rounded bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-300" />
-            <span className="text-slate-600 dark:text-slate-400 font-medium">1-5</span>
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 rounded bg-accent border border-primary/40" />
+            <span className="text-muted-foreground font-medium">1-5</span>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 rounded bg-amber-100 dark:bg-amber-900/50 border border-amber-300" />
-            <span className="text-slate-600 dark:text-slate-400 font-medium">6-9</span>
+            <span className="text-muted-foreground font-medium">6-9</span>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 rounded bg-rose-100 dark:bg-rose-900/50 border border-rose-300" />
-            <span className="text-slate-600 dark:text-slate-400 font-medium">10+</span>
+            <span className="text-muted-foreground font-medium">10+</span>
           </div>
         </div>
       </div>
