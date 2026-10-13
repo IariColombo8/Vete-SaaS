@@ -5,6 +5,10 @@ import { toast } from "sonner"
 import { Plus, Trash2, Pencil, Tag } from "lucide-react"
 import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PromocionDialog } from "@/components/admin/promos-sorteos/promocion-dialog"
@@ -81,7 +85,6 @@ export function PromocionesTab({ tenantId }: Props) {
   }
 
   const eliminar = async (p: Promocion) => {
-    if (!confirm(`¿Eliminar la promoción "${p.nombre}"?`)) return
     try {
       await eliminarPromocion(tenantId, p.id)
       toast.success("Promoción eliminada")
@@ -215,12 +218,30 @@ export function PromocionesTab({ tenantId }: Props) {
 
                   <TableCell className="align-top">
                     <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => abrirEdicion(p)}>
+                      <Button size="sm" variant="ghost" onClick={() => abrirEdicion(p)} aria-label={`Editar ${p.nombre}`}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => eliminar(p)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="ghost" aria-label={`Eliminar ${p.nombre}`}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar la promoción “{p.nombre}”?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Deja de mostrarse en el catálogo y en el mostrador. Las ventas que ya la usaron no cambian.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => eliminar(p)} className="bg-red-600 hover:bg-red-700">
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1572,7 +1572,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 ) : (
                   <>
                     <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{clienteExpandido.cliente.domicilio || "—"}</span>
-                    <button type="button" onClick={() => startInlineEdit("domicilio")} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
+                    <button aria-label="Editar domicilio" type="button" onClick={() => startInlineEdit("domicilio")} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                   </>
                 )}
               </div>
@@ -1596,7 +1596,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 ) : (
                   <>
                     <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{clienteExpandido.cliente.telefono}</span>
-                    <button type="button" onClick={() => startInlineEdit("telefono")} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
+                    <button aria-label="Editar teléfono" type="button" onClick={() => startInlineEdit("telefono")} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                   </>
                 )}
               </div>
@@ -1914,7 +1914,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         </div>
                                         <div className="flex items-center gap-0.5 shrink-0">
                                           {(aplicacionesDeH.length > 0 || h.tipoVisita === "orden_medica") && (
-                                            <button
+                                            <button aria-label="Descargar orden"
                                               type="button"
                                               className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
                                               disabled={descargandoComprobanteId === h.id}
@@ -1926,8 +1926,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                                 : <FileDown className="h-3.5 w-3.5" />}
                                             </button>
                                           )}
-                                          <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: h }); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
-                                          <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => openEditHistoria(h, clienteExpandido.cliente.id!, m.id!)} title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
+                                          <button aria-label="Ver detalles" type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: h }); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
+                                          <button aria-label="Editar" type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => openEditHistoria(h, clienteExpandido.cliente.id!, m.id!)} title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                                         </div>
                                       </div>
                                       <div className="text-xs text-slate-600 dark:text-slate-400">
@@ -2024,12 +2024,12 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                       </div>
                                       <div className="flex items-center gap-0.5 shrink-0">
                                         {t.estado === "completado" && historiaAsociada && (
-                                          <button type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: historiaAsociada }); setDetailTurnoHistoriaAsociada(null); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver Nota Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
+                                          <button aria-label="Ver Nota Clínica" type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: historiaAsociada }); setDetailTurnoHistoriaAsociada(null); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver Nota Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
                                         )}
                                         {t.estado === "pendiente" && (
-                                          <button type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); openGenerarHistoriaFromTurno(t, clienteExpandido.cliente, m); }} title="Generar Historia Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
+                                          <button aria-label="Generar Historia Clínica" type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); openGenerarHistoriaFromTurno(t, clienteExpandido.cliente, m); }} title="Generar Historia Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
                                         )}
-                                        <button type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={(e) => { e.stopPropagation(); openDetailTurno(); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
+                                        <button aria-label="Ver detalles" type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={(e) => { e.stopPropagation(); openDetailTurno(); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
                                       </div>
                                     </div>
                                   </div>
@@ -2447,7 +2447,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   if (file) subirFotoMascota(file);
                 }}
               />
-              <button
+              <button aria-label="Cambiar foto"
                 type="button"
                 onClick={() => fotoMascotaInputRef.current?.click()}
                 disabled={subiendoFotoMascota}
@@ -2624,7 +2624,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             {itemsAplicacion.map((item, i) => (
               <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2.5 relative">
                 {itemsAplicacion.length > 1 && (
-                  <button
+                  <button aria-label="Quitar"
                     type="button"
                     onClick={() => quitarItemAplicacion(i)}
                     className="absolute top-2 right-2 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-600"
@@ -2773,7 +2773,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         </p>
                       )}
                     </div>
-                    <button
+                    <button aria-label="Quitar"
                       type="button"
                       onClick={() => quitarItemExtra(i)}
                       className="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-600 shrink-0"
@@ -3050,7 +3050,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                             <FileIcon className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                             <span className="flex-1 truncate text-slate-700 dark:text-slate-300">{file.name}</span>
                             <span className="text-slate-400 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
-                            <button
+                            <button aria-label={`Quitar ${file.name}`}
                               type="button"
                               onClick={() => setArchivosNota((prev) => prev.filter((_, i) => i !== idx))}
                               className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"

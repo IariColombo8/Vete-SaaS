@@ -122,7 +122,7 @@ export function CalendarView({
             )}
             {isBlocked && <Ban className="absolute top-0.5 right-0.5 h-2 w-2 sm:h-3 sm:w-3 text-slate-400" />}
           </button>
-          <button
+          <button aria-label={isBlocked ? "Habilitar fecha" : "Bloquear fecha"}
             onClick={(e) => {
               e.stopPropagation()
               onToggleBlockDate(dateStr)
@@ -149,7 +149,7 @@ export function CalendarView({
             {monthNames[month]} {year}
           </h3>
           <div className="flex gap-1 sm:gap-2">
-            <Button
+            <Button aria-label="Mes anterior"
               variant="outline"
               size="sm"
               className="h-6 w-6 sm:h-8 sm:w-8 lg:h-9 lg:w-9 p-0 rounded-lg sm:rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent"
@@ -157,7 +157,7 @@ export function CalendarView({
             >
               <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
-            <Button
+            <Button aria-label="Mes siguiente"
               variant="outline"
               size="sm"
               className="h-6 w-6 sm:h-8 sm:w-8 lg:h-9 lg:w-9 p-0 rounded-lg sm:rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent"

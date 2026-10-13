@@ -297,8 +297,8 @@ export default function ConfiguracionPage() {
             {/* ── DATOS BASICOS ── */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Datos de la clinica</CardTitle>
-                <CardDescription>Informacion de contacto visible en tu pagina.</CardDescription>
+                <CardTitle className="text-base">Datos de la clínica</CardTitle>
+                <CardDescription>Información de contacto visible en tu página.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={e => { e.preventDefault(); saveDatos("basic", basic) }} className="space-y-4">
@@ -308,7 +308,7 @@ export default function ConfiguracionPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>Telefono</Label>
+                      <Label>Teléfono</Label>
                       <Input value={basic.telefono} onChange={e => setBasic(p => ({ ...p, telefono: e.target.value }))} placeholder="+54 11 1234-5678" />
                     </div>
                     <div className="space-y-1.5">
@@ -322,7 +322,7 @@ export default function ConfiguracionPage() {
                       <Input value={basic.ciudad} onChange={e => setBasic(p => ({ ...p, ciudad: e.target.value }))} placeholder="Buenos Aires" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Direccion</Label>
+                      <Label>Dirección</Label>
                       <Input value={basic.direccion} onChange={e => setBasic(p => ({ ...p, direccion: e.target.value }))} placeholder="Av. Corrientes 1234" />
                     </div>
                   </div>
@@ -343,8 +343,8 @@ export default function ConfiguracionPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">Horarios de atencion</CardTitle>
-                    <CardDescription>Se muestran en tu pagina publica. Marca los dias que cubre cada fila; el nombre (ej &quot;Urgencias&quot;) es solo una etiqueta y no afecta los dias. Si un dia no es de corrido, desactiva &quot;Corrido&quot; para definir dos bloques horarios.</CardDescription>
+                    <CardTitle className="text-base">Horarios de atención</CardTitle>
+                    <CardDescription>Se muestran en tu página pública. Marcá los días que cubre cada fila; el nombre (ej &quot;Urgencias&quot;) es solo una etiqueta y no afecta los días. Si un día no es de corrido, desactivá &quot;Corrido&quot; para definir dos bloques horarios.</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" type="button" onClick={addHorario}>
                     <Plus className="h-3.5 w-3.5 mr-1" />
@@ -419,7 +419,7 @@ export default function ConfiguracionPage() {
                           ) : (
                             <div className="space-y-1.5 pl-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground w-16">Maniana</span>
+                                <span className="text-xs text-muted-foreground w-16">Mañana</span>
                                 <Input value={h.apertura} onChange={e => updateHorario(i, "apertura", e.target.value)} placeholder="08:00" className="h-8 w-20 text-sm font-mono" />
                                 <span className="text-xs text-muted-foreground">a</span>
                                 <Input value={h.cierre1 ?? ""} onChange={e => updateHorario(i, "cierre1", e.target.value)} placeholder="12:00" className="h-8 w-20 text-sm font-mono" />
@@ -453,7 +453,7 @@ export default function ConfiguracionPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-1.5 text-base">Anticipación mínima para turnos <Ayuda tema="config.anticipacion" /></CardTitle>
                 <CardDescription>
-                  Horas minimas de anticipacion para sacar turno el mismo dia.
+                  Horas mínimas de anticipación para sacar turno el mismo día.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -505,7 +505,7 @@ export default function ConfiguracionPage() {
                 <div className="space-y-3">
                   {mascotas.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Sin mascotas configuradas. Hace clic en &quot;Agregar&quot; para sumar la primera.
+                      Sin mascotas configuradas. Hacé clic en &quot;Agregar&quot; para sumar la primera.
                     </p>
                   )}
                   {mascotas.map((m, i) => (
@@ -559,14 +559,14 @@ export default function ConfiguracionPage() {
                 <div className="space-y-3">
                   {serviciosTurno.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Sin servicios configurados. Hace clic en &quot;Agregar&quot; para sumar el primero.
+                      Sin servicios configurados. Hacé clic en &quot;Agregar&quot; para sumar el primero.
                     </p>
                   )}
                   {serviciosTurno.map((s, i) => (
                     <div key={i} className="p-3 rounded-lg border bg-muted/30 space-y-3">
                       <div className="flex items-start gap-2">
                         <div className="space-y-1">
-                          <Label className="text-xs">Icono</Label>
+                          <Label className="text-xs">Ícono</Label>
                           <select
                             value={s.emoji}
                             onChange={e => updateServicioTurnoField(i, "emoji", e.target.value)}
@@ -581,8 +581,8 @@ export default function ConfiguracionPage() {
                             <Input value={s.nombre} onChange={e => updateServicioTurnoField(i, "nombre", e.target.value)} placeholder="Consulta general" className="h-9" />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Descripcion</Label>
-                            <Input value={s.descripcion ?? ""} onChange={e => updateServicioTurnoField(i, "descripcion", e.target.value)} placeholder="Breve descripcion..." className="h-9" />
+                            <Label className="text-xs">Descripción</Label>
+                            <Input value={s.descripcion ?? ""} onChange={e => updateServicioTurnoField(i, "descripcion", e.target.value)} placeholder="Breve descripción..." className="h-9" />
                           </div>
                         </div>
                         <Button variant="ghost" size="icon" type="button" className="h-8 w-8 text-muted-foreground hover:text-destructive mt-5" onClick={() => removeServicioTurno(i)}>
@@ -594,7 +594,7 @@ export default function ConfiguracionPage() {
                         <div className="space-y-1">
                           <Label className="gap-1.5 text-xs">Duración (min) <Ayuda tema="config.duracion" /></Label>
                           <Input type="number" min={5} step={5} value={s.duracionMin ?? 60} onChange={e => updateServicioTurnoDuracion(i, e.target.value)} placeholder="60" className="h-9 font-mono" />
-                          <p className="text-[10px] text-muted-foreground">Tambien define cada cuanto se ofrece un horario (ej: 15 min = turnos cada 15 min).</p>
+                          <p className="text-[10px] text-muted-foreground">También define cada cuánto se ofrece un horario (ej: 15 min = turnos cada 15 min).</p>
                         </div>
                         <div className="space-y-1">
                           <Label className="gap-1.5 text-xs">Cupo simultáneo <Ayuda tema="config.cupo" /></Label>
@@ -696,7 +696,7 @@ export default function ConfiguracionPage() {
                       <div key={i} className="flex items-center gap-2 pl-8">
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <Input value={v.nombre} onChange={e => updateVacunaField(mascota.id, i, "nombre", e.target.value)} placeholder="Nombre de vacuna" className="h-8 text-sm" />
-                          <Input value={v.descripcion ?? ""} onChange={e => updateVacunaField(mascota.id, i, "descripcion", e.target.value)} placeholder="Descripcion (opcional)" className="h-8 text-sm" />
+                          <Input value={v.descripcion ?? ""} onChange={e => updateVacunaField(mascota.id, i, "descripcion", e.target.value)} placeholder="Descripción (opcional)" className="h-8 text-sm" />
                         </div>
                         <Button variant="ghost" size="icon" type="button" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeVacuna(mascota.id, i)}>
                           <Trash2 className="h-3 w-3" />

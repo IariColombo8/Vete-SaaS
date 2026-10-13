@@ -1,6 +1,16 @@
 # Plan de mejoras — estilo del panel y cartelitos de ayuda
 
-> Estado: **Fase 1 implementada** (2026-10-04), sin commitear. Fases 2 a 5 pendientes.
+> Estado al 2026-10-12: **Fase 1 hecha.** De la Fase 5, el punto 1 (encabezado
+> único, `encabezado-pagina.tsx`) está hecho en todas las pantallas salvo Vender.
+> También se sacó el glassmorphism y los textos de 8–9 px de Clínica (fondos
+> `min-h-screen`, `backdrop-blur`, `shadow-2xl`), pero **sin pasar a tokens**:
+> la Fase 4 sigue pendiente. `historias-management.tsx` se borró (no lo usaba
+> nadie). Lint en 0 errores.
+>
+> **Fase 2 hecha** (2026-10-12): tildes en Configuración y Tienda virtual; los dos
+> `confirm()` (eliminar promoción y eliminar turno) pasaron a `AlertDialog`;
+> `aria-label` en los 16 botones de solo ícono de Libreta y calendario;
+> `styles/globals.css` borrado. Pendientes: Fases 3, 4 y Fase 5 puntos 2–4.
 >
 > Lo hecho en la Fase 1:
 > - `components/ui/ayuda.tsx` + `lib/ayuda/textos.ts`: 19 cartelitos en Caja, Vender,

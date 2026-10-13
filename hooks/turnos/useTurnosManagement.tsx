@@ -164,7 +164,7 @@ export function useTurnosManagement(tenantId: string) {
   }
 
   const handleDelete = async (turnoId: string, onSuccess: () => void) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este turno?")) return
+    // La confirmación la pide TurnoDetailsModal con un AlertDialog.
     try {
       await deleteTurno(tenantId, turnoId)
       toast({ title: "Turno eliminado" })

@@ -123,7 +123,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
     if (fotosHero.length + files.length > 5) {
-      toast({ title: "Maximo 5 fotos", variant: "destructive" }); return
+      toast({ title: "Máximo 5 fotos", variant: "destructive" }); return
     }
     setUploadingFoto(true)
     try {
@@ -161,7 +161,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
     if (fotosHeroMobile.length + files.length > 5) {
-      toast({ title: "Maximo 5 fotos", variant: "destructive" }); return
+      toast({ title: "Máximo 5 fotos", variant: "destructive" }); return
     }
     setUploadingFotoMobile(true)
     try {
@@ -250,10 +250,10 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
-                  Logo de la clinica
+                  Logo de la clínica
                 </CardTitle>
                 <CardDescription>
-                  Se muestra en la navegacion y en tu pagina publica. Si no subis ninguno se usa un icono por defecto.
+                  Se muestra en la navegación y en tu página pública. Si no subís ninguno se usa un ícono por defecto.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -306,7 +306,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Hero (portada)</CardTitle>
-                <CardDescription>Lo primero que ven tus clientes al entrar a tu pagina.</CardDescription>
+                <CardDescription>Lo primero que ven tus clientes al entrar a tu página.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={e => { e.preventDefault(); saveDatos("hero", { slogan: hero.slogan, descripcion: hero.descripcion }) }} className="space-y-4">
@@ -317,14 +317,14 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                       onChange={e => setHero(p => ({ ...p, slogan: e.target.value }))}
                       placeholder="Cuidamos a tu mascota como si fuera nuestra"
                     />
-                    <p className="text-xs text-muted-foreground">Frase corta debajo del nombre de tu clinica.</p>
+                    <p className="text-xs text-muted-foreground">Frase corta debajo del nombre de tu clínica.</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Descripcion</Label>
+                    <Label>Descripción</Label>
                     <Textarea
                       value={hero.descripcion}
                       onChange={e => setHero(p => ({ ...p, descripcion: e.target.value }))}
-                      placeholder="Brindamos atencion veterinaria de calidad..."
+                      placeholder="Brindamos atención veterinaria de calidad..."
                       rows={3}
                     />
                   </div>
@@ -341,7 +341,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                   Fotos del hero
                 </CardTitle>
                 <CardDescription>
-                  Se muestran en la portada de tu pagina. Maximo 5 fotos. Si no subis ninguna se usan fotos por defecto.
+                  Se muestran en la portada de tu página. Máximo 5 fotos. Si no subís ninguna se usan fotos por defecto.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -384,7 +384,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                 </div>
                 {fotosHero.length === 0 && (
                   <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-                    Sin fotos configuradas — se mostraran 3 fotos genericas de veterinaria por defecto.
+                    Sin fotos configuradas — se mostrarán 3 fotos genéricas de veterinaria por defecto.
                   </p>
                 )}
               </CardContent>
@@ -399,7 +399,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                   <span className="text-xs font-normal text-muted-foreground ml-1">(opcional)</span>
                 </CardTitle>
                 <CardDescription>
-                  Fotos optimizadas para celular (formato vertical). Si no subis ninguna, se usan las mismas que en PC o fotos por defecto.
+                  Fotos optimizadas para celular (formato vertical). Si no subís ninguna, se usan las mismas que en PC o fotos por defecto.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -442,7 +442,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                 </div>
                 {fotosHeroMobile.length === 0 && (
                   <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-                    Sin fotos para celular — se usaran las fotos de PC o fotos genericas por defecto.
+                    Sin fotos para celular — se usarán las fotos de PC o fotos genéricas por defecto.
                   </p>
                 )}
               </CardContent>
@@ -458,7 +458,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">Servicios</CardTitle>
-                    <CardDescription>Los servicios que ofrece tu clinica.</CardDescription>
+                    <CardDescription>Los servicios que ofrece tu clínica.</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" type="button" onClick={addServicio}>
                     <Plus className="h-3.5 w-3.5 mr-1" />
@@ -470,13 +470,13 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                 <div className="space-y-3">
                   {servicios.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Sin servicios. Hace clic en &quot;Agregar&quot; para sumar el primero.
+                      Sin servicios. Hacé clic en &quot;Agregar&quot; para sumar el primero.
                     </p>
                   )}
                   {servicios.map((s, i) => (
                     <div key={i} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                       <div className="space-y-1">
-                        <Label className="text-xs">Icono</Label>
+                        <Label className="text-xs">Ícono</Label>
                         <select
                           value={s.emoji}
                           onChange={e => updateServicio(i, "emoji", e.target.value)}
@@ -491,8 +491,8 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                           <Input value={s.nombre} onChange={e => updateServicio(i, "nombre", e.target.value)} placeholder="Consulta general" className="h-9" />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Descripcion</Label>
-                          <Input value={s.descripcion ?? ""} onChange={e => updateServicio(i, "descripcion", e.target.value)} placeholder="Breve descripcion..." className="h-9" />
+                          <Label className="text-xs">Descripción</Label>
+                          <Input value={s.descripcion ?? ""} onChange={e => updateServicio(i, "descripcion", e.target.value)} placeholder="Breve descripción..." className="h-9" />
                         </div>
                       </div>
                       <Button variant="ghost" size="icon" type="button" className="h-8 w-8 text-muted-foreground hover:text-destructive mt-5" onClick={() => removeServicio(i)}>
@@ -527,16 +527,16 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  Ubicacion y modalidad
+                  Ubicación y modalidad
                 </CardTitle>
                 <CardDescription>
-                  Indica como atendes: en un local fijo, a domicilio o ambos. Si tenes local, agrega tu ubicacion de Google Maps.
+                  Indicá cómo atendés: en un local fijo, a domicilio o ambos. Si tenés local, agregá tu ubicación de Google Maps.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={e => { e.preventDefault(); saveDatos("ubicacion", { modalidad, googleMapsUrl }) }} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Modalidad de atencion</Label>
+                    <Label>Modalidad de atención</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {([
                         { value: "local" as Modalidad, icon: MapPin, label: "En local", desc: "Consultorio fijo" },
@@ -570,8 +570,8 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                         placeholder="https://maps.google.com/..."
                       />
                       <p className="text-xs text-muted-foreground">
-                        Abri Google Maps, busca tu local, hace clic en &quot;Compartir&quot; &rarr; &quot;Copiar enlace&quot; y pegalo aca.
-                        Tambien podes pegar el link de &quot;Insertar mapa&quot; (iframe).
+                        Abrí Google Maps, buscá tu local, hacé clic en &quot;Compartir&quot; &rarr; &quot;Copiar enlace&quot; y pegalo acá.
+                        También podés pegar el link de &quot;Insertar mapa&quot; (iframe).
                       </p>
                       {googleMapsUrl && (
                         <div className="mt-3 rounded-lg overflow-hidden border h-48 bg-muted/30">
@@ -587,11 +587,11 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                               loading="lazy"
                               allowFullScreen
                               referrerPolicy="no-referrer-when-downgrade"
-                              title="Ubicacion en Google Maps"
+                              title="Ubicación en Google Maps"
                             />
                           ) : (
                             <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                              Vista previa no disponible. Verifica el link.
+                              Vista previa no disponible. Verificá el link.
                             </div>
                           )}
                         </div>
@@ -603,7 +603,7 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
                     <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-3">
                       <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
                         <Home className="h-4 w-4 shrink-0" />
-                        En tu pagina publica se mostrara que atendes a domicilio en vez del mapa.
+                        En tu página pública se mostrará que atendés a domicilio en vez del mapa.
                       </p>
                     </div>
                   )}
