@@ -55,6 +55,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { serieHorarios, serieUltimosDias, serieUltimosMeses } from "@/lib/dashboard/metricas";
 
 interface DashboardChartsProps {
   tenantId: string;
@@ -128,25 +129,15 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
     );
   }
 
-  // Datos procesados
-  const turnosPorDia = turnos.reduce((acc, turno) => {
-    if (turno.turno?.fecha) {
-      const fecha = turno.turno.fecha;
-      acc[fecha] = (acc[fecha] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  // Datos procesados. Las series por día/mes/hora son puras y testeadas en
+  // lib/dashboard/metricas.ts: ordenadas cronológicamente y con ceros donde no
+  // hubo turnos, independientemente del orden en que lleguen los turnos.
+  const hoy = new Date();
+  const fechasTurnos = turnos.map((t) => t.turno?.fecha).filter((f): f is string => Boolean(f));
+  const horasTurnos = turnos.map((t) => t.turno?.hora).filter((h): h is string => Boolean(h));
 
-  const turnosPorDiaData = Object.entries(turnosPorDia)
-    .map(([fecha, cantidad]) => ({
-      fecha: new Date(fecha + "T00:00:00").toLocaleDateString("es-AR", {
-        month: "short",
-        day: "numeric",
-      }),
-      cantidad,
-      fullDate: fecha,
-    }))
-    .slice(-30);
+  const turnosPorDiaData = serieUltimosDias(fechasTurnos, 30, hoy);
+  const diasConActividad = new Set(fechasTurnos).size;
 
   const mascotasPorTipo = turnos.reduce((acc, turno) => {
     if (turno.mascota?.tipo) {
@@ -189,44 +180,8 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       return (a?.turno?.hora || "").localeCompare(b?.turno?.hora || "");
     });
 
-  // Turnos por mes
-  const turnosPorMes = turnos.reduce((acc, turno) => {
-    if (turno.turno?.fecha) {
-      const mes = new Date(turno.turno.fecha + "T00:00:00").toLocaleDateString(
-        "es-AR",
-        { month: "short" }
-      );
-      acc[mes] = (acc[mes] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-
-  const turnosPorMesData = Object.entries(turnosPorMes)
-    .map(([mes, cantidad]) => ({
-      mes: mes.charAt(0).toUpperCase() + mes.slice(1),
-      cantidad,
-    }))
-    .slice(-6);
-
-  // Horarios más populares - Generar todas las horas del horario de atención (08:00 a 20:00)
-  const horasDisponibles = Array.from({ length: 13 }, (_, i) => {
-    const hora = 8 + i;
-    return `${hora.toString().padStart(2, "0")}:00`;
-  });
-
-  const turnosPorHorario = turnos.reduce((acc, turno) => {
-    if (turno.turno?.hora) {
-      const hora = turno.turno.hora.split(":")[0] + ":00";
-      acc[hora] = (acc[hora] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Crear array completo con todas las horas, incluso si no tienen turnos
-  const turnosPorHorarioData = horasDisponibles.map((hora) => ({
-    hora,
-    cantidad: turnosPorHorario[hora] || 0,
-  }));
+  const turnosPorMesData = serieUltimosMeses(fechasTurnos, 6, hoy);
+  const turnosPorHorarioData = serieHorarios(horasTurnos);
 
   const estadosTurnosData = [
     {
@@ -272,9 +227,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
     totalTurnos > 0
       ? ((estadosTurnos.cancelado / totalTurnos) * 100).toFixed(1)
       : 0;
-  const promedioTurnosDia = (
-    totalTurnos / Object.keys(turnosPorDia).length || 0
-  ).toFixed(1);
+  const promedioTurnosDia = (diasConActividad > 0 ? totalTurnos / diasConActividad : 0).toFixed(1);
 
   // Servicios más solicitados (top 6)
   const turnosPorServicio = turnos.reduce((acc, turno) => {
@@ -546,7 +499,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                     Evolución de Turnos
                   </CardTitle>
                   <CardDescription className="text-xs text-muted-foreground">
-                    Últimos 30 días con actividad
+                    Últimos 30 días
                   </CardDescription>
                 </div>
               </div>
@@ -580,12 +533,12 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   vertical={false}
                 />
                 <XAxis
-                  dataKey="fecha"
+                  dataKey="etiqueta"
                   tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   axisLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}
                   tickLine={false}
                 />
-                <YAxis
+                <YAxis allowDecimals={false}
                   tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   axisLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}
                   tickLine={false}
@@ -795,12 +748,12 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   vertical={false}
                 />
                 <XAxis
-                  dataKey="mes"
+                  dataKey="etiqueta"
                   tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
                   axisLine={{ stroke: "#cbd5e1" }}
                   tickLine={false}
                 />
-                <YAxis
+                <YAxis allowDecimals={false}
                   tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   axisLine={{ stroke: "#cbd5e1" }}
                   tickLine={false}
@@ -854,13 +807,13 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   vertical={false}
                 />
                 <XAxis
-                  dataKey="hora"
+                  dataKey="etiqueta"
                   tick={{ fontSize: 10, fill: "#64748b", fontWeight: 600 }}
                   axisLine={{ stroke: "#cbd5e1" }}
                   tickLine={false}
                   interval={1}
                 />
-                <YAxis
+                <YAxis allowDecimals={false}
                   tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   axisLine={{ stroke: "#cbd5e1" }}
                   tickLine={false}
