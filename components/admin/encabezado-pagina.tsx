@@ -22,7 +22,10 @@ export function EncabezadoPagina({ icono: Icono, titulo, descripcion, acciones }
           <Icono className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight">{titulo}</h1>
+          {/* Fraunces (font-display), la misma voz que la landing. Se carga con un
+              solo peso (600): font-semibold, no font-bold, o el navegador
+              inventa la negrita. */}
+          <h1 className="truncate font-display text-2xl font-semibold tracking-tight">{titulo}</h1>
           {descripcion && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">{descripcion}</div>
           )}
