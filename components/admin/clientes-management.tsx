@@ -477,7 +477,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
             <div className="w-full overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                  <TableRow className="border-border bg-muted/50">
                     <TableHead className="w-[180px]">Nombre</TableHead>
                     <TableHead className="w-[100px]">DNI</TableHead>
                     <TableHead className="w-[120px]">Teléfono</TableHead>
@@ -488,7 +488,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <TableRow key={i} className="border-slate-200 dark:border-slate-800">
+                    <TableRow key={i} className="border-border">
                       <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full shrink-0" /><Skeleton className="h-4 w-28" /></div></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -526,7 +526,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 </Button>
               }
             />
-            <Button onClick={openAdd} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={openAdd} className="bg-primary hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" />
               Agregar cliente
             </Button>
@@ -538,13 +538,13 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Card>
           <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2.5 rounded-lg bg-slate-700 dark:bg-slate-600 shrink-0">
+            <div className="p-1.5 sm:p-2.5 rounded-lg bg-primary shrink-0">
               <Users className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Clientes totales</p>
+              <p className="text-xs text-muted-foreground font-medium truncate">Clientes totales</p>
               {stats ? (
-                <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.totalClientes}</p>
+                <p className="text-sm sm:text-xl font-black text-foreground">{stats.totalClientes}</p>
               ) : (
                 <Skeleton className="h-5 w-10 mt-0.5" />
               )}
@@ -553,13 +553,13 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
         </Card>
         <Card>
           <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2.5 rounded-lg bg-emerald-600 shrink-0">
+            <div className="p-1.5 sm:p-2.5 rounded-lg bg-primary shrink-0">
               <PawPrint className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Mascotas registradas</p>
+              <p className="text-xs text-muted-foreground font-medium truncate">Mascotas registradas</p>
               {stats ? (
-                <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.totalMascotas}</p>
+                <p className="text-sm sm:text-xl font-black text-foreground">{stats.totalMascotas}</p>
               ) : (
                 <Skeleton className="h-5 w-10 mt-0.5" />
               )}
@@ -572,9 +572,9 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
               <UserPlus className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Nuevos este mes</p>
+              <p className="text-xs text-muted-foreground font-medium truncate">Nuevos este mes</p>
               {stats ? (
-                <p className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100">{stats.clientesNuevosMes}</p>
+                <p className="text-sm sm:text-xl font-black text-foreground">{stats.clientesNuevosMes}</p>
               ) : (
                 <Skeleton className="h-5 w-10 mt-0.5" />
               )}
@@ -588,20 +588,20 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
         <CardHeader className="pb-1.5 sm:pb-2 lg:pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-slate-900 dark:text-white">
+              <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-foreground">
                 Listado de clientes
               </CardTitle>
-              <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+              <CardDescription className="text-xs text-muted-foreground">
                 {filtered.length} cliente{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por DNI, nombre, mascota, teléfono..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9 border-slate-300 dark:border-slate-700 text-xs sm:text-sm h-8 sm:h-9"
+                className="pl-9 border-input text-xs sm:text-sm h-8 sm:h-9"
               />
             </div>
           </div>
@@ -610,34 +610,34 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
           <div className="w-full overflow-x-auto">
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
-                <Users className="h-10 w-10 sm:h-12 sm:w-12 text-slate-400 dark:text-slate-600 mb-3" />
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Users className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-3" />
+                <p className="text-sm font-semibold text-foreground/80">
                   {searchTerm ? "No se encontraron clientes" : "No hay clientes registrados"}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {!searchTerm && "Usa «Agregar cliente» para registrar el primero."}
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                    <TableHead className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                  <TableRow className="border-border bg-muted/50">
+                    <TableHead className="text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide">
                       Nombre
                     </TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <TableHead className="text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide">
                       DNI
                     </TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <TableHead className="text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide">
                       Teléfono
                     </TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <TableHead className="text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide">
                       Email
                     </TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide min-w-[140px] sm:min-w-[180px]">
+                    <TableHead className="text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide min-w-[140px] sm:min-w-[180px]">
                       Mascotas
                     </TableHead>
-                    <TableHead className="text-right text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide w-[140px] sm:w-[180px]">
+                    <TableHead className="text-right text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide w-[140px] sm:w-[180px]">
                       Acciones
                     </TableHead>
                   </TableRow>
@@ -650,34 +650,34 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                     return (
                       <TableRow
                         key={c.id}
-                        className="border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                        className="border-border hover:bg-muted"
                         onMouseEnter={() => c.id && !mascotas && !isLoadingMascotas && loadMascotasForCliente(c.id)}
                       >
                         <TableCell className="text-xs sm:text-sm">
                           <div className="flex items-center gap-2">
                             <div
-                              className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center shrink-0 text-slate-700 dark:text-slate-200 font-semibold text-xs"
+                              className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground/80 font-semibold text-xs"
                               title={c.nombre ?? ""}
                             >
                               {getIniciales(c.nombre ?? "")}
                             </div>
-                            <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            <span className="font-semibold text-foreground truncate">
                               {c.nombre}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-mono">
+                        <TableCell className="text-foreground/80 text-xs sm:text-sm font-mono">
                           {c.dni || "—"}
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-slate-700 dark:text-slate-300">{c.telefono}</span>
+                            <span className="text-foreground/80">{c.telefono}</span>
                             {c.telefono && (
                               <a
                                 href={getWhatsAppUrl(c.telefono)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors"
+                                className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-accent text-primary hover:bg-primary/15 transition-colors"
                                 title="Abrir WhatsApp"
                               >
                                 <MessageCircle className="h-3.5 w-3.5" />
@@ -685,12 +685,12 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-slate-700 dark:text-slate-300 text-xs sm:text-sm break-all">
+                        <TableCell className="text-foreground/80 text-xs sm:text-sm break-all">
                           {c.email}
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm">
                           {isLoadingMascotas ? (
-                            <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                           ) : mascotas ? (
                             <div className="flex flex-wrap items-center gap-1.5">
                               {mascotas.map((m) => {
@@ -699,7 +699,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                                   <Badge
                                     key={m.id}
                                     variant="secondary"
-                                    className="font-normal text-[10px] sm:text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-0 inline-flex items-center gap-1"
+                                    className="font-normal text-[10px] sm:text-xs bg-muted text-foreground/80 border-0 inline-flex items-center gap-1"
                                   >
                                     <Icon className="h-3 w-3 shrink-0" />
                                     {m.nombre ?? "—"} · {m.tipo ?? "—"}
@@ -708,7 +708,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                               })}
                             </div>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -717,7 +717,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                               variant="outline"
                               size="sm"
                               onClick={() => openDetails(c)}
-                              className="h-7 sm:h-8 text-[10px] sm:text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 dark:hover:border-emerald-700"
+                              className="h-7 sm:h-8 text-[10px] sm:text-xs border-input text-foreground/80 hover:bg-accent hover:border-primary/40"
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               Ver detalles
@@ -726,7 +726,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                               variant="outline"
                               size="sm"
                               onClick={() => openEdit(c)}
-                              className="h-7 sm:h-8 text-[10px] sm:text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-700"
+                              className="h-7 sm:h-8 text-[10px] sm:text-xs border-input text-foreground/80 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-700"
                             >
                               <Edit className="h-3 w-3 mr-1" />
                               Editar
@@ -754,13 +754,13 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                   variant="outline"
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="h-8 sm:h-9 text-[10px] sm:text-xs border-slate-300 dark:border-slate-700"
+                  className="h-8 sm:h-9 text-[10px] sm:text-xs border-input"
                 >
                   {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {loadingMore ? "Cargando..." : "Cargar más clientes"}
                 </Button>
               ) : (
-                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-500">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} cargado{clientes.length !== 1 ? "s" : ""} · no hay más
                 </p>
               )}
@@ -797,17 +797,17 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
         }}
       >
         <DialogContent className="sm:max-w-md">
-          <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4">
-            <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
+          <DialogHeader className="border-b border-border pb-3 sm:pb-4">
+            <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-foreground">
               {editingId ? "Editar cliente" : "Agregar cliente"}
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
               {editingId ? "Modifica los datos del cliente." : "DNI como clave única. Si existe, se actualizará automáticamente."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 sm:space-y-4 py-2 sm:py-3 lg:py-4">
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="cliente-nombre" className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+              <Label htmlFor="cliente-nombre" className="text-xs sm:text-sm font-bold text-foreground/80">
                 Nombre *
               </Label>
               <Input
@@ -815,11 +815,11 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 value={form.nombre}
                 onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
                 placeholder="Nombre completo"
-                className="border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
+                className="border-2 border-input h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
               />
             </div>
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="cliente-dni" className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+              <Label htmlFor="cliente-dni" className="text-xs sm:text-sm font-bold text-foreground/80">
                 DNI
               </Label>
               <Input
@@ -827,15 +827,15 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 value={form.dni}
                 onChange={(e) => setForm((f) => ({ ...f, dni: e.target.value }))}
                 placeholder="Clave única (opcional)"
-                className="border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-xs sm:text-sm font-mono"
+                className="border-2 border-input h-8 sm:h-9 lg:h-10 text-xs sm:text-sm font-mono"
                 disabled={!!editingId}
               />
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              <p className="text-[10px] text-muted-foreground">
                 Si el DNI ya existe, se actualizará el cliente existente en lugar de crear uno nuevo.
               </p>
             </div>
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="cliente-telefono" className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+              <Label htmlFor="cliente-telefono" className="text-xs sm:text-sm font-bold text-foreground/80">
                 Teléfono *
               </Label>
               <Input
@@ -843,11 +843,11 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 value={form.telefono}
                 onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
                 placeholder="Ej. 11 1234-5678"
-                className="border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
+                className="border-2 border-input h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
               />
             </div>
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="cliente-email" className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+              <Label htmlFor="cliente-email" className="text-xs sm:text-sm font-bold text-foreground/80">
                 Email *
               </Label>
               <Input
@@ -856,11 +856,11 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="correo@ejemplo.com"
-                className="border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
+                className="border-2 border-input h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
               />
             </div>
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="cliente-domicilio" className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+              <Label htmlFor="cliente-domicilio" className="text-xs sm:text-sm font-bold text-foreground/80">
                 Dirección
               </Label>
               <Input
@@ -868,14 +868,14 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 value={form.domicilio}
                 onChange={(e) => setForm((f) => ({ ...f, domicilio: e.target.value }))}
                 placeholder="Dirección para atención a domicilio"
-                className="border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
+                className="border-2 border-input h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
               />
             </div>
 
             {/* Solo al editar uno existente: para un cliente nuevo todavía no
                 hay a quién colgarle la mascota — primero se guarda. */}
             {editingId && form.dni.trim() ? (
-              <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+              <div className="border-t border-border pt-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -885,17 +885,17 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                   <PawPrint className="h-3.5 w-3.5 mr-1.5" />
                   Agregar mascota
                 </Button>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                <p className="text-[10px] text-muted-foreground mt-1.5">
                   Los cambios sin guardar de este formulario se descartan al abrir el registro de mascota.
                 </p>
               </div>
             ) : null}
           </div>
-          <DialogFooter className="flex gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-slate-200 dark:border-slate-800">
+          <DialogFooter className="flex gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => { if (solicitarCierreCliente()) setEditDialogOpen(false); }}
-              className="flex-1 border-2 border-slate-300 dark:border-slate-700 h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+              className="flex-1 border-2 border-input h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
             >
               Cancelar
             </Button>
@@ -903,7 +903,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
               onClick={handleSave}
               disabled={saving || readOnly}
               title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+              className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {saving ? "Guardando..." : "Guardar"}
