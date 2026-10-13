@@ -115,8 +115,8 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
     return (
       <div className="flex items-center justify-center py-24">
         <div className="relative">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500" />
-          <div className="absolute inset-0 h-16 w-16 animate-ping rounded-full border-4 border-indigo-400 opacity-20" />
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-primary" />
+          <div className="absolute inset-0 h-16 w-16 animate-ping rounded-full border-4 border-primary opacity-20" />
         </div>
       </div>
     );
@@ -300,19 +300,19 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
               <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
                 <Calendar className="h-5 w-5 text-white" strokeWidth={2.5} />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/50">
-                <TrendingUp className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+              <div className="px-2.5 py-1 rounded-full bg-accent">
+                <TrendingUp className="h-3.5 w-3.5 text-primary" />
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+            <div className="text-3xl font-black text-foreground mb-1">
               {totalTurnos}
             </div>
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Total Turnos
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-[10px] text-muted-foreground mt-1">
               Todos los registros
             </p>
           </CardContent>
@@ -332,13 +332,13 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+            <div className="text-3xl font-black text-foreground mb-1">
               {estadosTurnos.pendiente}
             </div>
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Pendientes
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-[10px] text-muted-foreground mt-1">
               Por atender
             </p>
             {estadosTurnos.pendiente > 0 && turnosPendientes && turnosPendientes.length > 0 && (
@@ -355,16 +355,16 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 <Dialog open={pendientesDialogOpen} onOpenChange={setPendientesDialogOpen}>
                   <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      <DialogTitle className="text-base font-bold text-foreground">
                         Turnos pendientes
                       </DialogTitle>
-                      <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+                      <DialogDescription className="text-xs text-muted-foreground">
                         {turnosPendientes?.length || 0} pendientes ordenados por fecha
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
                       {!turnosPendientes || turnosPendientes.length === 0 ? (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-6">
+                        <p className="text-xs text-muted-foreground text-center py-6">
                           No hay turnos pendientes
                         </p>
                       ) : (
@@ -381,13 +381,13 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                           return (
                             <div
                               key={turno.id}
-                              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/50 border border-border"
                             >
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                                <p className="text-xs font-semibold text-foreground truncate">
                                   {turno.mascota?.nombre || "Sin nombre"} · {turno.cliente?.nombre || "Cliente"}
                                 </p>
-                                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                                <p className="text-[11px] text-muted-foreground">
                                   {fecha} {horaStr && `· ${horaStr}`}
                                 </p>
                               </div>
@@ -428,19 +428,19 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                   strokeWidth={2.5}
                 />
               </div>
-              <div className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                <Heart className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <div className="px-2.5 py-1 rounded-full bg-accent">
+                <Heart className="h-3.5 w-3.5 text-primary" />
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+            <div className="text-3xl font-black text-foreground mb-1">
               {estadosTurnos.completado}
             </div>
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Completados
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-[10px] text-muted-foreground mt-1">
               Exitosamente
             </p>
           </CardContent>
@@ -460,13 +460,13 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+            <div className="text-3xl font-black text-foreground mb-1">
               {tasaCompletado}%
             </div>
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Tasa de Éxito
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-[10px] text-muted-foreground mt-1">
               Completados
             </p>
           </CardContent>
@@ -486,13 +486,13 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+            <div className="text-3xl font-black text-foreground mb-1">
               {mascotasUnicas}
             </div>
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Mascotas
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-[10px] text-muted-foreground mt-1">
               Únicas registradas
             </p>
           </CardContent>
@@ -512,13 +512,13 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+            <div className="text-3xl font-black text-foreground mb-1">
               {totalClientes}
             </div>
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Clientes
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-[10px] text-muted-foreground mt-1">
               Activos totales
             </p>
           </CardContent>
@@ -532,19 +532,19 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                   <Activity className="h-5 w-5 text-white" strokeWidth={2.5} />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  <CardTitle className="text-lg font-bold text-foreground">
                     Evolución de Turnos
                   </CardTitle>
-                  <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                  <CardDescription className="text-xs text-muted-foreground">
                     Últimos 30 días con actividad
                   </CardDescription>
                 </div>
               </div>
-              <div className="px-3 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+              <div className="px-3 py-1.5 rounded-full bg-accent text-primary text-xs font-bold">
                 {promedioTurnosDia} turnos/día
               </div>
             </div>
@@ -614,17 +614,17 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                 <CheckCircle2
                   className="h-5 w-5 text-white"
                   strokeWidth={2.5}
                 />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-lg font-bold text-foreground">
                   Estados
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                <CardDescription className="text-xs text-muted-foreground">
                   Distribución actual
                 </CardDescription>
               </div>
@@ -652,11 +652,11 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-3 gap-3 mt-4 w-full">
-              <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
-                <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+              <div className="text-center p-2 rounded-lg bg-accent">
+                <div className="text-xl font-black text-primary">
                   {estadosTurnos.completado}
                 </div>
-                <div className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                <div className="text-[10px] font-semibold text-muted-foreground">
                   Completados
                 </div>
               </div>
@@ -664,15 +664,15 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
                 <div className="text-xl font-black text-amber-600 dark:text-amber-400">
                   {estadosTurnos.pendiente}
                 </div>
-                <div className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                <div className="text-[10px] font-semibold text-muted-foreground">
                   Pendientes
                 </div>
               </div>
-              <div className="text-center p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-                <div className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+              <div className="text-center p-2 rounded-lg bg-accent">
+                <div className="text-xl font-black text-primary">
                   {estadosTurnos.cancelado}
                 </div>
-                <div className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                <div className="text-[10px] font-semibold text-muted-foreground">
                   Cancelados
                 </div>
               </div>
@@ -687,14 +687,14 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                 <PawPrint className="h-5 w-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-lg font-bold text-foreground">
                   Tipos de Mascotas
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                <CardDescription className="text-xs text-muted-foreground">
                   Por especie
                 </CardDescription>
               </div>
@@ -754,17 +754,17 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                 <CalendarDays
                   className="h-5 w-5 text-white"
                   strokeWidth={2.5}
                 />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-lg font-bold text-foreground">
                   Por Mes
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                <CardDescription className="text-xs text-muted-foreground">
                   Últimos 6 meses
                 </CardDescription>
               </div>
@@ -815,14 +815,14 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                 <Clock className="h-5 w-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-lg font-bold text-foreground">
                   Horarios Populares
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                <CardDescription className="text-xs text-muted-foreground">
                   Distribución horaria
                 </CardDescription>
               </div>
@@ -893,14 +893,14 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         <Card className="lg:col-span-8">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                 <Sparkles className="h-5 w-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-lg font-bold text-foreground">
                   Servicios más solicitados
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                <CardDescription className="text-xs text-muted-foreground">
                   Top servicios por cantidad de turnos
                 </CardDescription>
               </div>
@@ -908,7 +908,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
           </CardHeader>
           <CardContent>
             {serviciosTopData.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-12">
+              <p className="text-sm text-muted-foreground text-center py-12">
                 Sin datos de servicios todavía.
               </p>
             ) : (
@@ -933,40 +933,40 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                 <TrendingUp className="h-5 w-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-lg font-bold text-foreground">
                   Métricas clave
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+                <CardDescription className="text-xs text-muted-foreground">
                   Tasas sobre el total de turnos
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-accent">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tasa de éxito</span>
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground/80">Tasa de éxito</span>
               </div>
-              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{tasaCompletado}%</span>
+              <span className="text-xl font-black text-primary">{tasaCompletado}%</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tasa de cancelación</span>
+                <span className="text-sm font-semibold text-foreground/80">Tasa de cancelación</span>
               </div>
               <span className="text-xl font-black text-rose-600 dark:text-rose-400">{tasaCancelacion}%</span>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-accent">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Promedio diario</span>
+                <Activity className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground/80">Promedio diario</span>
               </div>
-              <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{promedioTurnosDia}</span>
+              <span className="text-xl font-black text-primary">{promedioTurnosDia}</span>
             </div>
           </CardContent>
         </Card>
