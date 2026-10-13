@@ -17,8 +17,15 @@
 > y `-soft-foreground`) y `--destructive-soft`; `components/admin/estado-badge.tsx`
 > (`EstadoBadge` + `EstadoTurnoBadge`) en agenda, detalle de turno, perfil del
 > cliente, productos (stock / a revisar), gastos (pagado), cajas (abierta) y
-> ventas (anulada / pago cta. cte.). Pendientes: Fase 4 y Fase 5 puntos 2–4.
-> Nota Fase 4: el calendario de Turnos sigue con `indigo`/violeta fijo.
+> ventas (anulada / pago cta. cte.).
+>
+> **Fase 4 hecha** (2026-10-12), un commit por archivo: Turnos (calendario,
+> timeline, grilla, modales, próximo turno, stats), Libreta (y su modal), Clientes
+> y gráficos del Dashboard. Neutros slate/white → `card`/`muted`/`foreground`/
+> `border`; verde emerald e indigo/violeta de acento → `primary`/`accent`;
+> "completado" → `success`. Se mantienen a propósito: el color por métrica de las
+> tarjetas del Dashboard y el botón turquesa "Generar historia" del detalle de
+> turno. Pendiente: Fase 5 puntos 2–4.
 >
 > Lo hecho en la Fase 1:
 > - `components/ui/ayuda.tsx` + `lib/ayuda/textos.ts`: 19 cartelitos en Caja, Vender,
