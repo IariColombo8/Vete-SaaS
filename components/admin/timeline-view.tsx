@@ -55,23 +55,23 @@ export function TimelineView({
       key={turno.id}
       className={`group relative overflow-hidden rounded-lg sm:rounded-xl lg:rounded-2xl border sm:border-2 transition-all duration-300 hover:scale-[1.01] sm:hover:scale-[1.02] hover:shadow-lg sm:hover:shadow-xl ${
         turno.estado === "completado"
-          ? "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800"
+          ? "bg-success-soft/60 border-success/30"
           : turno.estado === "cancelado"
-            ? "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900/30 dark:to-slate-800/30 border-slate-300 dark:border-slate-700 opacity-60"
+            ? "bg-muted/50 border-input opacity-60"
             : isUrgent
               ? "bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30 border-rose-300 dark:border-rose-700 shadow-lg shadow-rose-500/20"
-              : "bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/50 border-slate-200 dark:border-slate-700"
+              : "bg-card border-border"
       }`}
     >
       <div
         className={`absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 ${
           turno.estado === "completado"
-            ? "bg-gradient-to-b from-emerald-500 to-teal-500"
+            ? "bg-success"
             : turno.estado === "cancelado"
-              ? "bg-gradient-to-b from-slate-400 to-slate-500"
+              ? "bg-muted-foreground/50"
               : isUrgent
                 ? "bg-gradient-to-b from-rose-500 to-pink-500"
-                : "bg-gradient-to-b from-indigo-500 to-purple-500"
+                : "bg-primary"
         }`}
       />
 
@@ -79,7 +79,7 @@ export function TimelineView({
         <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-              <span className="text-xs sm:text-sm lg:text-base font-black text-slate-900 dark:text-white truncate">
+              <span className="text-xs sm:text-sm lg:text-base font-black text-foreground truncate">
                 {turno.cliente.nombre}
               </span>
               {isUrgent && (
@@ -89,7 +89,7 @@ export function TimelineView({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-muted-foreground">
               {(() => {
                 const MascotaIcon = getMascotaIcon(turno.mascota?.tipo ?? "")
                 return <MascotaIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
@@ -100,7 +100,7 @@ export function TimelineView({
           </div>
           <div className="flex flex-col items-end gap-1 sm:gap-2">
             <EstadoTurnoBadge estado={turno.estado} />
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+            <span className="text-xs font-bold text-primary">
               {getHora(turno) || "—"}
             </span>
           </div>
@@ -108,7 +108,7 @@ export function TimelineView({
 
         <Button
           onClick={() => onViewDetails(turno)}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg sm:rounded-xl h-7 sm:h-8 lg:h-9 text-[10px] sm:text-xs lg:text-sm shadow-lg"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg sm:rounded-xl h-7 sm:h-8 lg:h-9 text-[10px] sm:text-xs lg:text-sm shadow-lg"
         >
           Ver Detalles
         </Button>
@@ -145,8 +145,8 @@ export function TimelineView({
           const cancelados = list.filter((t) => t.estado === "cancelado")
           return (
             <div key={fechaStr} className="space-y-2">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   {fechaLabel}
                 </p>
               </div>
@@ -161,7 +161,7 @@ export function TimelineView({
                 })}
                 {cancelados.length > 0 && (
                   <div className="pt-2">
-                    <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
                       Cancelados
                     </p>
                     <div className="space-y-2 sm:space-y-3">
@@ -190,13 +190,13 @@ export function TimelineView({
           return (
             <div
               key={slot}
-              className="relative flex items-start border-l-2 sm:border-l-4 border-slate-200 dark:border-slate-800 pl-3 sm:pl-6 pb-2 sm:pb-4 ml-8 sm:ml-12 lg:ml-16"
+              className="relative flex items-start border-l-2 sm:border-l-4 border-border pl-3 sm:pl-6 pb-2 sm:pb-4 ml-8 sm:ml-12 lg:ml-16"
             >
               <div
                 className={`absolute -left-8 sm:-left-12 lg:-left-16 top-0 w-7 sm:w-10 lg:w-14 text-right ${
                   isCurrentHour
-                    ? "text-indigo-600 dark:text-indigo-400 font-black"
-                    : "text-slate-600 dark:text-slate-400 font-semibold"
+                    ? "text-primary font-black"
+                    : "text-muted-foreground font-semibold"
                 }`}
               >
                 <div className="text-xs lg:text-sm">{slot}</div>
@@ -205,10 +205,10 @@ export function TimelineView({
               <div
                 className={`absolute -left-[5px] sm:-left-[9px] lg:-left-[11px] top-0.5 sm:top-1 w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 rounded-full border-2 sm:border-4 ${
                   isCurrentHour
-                    ? "bg-indigo-500 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/50"
+                    ? "bg-primary border-primary/30 shadow-md"
                     : hourTurnos.length > 0
-                      ? "bg-emerald-500 border-emerald-200 dark:border-emerald-800"
-                      : "bg-slate-200 dark:bg-slate-700 border-slate-100 dark:border-slate-800"
+                      ? "bg-success border-primary/30"
+                      : "bg-muted border-border"
                 }`}
               />
 
@@ -222,18 +222,18 @@ export function TimelineView({
                   <div
                     className={`rounded-lg sm:rounded-xl lg:rounded-2xl border sm:border-2 border-dashed p-2 sm:p-3 lg:p-4 text-center ${
                       isPast
-                        ? "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30"
-                        : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50"
+                        ? "border-border bg-muted/50"
+                        : "border-input bg-card"
                     }`}
                   >
                     <Clock
                       className={`h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 mx-auto mb-1 sm:mb-2 ${
-                        isPast ? "text-slate-300 dark:text-slate-700" : "text-slate-400 dark:text-slate-600"
+                        isPast ? "text-muted-foreground/40" : "text-muted-foreground"
                       }`}
                     />
                     <p
                       className={`text-xs font-semibold ${
-                        isPast ? "text-slate-400 dark:text-slate-600" : "text-slate-500 dark:text-slate-500"
+                        isPast ? "text-muted-foreground" : "text-muted-foreground"
                       }`}
                     >
                       {isPast ? "Pasado" : "Disponible"}
@@ -246,8 +246,8 @@ export function TimelineView({
         })}
       {canceladosDelDia.length > 0 && (
         <div className="mt-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+          <div className="flex items-center gap-2 pb-2 border-b border-border">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
               Cancelados
             </p>
           </div>
