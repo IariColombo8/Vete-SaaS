@@ -286,7 +286,7 @@ function tituloAplicaciones(items: { tipo: TipoAplicacionHistoriaLocal }[]): str
 
 function SkeletonCard() {
   return (
-    <Card className="border-slate-200 dark:border-slate-700">
+    <Card className="border-border">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-full" />
@@ -1515,23 +1515,23 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
     <>
       {loadingCliente ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       ) : (
         <div className="space-y-4">
           {/* Cabecera: avatar, nombre, acciones */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200 font-bold text-lg shrink-0">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-foreground/80 font-bold text-lg shrink-0">
               {getIniciales(clienteExpandido.cliente.nombre ?? "")}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 dark:text-slate-100 text-lg">{clienteExpandido.cliente.nombre}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">DNI {clienteExpandido.cliente.dni}</p>
+              <p className="font-bold text-foreground text-lg">{clienteExpandido.cliente.nombre}</p>
+              <p className="text-sm text-muted-foreground font-mono">DNI {clienteExpandido.cliente.dni}</p>
             </div>
             <div className="flex items-center gap-1">
               <a
                 href={`tel:${clienteExpandido.cliente.telefono}`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-primary hover:bg-primary/15"
                 title="Llamar"
               >
                 <Phone className="h-4 w-4" />
@@ -1540,7 +1540,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 href={getWhatsAppUrl(clienteExpandido.cliente.telefono ?? "")}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-primary hover:bg-primary/15"
                 title="WhatsApp"
               >
                 <MessageCircle className="h-4 w-4" />
@@ -1549,11 +1549,11 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           </div>
 
           {/* Contacto editable inline */}
-          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-3 space-y-2">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Contacto</p>
+          <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contacto</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                 {inlineEditField === "domicilio" ? (
                   <div className="flex-1 flex gap-2 flex-wrap">
                     <Input
@@ -1564,20 +1564,20 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     />
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" className="h-8" onClick={() => setInlineEditField(null)}>Cancelar</Button>
-                      <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700" onClick={handleSaveInline} disabled={savingCliente}>
+                      <Button size="sm" className="h-8 bg-primary hover:bg-primary/90" onClick={handleSaveInline} disabled={savingCliente}>
                         {savingCliente ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{clienteExpandido.cliente.domicilio || "—"}</span>
-                    <button aria-label="Editar domicilio" type="button" onClick={() => startInlineEdit("domicilio")} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
+                    <span className="text-sm text-foreground/80 flex-1">{clienteExpandido.cliente.domicilio || "—"}</span>
+                    <button aria-label="Editar domicilio" type="button" onClick={() => startInlineEdit("domicilio")} className="p-1 rounded text-muted-foreground hover:bg-muted" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                   </>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-slate-400 shrink-0" />
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                 {inlineEditField === "telefono" ? (
                   <div className="flex-1 flex gap-2 flex-wrap">
                     <Input
@@ -1588,20 +1588,20 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     />
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" className="h-8" onClick={() => setInlineEditField(null)}>Cancelar</Button>
-                      <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700" onClick={handleSaveInline} disabled={savingCliente}>
+                      <Button size="sm" className="h-8 bg-primary hover:bg-primary/90" onClick={handleSaveInline} disabled={savingCliente}>
                         {savingCliente ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{clienteExpandido.cliente.telefono}</span>
-                    <button aria-label="Editar teléfono" type="button" onClick={() => startInlineEdit("telefono")} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
+                    <span className="text-sm text-foreground/80 flex-1">{clienteExpandido.cliente.telefono}</span>
+                    <button aria-label="Editar teléfono" type="button" onClick={() => startInlineEdit("telefono")} className="p-1 rounded text-muted-foreground hover:bg-muted" title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                   </>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-700 dark:text-slate-300 break-all">{clienteExpandido.cliente.email}</span>
+                <span className="text-sm text-foreground/80 break-all">{clienteExpandido.cliente.email}</span>
               </div>
             </div>
           </div>
@@ -1609,23 +1609,23 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           {/* Historial de cambios (acordeón cerrado por defecto) */}
           {(clienteExpandido.cliente as Cliente & { historialDatos?: HistorialDato[] }).historialDatos?.length ? (
             <Collapsible open={historialOpen} onOpenChange={setHistorialOpen}>
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-3 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/50 p-3 hover:bg-muted transition-colors">
                 <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Historial de cambios</p>
+                  <History className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Historial de cambios</p>
                 </div>
-                <ChevronDown className={`h-4 w-4 text-slate-500 dark:text-slate-400 transition-transform ${historialOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${historialOpen ? "rotate-180" : ""}`} />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 space-y-2 max-h-32 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 border-t-0 rounded-t-none bg-slate-50/30 dark:bg-slate-800/20 p-2">
+                <div className="mt-2 space-y-2 max-h-32 overflow-y-auto rounded-lg border border-border border-t-0 rounded-t-none bg-muted/30 p-2">
                   {((clienteExpandido.cliente as Cliente & { historialDatos?: HistorialDato[] }).historialDatos ?? []).map((h, idx) => (
-                    <div key={idx} className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-xs">
+                    <div key={idx} className="rounded border border-border bg-card p-2 text-xs">
                       <div className="flex justify-between mb-0.5">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300 capitalize">{h.campo}</span>
-                        <span className="text-slate-500">{new Date(h.fechaCambio).toLocaleDateString("es-AR")}</span>
+                        <span className="font-semibold text-foreground/80 capitalize">{h.campo}</span>
+                        <span className="text-muted-foreground">{new Date(h.fechaCambio).toLocaleDateString("es-AR")}</span>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-400">Antes: {h.valorAnterior || "—"}</p>
-                      <p className="text-slate-700 dark:text-slate-300">Ahora: {h.valorNuevo || "—"}</p>
+                      <p className="text-muted-foreground">Antes: {h.valorAnterior || "—"}</p>
+                      <p className="text-foreground/80">Ahora: {h.valorNuevo || "—"}</p>
                     </div>
                   ))}
                 </div>
@@ -1636,7 +1636,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           {/* Mascotas: chips horizontales (2 + N más si hay >3) */}
           {clienteExpandido.mascotas.length === 0 ? (
             <div className="text-center py-4 space-y-2">
-              <p className="text-sm text-slate-500 dark:text-slate-400">Sin mascotas registradas</p>
+              <p className="text-sm text-muted-foreground">Sin mascotas registradas</p>
               <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => setAgregarMascotaOpen(true)}>
                 <PawPrint className="h-3.5 w-3.5 mr-1" />
                 Agregar mascota
@@ -1657,7 +1657,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                       key={m.id}
                       type="button"
                       onClick={() => setSelectedMascotaId(m.id ?? "")}
-                      className={`flex items-center gap-1.5 shrink-0 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors ${isActive ? "bg-emerald-600 text-white border-emerald-600" : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"}`}
+                      className={`flex items-center gap-1.5 shrink-0 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors ${isActive ? "bg-primary text-white border-primary" : "bg-muted border-border hover:bg-muted"}`}
                     >
                       <Icon className="h-3.5 w-3.5" />
                       <span>{m.nombre} – {m.tipo}</span>
@@ -1669,7 +1669,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   <button
                     type="button"
                     onClick={() => setShowAllMascotasChips(true)}
-                    className="shrink-0 rounded-full border border-slate-300 dark:border-slate-600 bg-slate-200/80 dark:bg-slate-700/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600"
+                    className="shrink-0 rounded-full border border-input bg-muted px-2.5 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-muted/70"
                   >
                     +{clienteExpandido.mascotas.length - 2} más
                   </button>
@@ -1677,7 +1677,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 <button
                   type="button"
                   onClick={() => setAgregarMascotaOpen(true)}
-                  className="flex items-center gap-1 shrink-0 rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="flex items-center gap-1 shrink-0 rounded-full border border-dashed border-input px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
                 >
                   <PawPrint className="h-3.5 w-3.5" />
                   Agregar mascota
@@ -1711,18 +1711,18 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   return (
                     <div className="space-y-3">
                       {/* Cabecera mascota: Nombre - Raza - Edad - Peso + contadores + botón + */}
-                      <div className="flex items-center gap-2 flex-wrap rounded-xl border border-slate-200 dark:border-slate-700 p-3 bg-white dark:bg-slate-900 shadow-sm">
-                        <div className="h-9 w-9 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
+                      <div className="flex items-center gap-2 flex-wrap rounded-xl border border-border p-3 bg-card shadow-sm">
+                        <div className="h-9 w-9 shrink-0 rounded-lg bg-muted overflow-hidden flex items-center justify-center">
                           {m.fotoUrl
                             ? <img src={m.fotoUrl} alt={m.nombre} className="h-full w-full object-cover" />
-                            : <Icon className="h-5 w-5 text-slate-600 dark:text-slate-400" />}
+                            : <Icon className="h-5 w-5 text-muted-foreground" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{m.nombre} · {m.tipo}</p>
+                          <p className="font-semibold text-foreground text-sm">{m.nombre} · {m.tipo}</p>
                           <button
                             type="button"
                             onClick={() => openEditMascotaData(clienteExpandido.cliente, m)}
-                            className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
                             title="Cargar o corregir datos de la mascota"
                           >
                             {[m.raza, m.edad, m.peso, m.sexo === "macho" ? "Macho" : m.sexo === "hembra" ? "Hembra" : null, m.color, m.tieneChip ? "Chip" : null].filter(Boolean).join(" · ") || "Sin datos"}
@@ -1754,7 +1754,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           )}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button size="sm" className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 transition-all shrink-0 gap-1.5 px-3">
+                              <Button size="sm" className="h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all shrink-0 gap-1.5 px-3">
                                 {descargandoLibretaId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
                                 Acciones
                               </Button>
@@ -1813,16 +1813,16 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
 
                       {/* Ventas y cuenta corriente del dueño: ya están vinculadas por cliente_id, esto solo lo muestra */}
                       {(ventasCliente.length > 0 || saldoCtaCte > 0) && (
-                        <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 flex-wrap">
+                        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card p-2.5 flex-wrap">
                           <div className="flex items-center gap-2 min-w-0">
-                            <ShoppingCart className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600 dark:text-slate-400 min-w-0">
+                            <ShoppingCart className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground min-w-0">
                               {ventasCliente.slice(0, 3).map((v) => (
-                                <span key={v.id} className={v.estado === "anulada" ? "line-through text-slate-400" : ""}>
+                                <span key={v.id} className={v.estado === "anulada" ? "line-through text-muted-foreground" : ""}>
                                   #{v.numero} · {formatCurrency(v.total)}
                                 </span>
                               ))}
-                              {ventasCliente.length === 0 && <span className="text-slate-400">Sin ventas registradas</span>}
+                              {ventasCliente.length === 0 && <span className="text-muted-foreground">Sin ventas registradas</span>}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -1834,7 +1834,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-xs text-slate-500"
+                              className="h-7 text-xs text-muted-foreground"
                               onClick={() => router.push(`/${tenantId}/admin/CuentaCorriente`)}
                             >
                               Ver cuenta corriente
@@ -1845,12 +1845,12 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
 
                       {/* Tabs: Historia Clínica (default) | Turnos */}
                       <Tabs value={mascotaContentTab} onValueChange={(v) => setMascotaContentTab(v as "historia" | "turnos")} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 h-9 bg-slate-200/80 dark:bg-slate-800/80">
-                          <TabsTrigger value="historia" className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Historia Clínica</TabsTrigger>
-                          <TabsTrigger value="turnos" className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Turnos</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-2 h-9">
+                          <TabsTrigger value="historia" className="text-xs">Historia Clínica</TabsTrigger>
+                          <TabsTrigger value="turnos" className="text-xs">Turnos</TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="historia" className="mt-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 max-h-[340px] overflow-y-auto bg-slate-50/30 dark:bg-slate-800/20">
+                        <TabsContent value="historia" className="mt-3 rounded-lg border border-border p-3 max-h-[340px] overflow-y-auto bg-muted/30">
                           {visitasReales.length > 0 && (
                             <div className="flex items-center gap-1.5 mb-3">
                               {([
@@ -1864,8 +1864,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                   onClick={() => setFiltroArchivos(opt.value)}
                                   className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                                     filtroArchivos === opt.value
-                                      ? "bg-emerald-600 text-white border-emerald-600"
-                                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                      ? "bg-primary text-white border-primary"
+                                      : "bg-card border-border text-muted-foreground hover:bg-muted"
                                   }`}
                                 >
                                   {opt.label}
@@ -1874,15 +1874,15 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                             </div>
                           )}
                           {loadingTimeline ? (
-                            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-emerald-600" /></div>
+                            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
                           ) : visitasFiltradas.length === 0 ? filtroArchivos !== "todos" ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">
+                            <p className="text-sm text-muted-foreground text-center py-8">
                               Sin {filtroArchivos === "imagenes" ? "imágenes" : "PDFs"} adjuntos para esta mascota.
                             </p>
                           ) : (
                             <div className="flex flex-col items-center justify-center py-10">
-                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sin visitas registradas para esta mascota.</p>
-                              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-6 rounded-xl shadow-lg" onClick={() => openAddNota(clienteExpandido.cliente, m)}>
+                              <p className="text-sm text-muted-foreground mb-4">Sin visitas registradas para esta mascota.</p>
+                              <Button className="bg-primary hover:bg-primary/90 text-white h-11 px-6 rounded-xl shadow-lg" onClick={() => openAddNota(clienteExpandido.cliente, m)}>
                                 <Plus className="h-5 w-5 mr-2" />
                                 + Añadir nota clínica
                               </Button>
@@ -1891,7 +1891,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                             <div className="space-y-4">
                               {historiasPorFecha.map(([fechaStr, entradas]) => (
                                 <div key={fechaStr} className="space-y-2">
-                                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                                     {fechaStr ? new Date(fechaStr + "T00:00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "—"}
                                   </p>
                                   {entradas.map((h) => {
@@ -1901,13 +1901,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         ? [{ tipo: h.tipoVisita as TipoAplicacionHistoriaLocal, nombre: h.productoAplicado, indicaciones: h.observaciones, proxima: h.proximaVisita }]
                                         : [];
                                     return (
-                                    <div key={h.id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm space-y-2">
+                                    <div key={h.id} className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-2">
                                       <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-center gap-1.5 min-w-0">
-                                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{h.motivo || "Consulta"}</p>
+                                          <p className="text-xs font-semibold text-foreground/80 truncate">{h.motivo || "Consulta"}</p>
                                           <Badge
                                             variant="secondary"
-                                            className={`text-[11px] px-1.5 py-0 shrink-0 ${h.esPrivada ? "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"}`}
+                                            className={`text-[11px] px-1.5 py-0 shrink-0 ${h.esPrivada ? "bg-muted text-muted-foreground" : "bg-accent text-primary"}`}
                                           >
                                             {h.esPrivada ? "Privada" : "Visible al cliente"}
                                           </Badge>
@@ -1916,7 +1916,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                           {(aplicacionesDeH.length > 0 || h.tipoVisita === "orden_medica") && (
                                             <button aria-label="Descargar orden"
                                               type="button"
-                                              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                                              className="p-1.5 rounded hover:bg-muted disabled:opacity-50"
                                               disabled={descargandoComprobanteId === h.id}
                                               onClick={() => redescargarComprobante(h, clienteExpandido.cliente.nombre, m.nombre ?? "")}
                                               title="Descargar orden"
@@ -1926,11 +1926,11 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                                 : <FileDown className="h-3.5 w-3.5" />}
                                             </button>
                                           )}
-                                          <button aria-label="Ver detalles" type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => { if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: h }); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
-                                          <button aria-label="Editar" type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => openEditHistoria(h, clienteExpandido.cliente.id!, m.id!)} title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
+                                          <button aria-label="Ver detalles" type="button" className="p-1.5 rounded hover:bg-muted" onClick={() => { if (isMobile) setDetailSheetOpen(false); setDetailModalItem({ type: "historia", data: h }); setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
+                                          <button aria-label="Editar" type="button" className="p-1.5 rounded hover:bg-muted" onClick={() => openEditHistoria(h, clienteExpandido.cliente.id!, m.id!)} title="Editar"><Edit3 className="h-3.5 w-3.5" /></button>
                                         </div>
                                       </div>
-                                      <div className="text-xs text-slate-600 dark:text-slate-400">
+                                      <div className="text-xs text-muted-foreground">
                                         {h.tipoVisita === "orden_medica" ? (
                                           <p className="whitespace-pre-wrap">{h.observaciones || "—"}</p>
                                         ) : aplicacionesDeH.length > 0 ? (
@@ -1958,7 +1958,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                               {visibles.map((url, i) =>
                                                 esImagenUrl(url) ? (
                                                   <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                                    <img src={url} alt="Adjunto" className="h-12 w-12 rounded object-cover border border-slate-200 dark:border-slate-700" />
+                                                    <img src={url} alt="Adjunto" className="h-12 w-12 rounded object-cover border border-border" />
                                                   </a>
                                                 ) : (
                                                   <a
@@ -1966,7 +1966,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                                     href={url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-1 h-12 px-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] text-emerald-700 dark:text-emerald-400"
+                                                    className="flex items-center gap-1 h-12 px-2 rounded border border-border bg-muted/50 text-[11px] text-primary"
                                                   >
                                                     <Paperclip className="h-3 w-3" />
                                                     {esPdfUrl(url) ? "PDF" : "Archivo"}
@@ -1985,13 +1985,13 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                           )}
                         </TabsContent>
 
-                        <TabsContent value="turnos" className="mt-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 max-h-[340px] overflow-y-auto bg-slate-50/30 dark:bg-slate-800/20">
+                        <TabsContent value="turnos" className="mt-3 rounded-lg border border-border p-3 max-h-[340px] overflow-y-auto bg-muted/30">
                           {loadingTimeline ? (
-                            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-emerald-600" /></div>
+                            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
                           ) : turnosMascota.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10">
-                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">No hay turnos para esta mascota.</p>
-                              <p className="text-xs text-slate-400">Los turnos se agendan desde Gestión de Turnos.</p>
+                              <p className="text-sm text-muted-foreground mb-4">No hay turnos para esta mascota.</p>
+                              <p className="text-xs text-muted-foreground">Los turnos se agendan desde Gestión de Turnos.</p>
                             </div>
                           ) : (
                             <div className="space-y-2">
@@ -2007,7 +2007,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                   setTimeout(() => setDetailModalOpen(true), isMobile ? 150 : 0);
                                 };
                                 return (
-                                  <div key={t.id} className={`rounded-xl border p-3 shadow-sm ${t.estado === "cancelado" ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 opacity-70" : esFuturo ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 border-dashed" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"}`}>
+                                  <div key={t.id} className={`rounded-xl border p-3 shadow-sm ${t.estado === "cancelado" ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 opacity-70" : esFuturo ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 border-dashed" : "bg-card border-border"}`}>
                                     <div className="flex items-start justify-between gap-2">
                                       <div
                                         className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
@@ -2016,10 +2016,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         tabIndex={0}
                                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetailTurno(); } }}
                                       >
-                                        {t.estado === "cancelado" ? <XCircle className="h-4 w-4 text-red-500 shrink-0" /> : esFuturo ? <Clock className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
+                                        {t.estado === "cancelado" ? <XCircle className="h-4 w-4 text-red-500 shrink-0" /> : esFuturo ? <Clock className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-primary shrink-0" />}
                                         <div>
-                                          <p className={`text-xs font-semibold ${t.estado === "cancelado" ? "line-through text-slate-500 dark:text-slate-400" : "text-slate-900 dark:text-slate-100"}`}>{fecha ? fecha.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" }) : "—"}{t.turno?.hora ? ` · ${t.turno.hora}` : ""}</p>
-                                          <p className="text-[11px] text-slate-600 dark:text-slate-400">{t.estado === "cancelado" ? "Cancelado" : esFuturo ? "Próximo turno" : "Realizado"} {t.servicio && `· ${t.servicio}`}</p>
+                                          <p className={`text-xs font-semibold ${t.estado === "cancelado" ? "line-through text-muted-foreground" : "text-foreground"}`}>{fecha ? fecha.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" }) : "—"}{t.turno?.hora ? ` · ${t.turno.hora}` : ""}</p>
+                                          <p className="text-[11px] text-muted-foreground">{t.estado === "cancelado" ? "Cancelado" : esFuturo ? "Próximo turno" : "Realizado"} {t.servicio && `· ${t.servicio}`}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-0.5 shrink-0">
@@ -2029,7 +2029,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                                         {t.estado === "pendiente" && (
                                           <button aria-label="Generar Historia Clínica" type="button" className="p-1.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900/40" onClick={(e) => { e.stopPropagation(); openGenerarHistoriaFromTurno(t, clienteExpandido.cliente, m); }} title="Generar Historia Clínica"><FileText className="h-3.5 w-3.5 text-teal-600" /></button>
                                         )}
-                                        <button aria-label="Ver detalles" type="button" className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800" onClick={(e) => { e.stopPropagation(); openDetailTurno(); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
+                                        <button aria-label="Ver detalles" type="button" className="p-1.5 rounded hover:bg-muted" onClick={(e) => { e.stopPropagation(); openDetailTurno(); }} title="Ver detalles"><Eye className="h-3.5 w-3.5" /></button>
                                       </div>
                                     </div>
                                   </div>
@@ -2074,20 +2074,20 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           barra superior (56) + padding del main (48) + encabezado (~78) + separación (16). */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 h-[calc(100vh-200px)] min-h-[400px]">
         {/* Panel izquierdo: lista */}
-        <div className="md:col-span-4 flex flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
-          <div className="p-2 sm:p-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
+        <div className="md:col-span-4 flex flex-col border border-border rounded-xl bg-card overflow-hidden">
+          <div className="p-2 sm:p-3 border-b border-border shrink-0">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <Input placeholder="Buscar por DNI o nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-8 h-9 text-sm border-slate-300 dark:border-slate-700" />
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Buscar por DNI o nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-8 h-9 text-sm border-input" />
             </div>
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{filtered.length} de {total} clientes</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">{filtered.length} de {total} clientes</p>
           </div>
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-2 space-y-1">
               {loading && !clientes.length ? (
                 Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
               ) : filtered.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
+                <div className="py-8 text-center text-muted-foreground text-sm">
                   <User className="h-10 w-10 mx-auto mb-2 opacity-50" />
                   <p>{searchInput.trim() ? "No hay resultados" : "No hay clientes con DNI"}</p>
                 </div>
@@ -2112,22 +2112,22 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                       tabIndex={0}
                       onClick={() => c.id && selectCliente(c.id)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); c.id && selectCliente(c.id); } }}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-all ${isActive ? "bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 dark:border-emerald-500" : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-2 border-transparent"}`}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-all ${isActive ? "bg-accent border-2 border-primary" : "hover:bg-muted border-2 border-transparent"}`}
                     >
-                      <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200 font-semibold text-xs shrink-0">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-foreground/80 font-semibold text-xs shrink-0">
                         {getIniciales(c.nombre ?? "")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 dark:text-slate-100 truncate text-sm">{c.nombre}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">DNI {c.dni}</p>
+                        <p className="font-medium text-foreground truncate text-sm">{c.nombre}</p>
+                        <p className="text-[11px] text-muted-foreground font-mono">DNI {c.dni}</p>
                         <p
-                          className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5"
+                          className="text-[11px] text-muted-foreground truncate mt-0.5"
                           title={(resumenMascotas?.names ?? []).join(", ")}
                         >
                           {textoMascotas}
                         </p>
                       </div>
-                      <ChevronRight className={`h-4 w-4 shrink-0 ${isActive ? "text-emerald-600" : "text-slate-400"}`} />
+                      <ChevronRight className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
                   );
                 })
@@ -2142,11 +2142,11 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         </div>
 
         {/* Panel derecho: detalle o empty */}
-        <div className="hidden md:flex md:col-span-8 flex-col border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
+        <div className="hidden md:flex md:col-span-8 flex-col border border-border rounded-xl bg-card overflow-hidden">
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-4">
               {!expandedClienteId ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-slate-500 dark:text-slate-400">
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
                   <FileText className="h-14 w-14 mb-4 opacity-40" />
                   <p className="text-sm font-medium">Seleccioná un cliente de la lista</p>
                   <p className="text-xs mt-1">Sus datos, historial de cambios y libreta clínica aparecerán aquí.</p>
@@ -2213,10 +2213,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       <Dialog open={!!editingCliente} onOpenChange={(open) => !open && setEditingCliente(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-lg font-black text-foreground">
               Editar datos del cliente
             </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-sm text-muted-foreground">
               Los cambios se guardan en Firestore.
             </DialogDescription>
           </DialogHeader>
@@ -2226,7 +2226,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               <Input
                 value={clienteForm.nombre}
                 onChange={(e) => setClienteForm((f) => ({ ...f, nombre: e.target.value }))}
-                className="mt-1 border-slate-300 dark:border-slate-700 h-9"
+                className="mt-1 border-input h-9"
               />
             </div>
             <div>
@@ -2234,7 +2234,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               <Input
                 value={clienteForm.domicilio}
                 onChange={(e) => setClienteForm((f) => ({ ...f, domicilio: e.target.value }))}
-                className="mt-1 border-slate-300 dark:border-slate-700 h-9"
+                className="mt-1 border-input h-9"
                 placeholder="Domicilio"
               />
             </div>
@@ -2243,7 +2243,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               <Input
                 value={clienteForm.telefono}
                 onChange={(e) => setClienteForm((f) => ({ ...f, telefono: e.target.value }))}
-                className="mt-1 border-slate-300 dark:border-slate-700 h-9"
+                className="mt-1 border-input h-9"
               />
             </div>
             <div>
@@ -2252,7 +2252,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 type="email"
                 value={clienteForm.email}
                 onChange={(e) => setClienteForm((f) => ({ ...f, email: e.target.value }))}
-                className="mt-1 border-slate-300 dark:border-slate-700 h-9"
+                className="mt-1 border-input h-9"
               />
             </div>
           </div>
@@ -2260,7 +2260,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             <Button variant="outline" onClick={() => setEditingCliente(null)}>
               Cancelar
             </Button>
-            <Button onClick={saveCliente} disabled={savingCliente} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={saveCliente} disabled={savingCliente} className="bg-primary hover:bg-primary/90">
               {savingCliente ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar
             </Button>
@@ -2275,10 +2275,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-lg font-black text-foreground">
               {editTipo === "historia" ? "Editar consulta" : "Editar turno"}
             </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-sm text-muted-foreground">
               {editTipo === "turno" && editTurno
                 ? new Date((editTurno.turno?.fecha || editTurno.fecha || "") + "T12:00:00") > new Date()
                   ? "Turno futuro: podés cambiar fecha y motivo."
@@ -2333,7 +2333,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     className="mt-1 min-h-[50px] text-sm"
                   />
                 </div>
-                <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                <div className="flex items-center gap-2 rounded-lg border border-border p-2.5">
                   <Checkbox
                     id="edit-nota-visible-cliente"
                     checked={!formHistoria.esPrivada}
@@ -2418,7 +2418,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             <Button variant="outline" onClick={() => setEditEntradaOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={saveEntrada} disabled={savingEntrada} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={saveEntrada} disabled={savingEntrada} className="bg-primary hover:bg-primary/90">
               {savingEntrada ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar
             </Button>
@@ -2430,7 +2430,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       <Dialog open={editMascotaDataOpen} onOpenChange={setEditMascotaDataOpen}>
         <DialogContent className="sm:max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-base font-bold text-foreground">
               Datos de la mascota
             </DialogTitle>
           </DialogHeader>
@@ -2451,19 +2451,19 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 type="button"
                 onClick={() => fotoMascotaInputRef.current?.click()}
                 disabled={subiendoFotoMascota}
-                className="relative h-16 w-16 shrink-0 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-800 hover:border-emerald-500 transition-colors"
+                className="relative h-16 w-16 shrink-0 rounded-lg border-2 border-dashed border-input overflow-hidden flex items-center justify-center bg-muted/50 hover:border-primary transition-colors"
                 title="Cambiar foto"
               >
                 {subiendoFotoMascota ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : editMascotaDataTarget?.fotoUrl ? (
                   <img src={editMascotaDataTarget.fotoUrl} alt="Foto de la mascota" className="h-full w-full object-cover" />
                 ) : (
-                  <Camera className="h-5 w-5 text-slate-400" />
+                  <Camera className="h-5 w-5 text-muted-foreground" />
                 )}
               </button>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                <p className="font-medium text-slate-700 dark:text-slate-300">Foto</p>
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground/80">Foto</p>
                 <p>Se recorta cuadrada para la libreta.</p>
               </div>
             </div>
@@ -2574,7 +2574,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditMascotaDataOpen(false)}>Cancelar</Button>
-            <Button onClick={saveMascotaData} disabled={savingMascotaData} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={saveMascotaData} disabled={savingMascotaData} className="bg-primary hover:bg-primary/90">
               {savingMascotaData ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar
             </Button>
@@ -2592,10 +2592,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         }}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Syringe className="h-4 w-4 text-emerald-600" /> Vacunas, medicamentos, servicios y desparasitación
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Syringe className="h-4 w-4 text-primary" /> Vacunas, medicamentos, servicios y desparasitación
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               {addAplicacionMascota ? `${addAplicacionMascota.cliente.nombre} – ${addAplicacionMascota.mascota.nombre}` : ""}
             </DialogDescription>
           </DialogHeader>
@@ -2619,15 +2619,15 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 onChange={(e) => setFechaAplicacion(e.target.value)}
                 className="mt-1 h-9"
               />
-              <p className="mt-1 text-[11px] text-slate-400">Vacuna/medicamento/desparasitación quedan como una sola nota en la historia clínica. Servicio solo se cobra (su historia la crea el cobro en Vender).</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Vacuna/medicamento/desparasitación quedan como una sola nota en la historia clínica. Servicio solo se cobra (su historia la crea el cobro en Vender).</p>
             </div>
             {itemsAplicacion.map((item, i) => (
-              <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2.5 relative">
+              <div key={i} className="rounded-xl border border-border p-3 space-y-2.5 relative">
                 {itemsAplicacion.length > 1 && (
                   <button aria-label="Quitar"
                     type="button"
                     onClick={() => quitarItemAplicacion(i)}
-                    className="absolute top-2 right-2 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-600"
+                    className="absolute top-2 right-2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-red-600"
                     title="Quitar"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -2667,22 +2667,22 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                       placeholder="Buscar en productos (ej: Triple Felina)…"
                     />
                     {item.resultados.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-40 overflow-y-auto">
+                      <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-40 overflow-y-auto">
                         {item.resultados.map((prod) => (
                           <button
                             key={prod.id}
                             type="button"
                             onClick={() => elegirProductoAplicacion(i, prod)}
-                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
                           >
                             <span>{prod.nombre}</span>
-                            <span className="text-xs text-slate-400">{formatCurrency(prod.precio)}</span>
+                            <span className="text-xs text-muted-foreground">{formatCurrency(prod.precio)}</span>
                           </button>
                         ))}
                       </div>
                     )}
                     {!item.productoId && item.busqueda.trim().length >= 2 && item.resultados.length === 0 && (
-                      <p className="mt-1 text-[11px] text-slate-400">Sin coincidencias en productos: se guarda como texto libre (no se puede cobrar en Vender sin un producto del catálogo).</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">Sin coincidencias en productos: se guarda como texto libre (no se puede cobrar en Vender sin un producto del catálogo).</p>
                     )}
                   </div>
                 )}
@@ -2729,8 +2729,8 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             </Button>
 
             {/* Extras: productos sueltos (alimento, artículos) que no son un dato médico, solo se cobran */}
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-              <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Extras (alimento, artículos)</Label>
+            <div className="pt-2 border-t border-border">
+              <Label className="text-xs font-semibold text-muted-foreground">Extras (alimento, artículos)</Label>
               <div className="space-y-2 mt-2">
                 {itemsExtra.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -2742,16 +2742,16 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         placeholder="Buscar producto…"
                       />
                       {item.resultados.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-40 overflow-y-auto">
+                        <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-40 overflow-y-auto">
                           {item.resultados.map((prod) => (
                             <button
                               key={prod.id}
                               type="button"
                               onClick={() => elegirProductoExtra(i, prod)}
-                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
                             >
                               <span>{prod.nombre}</span>
-                              <span className="text-xs text-slate-400">{formatCurrency(prod.precio)}</span>
+                              <span className="text-xs text-muted-foreground">{formatCurrency(prod.precio)}</span>
                             </button>
                           ))}
                         </div>
@@ -2768,7 +2768,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         placeholder={item.producto?.unidad === "kg" ? "Kg" : "Cant."}
                       />
                       {item.producto && (
-                        <p className="mt-0.5 text-[11px] text-slate-400 text-center">
+                        <p className="mt-0.5 text-[11px] text-muted-foreground text-center">
                           {item.producto.unidad === "kg" ? "kg" : "un."} · {formatCurrency(item.producto.precio)}{item.producto.unidad === "kg" ? "/kg" : ""}
                         </p>
                       )}
@@ -2776,7 +2776,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     <button aria-label="Quitar"
                       type="button"
                       onClick={() => quitarItemExtra(i)}
-                      className="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-600 shrink-0"
+                      className="p-2 rounded hover:bg-muted text-muted-foreground hover:text-red-600 shrink-0"
                       title="Quitar"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -2790,29 +2790,29 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             </div>
 
             {/* Carrito: lo que se va a cobrar por esto, con descuento y medio de pago — igual que en Vender */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
-                <ShoppingCart className="h-3.5 w-3.5 text-slate-500" />
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Carrito</span>
+            <div className="rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/50 border-b border-border">
+                <ShoppingCart className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground">Carrito</span>
               </div>
               {errorPreview ? (
                 <p className="px-3 py-3 text-xs text-red-600">{errorPreview}</p>
               ) : lineasPreview.length === 0 ? (
-                <p className="px-3 py-3 text-xs text-slate-400">Elegí un producto con precio, un servicio o un extra para poder cobrar.</p>
+                <p className="px-3 py-3 text-xs text-muted-foreground">Elegí un producto con precio, un servicio o un extra para poder cobrar.</p>
               ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="divide-y divide-border">
                   {lineasPreview.map((linea) => (
                     <div key={linea.id} className="flex items-center justify-between px-3 py-1.5 text-sm">
-                      <span className="text-slate-700 dark:text-slate-300 truncate">
+                      <span className="text-foreground/80 truncate">
                         {linea.producto.nombre}{linea.cantidad !== 1 ? ` × ${linea.cantidad}` : ""}
                       </span>
-                      <span className="text-slate-600 dark:text-slate-400 shrink-0 ml-2">{formatCurrency(subtotalLinea(linea))}</span>
+                      <span className="text-muted-foreground shrink-0 ml-2">{formatCurrency(subtotalLinea(linea))}</span>
                     </div>
                   ))}
                 </div>
               )}
-              <div className="p-3 space-y-2 bg-slate-50/60 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div className="p-3 space-y-2 bg-muted/40 border-t border-border">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Subtotal</span>
                   <span>{formatCurrency(totalesPreview.subtotal)}</span>
                 </div>
@@ -2850,9 +2850,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
-                  <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Total</span>
-                  <span className="text-base font-bold text-emerald-800 dark:text-emerald-300">{formatCurrency(totalesPreview.total)}</span>
+                <div className="flex items-center justify-between pt-1 border-t border-border">
+                  <span className="text-sm font-semibold text-primary">Total</span>
+                  <span className="text-base font-bold text-primary">{formatCurrency(totalesPreview.total)}</span>
                 </div>
               </div>
             </div>
@@ -2863,7 +2863,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
               {savingAplicacion ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar sin cobrar
             </Button>
-            <Button onClick={cobrarAplicacion} disabled={savingAplicacion || cobrandoAplicacion || lineasPreview.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={cobrarAplicacion} disabled={savingAplicacion || cobrandoAplicacion || lineasPreview.length === 0} className="bg-primary hover:bg-primary/90">
               {cobrandoAplicacion ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Cobrar ahora
             </Button>
@@ -2918,7 +2918,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             <div>
               <Label className="text-xs">Vista previa</Label>
               {previewOrdenUrl ? (
-                <iframe src={previewOrdenUrl} title="Vista previa de la orden" className="mt-1 w-full h-[550px] border rounded bg-white" />
+                <iframe src={previewOrdenUrl} title="Vista previa de la orden" className="mt-1 w-full h-[550px] border rounded bg-card" />
               ) : (
                 <div className="mt-1 w-full h-[550px] border rounded flex items-center justify-center text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" /> Generando vista previa…
@@ -2946,10 +2946,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-base font-bold text-foreground">
               Nueva entrada
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               {addNotaMascota ? `${addNotaMascota.cliente.nombre} – ${addNotaMascota.mascota.nombre}` : ""}
             </DialogDescription>
           </DialogHeader>
@@ -3005,7 +3005,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   placeholder="Notas adicionales (opcional)"
                 />
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+              <div className="flex items-center gap-2 rounded-lg border border-border p-2.5">
                 <Checkbox
                   id="nota-visible-cliente"
                   checked={!formNota.esPrivada}
@@ -3022,9 +3022,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   Adjuntos
                 </Label>
                 <div className="mt-1.5 space-y-2">
-                  <label className="flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-600 cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/30">
-                    <Upload className="h-4 w-4 text-slate-400" />
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <label className="flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-input hover:border-primary cursor-pointer transition-colors bg-muted/50">
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
                       Arrastrá o hacé click para adjuntar fotos, videos o PDFs
                     </span>
                     <input
@@ -3046,10 +3046,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                         const isVideo = file.type.startsWith("video/");
                         const FileIcon = isImage ? Image : isVideo ? Film : File;
                         return (
-                          <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">
-                            <FileIcon className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                            <span className="flex-1 truncate text-slate-700 dark:text-slate-300">{file.name}</span>
-                            <span className="text-slate-400 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                          <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-muted text-xs">
+                            <FileIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="flex-1 truncate text-foreground/80">{file.name}</span>
+                            <span className="text-muted-foreground shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
                             <button aria-label={`Quitar ${file.name}`}
                               type="button"
                               onClick={() => setArchivosNota((prev) => prev.filter((_, i) => i !== idx))}
@@ -3067,7 +3067,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" size="sm" onClick={() => setAddNotaOpen(false)}>Cancelar</Button>
-            <Button size="sm" onClick={saveNota} disabled={savingNota} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button size="sm" onClick={saveNota} disabled={savingNota} className="bg-primary hover:bg-primary/90">
               {savingNota ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               {uploadingArchivos ? "Subiendo archivos..." : "Guardar nota"}
             </Button>
@@ -3085,10 +3085,10 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-1.5">
               <Paperclip className="h-4 w-4" /> Subir archivo adjunto
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-600 dark:text-slate-400">
+            <DialogDescription className="text-xs text-muted-foreground">
               {addArchivoMascota ? `${addArchivoMascota.cliente.nombre} – ${addArchivoMascota.mascota.nombre}` : ""}
             </DialogDescription>
           </DialogHeader>
@@ -3113,9 +3113,9 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
             </div>
             <div>
               <Label className="text-xs font-semibold">Archivo *</Label>
-              <label className="mt-1 flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-600 cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/30">
-                <Upload className="h-4 w-4 text-slate-400 shrink-0" />
-                <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
+              <label className="mt-1 flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-input hover:border-primary cursor-pointer transition-colors bg-muted/50">
+                <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground truncate flex-1">
                   {archivoFile ? archivoFile.name : "Elegí una imagen o un PDF"}
                 </span>
                 <input
@@ -3129,7 +3129,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setAddArchivoOpen(false)}>Cancelar</Button>
-            <Button size="sm" onClick={saveArchivo} disabled={savingArchivo} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button size="sm" onClick={saveArchivo} disabled={savingArchivo} className="bg-primary hover:bg-primary/90">
               {savingArchivo ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               {savingArchivo ? "Subiendo..." : "Guardar"}
             </Button>
