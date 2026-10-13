@@ -25,7 +25,18 @@
 > `border`; verde emerald e indigo/violeta de acento → `primary`/`accent`;
 > "completado" → `success`. Se mantienen a propósito: el color por métrica de las
 > tarjetas del Dashboard y el botón turquesa "Generar historia" del detalle de
-> turno. Pendiente: Fase 5 puntos 2–4.
+> turno.
+>
+> **Fase 5 hecha** (2026-10-12): títulos de `EncabezadoPagina` en Fraunces
+> (`font-display font-semibold`: la fuente se carga solo en 600); totales del
+> mostrador, remito, caja y gastos en `text-primary` con `tabular-nums` (el total
+> del carrito más grande); saldo deudor de cta. cte. en `text-destructive`;
+> esqueletos con la forma real en Turnos, Dashboard, Caja, Ventas e historiales
+> de ventas y cajas. **Plan completo.**
+>
+> Anotado para después (cambio de flujo, fuera de este plan): al cerrar la caja,
+> el "Esperado" se calcula recién al confirmar y el diálogo se cierra enseguida,
+> así que no llega a verse; la diferencia solo sale en el toast.
 >
 > Lo hecho en la Fase 1:
 > - `components/ui/ayuda.tsx` + `lib/ayuda/textos.ts`: 19 cartelitos en Caja, Vender,
