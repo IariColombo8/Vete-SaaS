@@ -30,11 +30,11 @@ export function EditTurnoModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3 sm:pb-4">
-          <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
+        <DialogHeader className="border-b border-border pb-3 sm:pb-4">
+          <DialogTitle className="text-base sm:text-lg lg:text-xl font-black text-foreground">
             Editar Turno
           </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+          <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
             Modifica la fecha y hora del turno
           </DialogDescription>
         </DialogHeader>
@@ -42,7 +42,7 @@ export function EditTurnoModal({
           <div className="space-y-1.5 sm:space-y-2">
             <Label
               htmlFor="edit-fecha"
-              className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300"
+              className="text-xs sm:text-sm font-bold text-foreground/80"
             >
               Fecha
             </Label>
@@ -53,13 +53,13 @@ export function EditTurnoModal({
               onChange={(e) =>
                 onEditDataChange({ ...editData, fecha: e.target.value })
               }
-              className="border-2 border-slate-300 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 font-semibold h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
+              className="border-2 border-input focus:border-ring font-semibold h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
             />
           </div>
           <div className="space-y-1.5 sm:space-y-2">
             <Label
               htmlFor="edit-hora"
-              className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300"
+              className="text-xs sm:text-sm font-bold text-foreground/80"
             >
               Hora
             </Label>
@@ -70,15 +70,15 @@ export function EditTurnoModal({
               onChange={(e) =>
                 onEditDataChange({ ...editData, hora: e.target.value })
               }
-              className="border-2 border-slate-300 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 font-semibold h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
+              className="border-2 border-input focus:border-ring font-semibold h-8 sm:h-9 lg:h-10 text-xs sm:text-sm"
             />
           </div>
         </div>
-        <DialogFooter className="flex gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-slate-200 dark:border-slate-800">
+        <DialogFooter className="flex gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-border">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="flex-1 border-2 border-slate-300 dark:border-slate-700 font-semibold h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+            className="flex-1 border-2 border-input font-semibold h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
           >
             Cancelar
           </Button>
@@ -86,7 +86,7 @@ export function EditTurnoModal({
             onClick={onSave}
             disabled={readOnly}
             title={readOnly ? "Reactivá tu cuenta para editar" : undefined}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
+            className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm"
           >
             Guardar
           </Button>
