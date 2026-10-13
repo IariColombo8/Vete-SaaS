@@ -36,17 +36,17 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
     <Card>
       <CardHeader className="pb-1.5 sm:pb-2 lg:pb-3">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className="p-1 sm:p-1.5 lg:p-2 rounded-md sm:rounded-lg bg-slate-700 dark:bg-slate-600 shadow-lg">
+          <div className="p-1 sm:p-1.5 lg:p-2 rounded-md sm:rounded-lg bg-primary shadow-lg">
             <Activity
               className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-white"
               strokeWidth={2.5}
             />
           </div>
           <div>
-            <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-slate-900 dark:text-white">
+            <CardTitle className="text-xs sm:text-sm lg:text-base font-bold text-foreground">
               Estadísticas
             </CardTitle>
-            <CardDescription className="text-xs text-slate-600 dark:text-slate-400">
+            <CardDescription className="text-xs text-muted-foreground">
               {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {
                 day: "numeric",
                 month: "short",
@@ -58,27 +58,27 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
       <CardContent className="space-y-1.5 sm:space-y-2 lg:space-y-3 p-2 sm:p-3 lg:p-4">
         <div className="space-y-1 sm:space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <span className="font-semibold text-foreground/80">
               Ocupación
             </span>
-            <span className="font-black text-xs sm:text-sm lg:text-base text-slate-900 dark:text-slate-100">
+            <span className="font-black text-xs sm:text-sm lg:text-base text-foreground">
               {ocupacion}%
             </span>
           </div>
-          <div className="h-1.5 sm:h-2 lg:h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+          <div className="h-1.5 sm:h-2 lg:h-2.5 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-slate-700 dark:bg-slate-600 transition-all duration-500 shadow-lg"
+              className="h-full rounded-full bg-primary transition-all duration-500 shadow-lg"
               style={{ width: `${ocupacion}%` }}
             />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {selectedDateTurnos.filter((t) => t.estado !== "cancelado").length} de {totalSlots}{" "}
             ocupados
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-          <div className="p-1.5 sm:p-2 lg:p-3 rounded-md sm:rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <div className="p-1.5 sm:p-2 lg:p-3 rounded-md sm:rounded-lg bg-muted border border-border">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <div className="p-0.5 sm:p-1 rounded-sm sm:rounded-md bg-amber-500 shadow-lg">
                 <Clock
@@ -87,29 +87,29 @@ export function StatsCard({ selectedDate, turnos }: StatsCardProps) {
                 />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Pendientes
                 </p>
-                <p className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-slate-100">
+                <p className="text-sm sm:text-base lg:text-lg font-black text-foreground">
                   {pendientes}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="p-1.5 sm:p-2 lg:p-3 rounded-md sm:rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <div className="p-1.5 sm:p-2 lg:p-3 rounded-md sm:rounded-lg bg-muted border border-border">
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="p-0.5 sm:p-1 rounded-sm sm:rounded-md bg-emerald-500 shadow-lg">
+              <div className="p-0.5 sm:p-1 rounded-sm sm:rounded-md bg-success shadow-lg">
                 <CheckCircle2
                   className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4 text-white"
                   strokeWidth={2.5}
                 />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Completados
                 </p>
-                <p className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-slate-100">
+                <p className="text-sm sm:text-base lg:text-lg font-black text-foreground">
                   {completados}
                 </p>
               </div>
