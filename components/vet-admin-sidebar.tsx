@@ -3,21 +3,24 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  Calendar, ExternalLink, FileText, Gift, HandCoins, LayoutDashboard, LogOut, Landmark, Package,
+  Calendar, ExternalLink, FileText, Gift, HandCoins, LayoutDashboard, Lock, LogOut, Landmark, Package,
   Receipt, Settings, ShoppingCart, Stethoscope, Store, Users, Wallet,
 } from "lucide-react"
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton,
   SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar"
 import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
 import type { UserRole } from "@/lib/supabase/queries"
+import { planAllows, type Feature } from "@/lib/plans"
 
 interface Props {
   slug: string
   vetNombre: string
   role: UserRole | null
+  /** Plan del tenant; con él se marcan las secciones que el plan no incluye. */
+  plan?: string
   onSalir: () => void
 }
 
@@ -26,6 +29,8 @@ interface ItemNav {
   label: string
   icon: React.ComponentType<{ className?: string }>
   section: AdminSection
+  /** Feature que exige la pantalla (la misma que usa su FeatureGate). */
+  feature?: Feature
 }
 
 /**
@@ -53,11 +58,11 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
       titulo: "Comercio",
       tour: "comercio",
       items: [
-        { href: `/${slug}/admin/Vender`,          label: "Vender",           icon: ShoppingCart, section: "pos" },
-        { href: `/${slug}/admin/Caja`,            label: "Caja",             icon: Wallet,       section: "caja" },
-        { href: `/${slug}/admin/Ventas`,          label: "Ventas",           icon: Receipt,      section: "ventas" },
-        { href: `/${slug}/admin/CuentaCorriente`, label: "Cuenta corriente", icon: Landmark,     section: "cuentaCorriente" },
-        { href: `/${slug}/admin/Productos`,       label: "Productos",        icon: Package,      section: "productos" },
+        { href: `/${slug}/admin/Vender`,          label: "Vender",           icon: ShoppingCart, section: "pos",             feature: "ventas" },
+        { href: `/${slug}/admin/Caja`,            label: "Caja",             icon: Wallet,       section: "caja",            feature: "ventas" },
+        { href: `/${slug}/admin/Ventas`,          label: "Ventas",           icon: Receipt,      section: "ventas",          feature: "ventas" },
+        { href: `/${slug}/admin/CuentaCorriente`, label: "Cuenta corriente", icon: Landmark,     section: "cuentaCorriente", feature: "ventas" },
+        { href: `/${slug}/admin/Productos`,       label: "Productos",        icon: Package,      section: "productos",       feature: "productos" },
       ],
     },
     {
@@ -65,21 +70,21 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
       tour: "online",
       items: [
         { href: `/${slug}/admin/TiendaVirtual`, label: "Tienda virtual",   icon: Store, section: "tiendaVirtual" },
-        { href: `/${slug}/admin/PromosSorteos`, label: "Promos y sorteos", icon: Gift,  section: "promosSorteos" },
+        { href: `/${slug}/admin/PromosSorteos`, label: "Promos y sorteos", icon: Gift,  section: "promosSorteos", feature: "promosSorteos" },
       ],
     },
     {
       titulo: "Administración",
       tour: "administracion",
       items: [
-        { href: `/${slug}/admin/Gastos`,        label: "Gastos",        icon: HandCoins, section: "gastos" },
+        { href: `/${slug}/admin/Gastos`,        label: "Gastos",        icon: HandCoins, section: "gastos",        feature: "ventas" },
         { href: `/${slug}/admin/Configuracion`, label: "Configuración", icon: Settings,  section: "configuracion" },
       ],
     },
   ]
 }
 
-export function VetAdminSidebar({ slug, vetNombre, role, onSalir }: Props) {
+export function VetAdminSidebar({ slug, vetNombre, role, plan, onSalir }: Props) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
 
@@ -128,22 +133,36 @@ export function VetAdminSidebar({ slug, vetNombre, role, onSalir }: Props) {
             <SidebarGroupLabel>{grupo.titulo}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {grupo.items.map(({ href, label, icon: Icon }) => {
+                {grupo.items.map(({ href, label, icon: Icon, feature }) => {
                   const activo = pathname === href || pathname.startsWith(href + "/")
+                  // La sección sigue siendo navegable (su FeatureGate explica
+                  // qué incluye y lleva a los planes); el candado avisa antes
+                  // de entrar, para que no parezca un link roto.
+                  // Mismo criterio que FeatureGate: sin plan se toma Básico.
+                  const bloqueada = !!feature && !planAllows(plan, feature)
                   return (
                     <SidebarMenuItem key={href}>
                       {/* `tooltip` es lo que hace usable el modo colapsado:
                           con solo el icono a la vista, el nombre aparece al pasar. */}
-                      <SidebarMenuButton asChild isActive={activo} tooltip={label}>
+                      <SidebarMenuButton asChild isActive={activo} tooltip={bloqueada ? `${label} · Plan Pro` : label}>
                         <Link href={href} onClick={cerrarEnMobile}>
                           <Icon
                             className={
                               activo ? "text-sidebar-primary" : undefined
                             }
                           />
-                          <span>{label}</span>
+                          <span className={bloqueada ? "text-sidebar-foreground/60" : undefined}>{label}</span>
                         </Link>
                       </SidebarMenuButton>
+                      {bloqueada && (
+                        <SidebarMenuBadge
+                          className="gap-0.5 bg-warning-soft text-warning-soft-foreground"
+                          aria-label="Disponible en el plan Pro"
+                        >
+                          <Lock className="h-2.5 w-2.5" />
+                          Pro
+                        </SidebarMenuBadge>
+                      )}
                     </SidebarMenuItem>
                   )
                 })}

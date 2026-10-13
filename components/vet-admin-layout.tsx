@@ -70,6 +70,7 @@ export function VetAdminLayout({ slug, children }: Props) {
   const pathname = usePathname()
   const [checking, setChecking] = useState(true)
   const [vetNombre, setVetNombre] = useState<string>("")
+  const [plan, setPlan] = useState<string | undefined>(undefined)
   const [trialVencido, setTrialVencido] = useState(false)
   const [motivoBloqueo, setMotivoBloqueo] = useState<"trial" | "suscripcion">("trial")
   const [role, setRole] = useState<UserRole | null>(null)
@@ -93,6 +94,7 @@ export function VetAdminLayout({ slug, children }: Props) {
       if (!isOwner) { router.push("/"); return }
       setRole(userRole)
       setVetNombre(config?.nombre || slug)
+      setPlan(config?.plan)
       setTrialVencido(getTrialStatus(config ?? {}).vencido)
       // Sin suscripción activa el servidor deja `trial_expires_at` en el pasado:
       // el aviso tiene que decir "suscripción" y no "prueba" en ese caso.
@@ -136,6 +138,7 @@ export function VetAdminLayout({ slug, children }: Props) {
           slug={slug}
           vetNombre={vetNombre}
           role={role}
+          plan={plan}
           onSalir={async () => {
             await signOut()
             router.push("/")
