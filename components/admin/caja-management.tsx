@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  Banknote, CreditCard, History, Loader2, Receipt, Repeat, Split, UserRound, Wallet,
+  Banknote, CreditCard, History, Receipt, Repeat, Split, UserRound, Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +22,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import { MEDIOS_PAGO, type Caja, type MedioPago, type Venta } from "@/lib/supabase/types"
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Props {
   tenantId: string
@@ -145,8 +146,10 @@ export function CajaManagement({ tenantId }: Props) {
       <CajaBar tenantId={tenantId} caja={caja} onCambio={cargar} />
 
       {cargando ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-busy="true" aria-label="Cargando caja">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[96px] rounded-xl" />
+          ))}
         </div>
       ) : caja && resumen ? (
         <div data-tour="caja-resumen" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,7 +250,7 @@ function Tarjeta({
   destacada?: boolean
 }) {
   return (
-    <Card className={destacada ? "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20" : undefined}>
+    <Card className={destacada ? "border-primary/40 bg-accent/50" : undefined}>
       <CardContent className="p-4">
         <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
           {icono} {titulo}
@@ -255,7 +258,7 @@ function Tarjeta({
         </div>
         <p
           className={`text-2xl font-bold tabular-nums ${
-            destacada ? "text-emerald-600 dark:text-emerald-400" : ""
+            destacada ? "text-primary" : ""
           }`}
         >
           {valor}

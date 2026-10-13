@@ -51,7 +51,7 @@ export function TablaSaldos({ clientes, cargando, onVerDetalle }: Props) {
             <TableCell className="text-sm text-muted-foreground">{c.telefono || "—"}</TableCell>
             <TableCell className="text-right">
               {c.saldo > 0 ? (
-                <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                <span className="font-semibold tabular-nums text-destructive">
                   {formatCurrency(c.saldo)}
                 </span>
               ) : (

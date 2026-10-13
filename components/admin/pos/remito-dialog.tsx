@@ -97,7 +97,7 @@ export function RemitoDialog({ venta, emisor, onCerrar, tenantId, facturacion }:
 
           <div className="flex justify-between border-t pt-1.5 text-base font-bold">
             <span>Total</span>
-            <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
+            <span className="tabular-nums text-primary">
               {formatCurrency(venta.total)}
             </span>
           </div>

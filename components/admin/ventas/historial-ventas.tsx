@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Ban, Download, Loader2, MessageCircle, Receipt } from "lucide-react"
+import { Ban, Download, MessageCircle, Receipt } from "lucide-react"
 import { EstadoVacio } from "@/components/admin/estado-vacio"
 import { toast } from "sonner"
 import {
@@ -22,6 +22,7 @@ import type { Comprobante, EstadoFacturacion } from "@/lib/supabase/comprobantes
 import { FacturarButton } from "@/components/admin/pos/facturar-button"
 import { COLOR_MEDIO_PAGO } from "./colores-medio-pago"
 import { EstadoBadge } from "@/components/admin/estado-badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Props {
   ventas: Venta[]
@@ -49,8 +50,10 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
 
   if (cargando) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-2 py-2" aria-busy="true" aria-label="Cargando ventas">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
       </div>
     )
   }

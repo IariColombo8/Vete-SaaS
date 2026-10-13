@@ -382,7 +382,7 @@ export function CarritoPanel({
           )}
           <div className="flex items-baseline justify-between pt-1">
             <span className="font-semibold">Total</span>
-            <span className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <span className="text-3xl font-bold tabular-nums text-primary">
               {formatCurrency(totalACobrar)}
             </span>
           </div>

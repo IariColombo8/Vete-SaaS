@@ -530,12 +530,12 @@ function Tarjeta({
   destacada?: boolean
 }) {
   return (
-    <Card className={destacada ? "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20" : undefined}>
+    <Card className={destacada ? "border-primary/40 bg-accent/50" : undefined}>
       <CardContent className="p-4">
         <p className="mb-1 text-xs text-muted-foreground">{titulo}</p>
         <p
           className={`text-2xl font-bold tabular-nums ${
-            destacada ? "text-emerald-600 dark:text-emerald-400" : ""
+            destacada ? "text-primary" : ""
           }`}
         >
           {formatCurrency(valor)}

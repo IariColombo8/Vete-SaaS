@@ -54,6 +54,7 @@ import {
   Sparkles,
   ExternalLink,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardChartsProps {
   tenantId: string;
@@ -113,10 +114,15 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="relative">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-primary" />
-          <div className="absolute inset-0 h-16 w-16 animate-ping rounded-full border-4 border-primary opacity-20" />
+      <div className="space-y-6" aria-busy="true" aria-label="Cargando métricas">
+        <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[150px] rounded-xl" />
+          ))}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <Skeleton className="h-[320px] rounded-xl lg:col-span-8" />
+          <Skeleton className="h-[320px] rounded-xl lg:col-span-4" />
         </div>
       </div>
     );

@@ -41,6 +41,7 @@ import { NextAppointmentCard } from "./NextAppointmentCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReadOnly } from "@/lib/auth/read-only-context";
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TurnosManagementProps {
   tenantId: string;
@@ -185,10 +186,16 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="relative">
-          <div className="h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-spin rounded-full border-2 sm:border-4 border-border border-t-primary" />
-          <div className="absolute inset-0 h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 animate-ping rounded-full border-2 sm:border-4 border-primary opacity-20" />
+      <div className="space-y-4" aria-busy="true" aria-label="Cargando turnos">
+        <Skeleton className="h-[76px] w-full rounded-xl" />
+        <div className="grid gap-4 lg:grid-cols-12">
+          <Skeleton className="h-[420px] rounded-xl lg:col-span-4" />
+          <div className="space-y-3 lg:col-span-8">
+            <Skeleton className="h-9 w-56" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
+            ))}
+          </div>
         </div>
       </div>
     );

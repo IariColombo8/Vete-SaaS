@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, LayoutDashboard, List, Loader2, Receipt, ShoppingBag, TrendingUp, Wallet } from "lucide-react"
+import { ChevronLeft, ChevronRight, LayoutDashboard, List, Receipt, ShoppingBag, TrendingUp, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/format"
 import type { EmisorRemito } from "@/lib/ventas/remito"
 import { MEDIOS_PAGO, type MedioPago, type Venta } from "@/lib/supabase/types"
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Props {
   tenantId: string
@@ -332,7 +333,7 @@ function Tarjeta({
         <div>
           <p className="mb-1 text-sm text-muted-foreground">{titulo}</p>
           {cargando ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Skeleton className="mt-1 h-8 w-28" />
           ) : (
             <p className="text-2xl font-bold tabular-nums">{valor}</p>
           )}

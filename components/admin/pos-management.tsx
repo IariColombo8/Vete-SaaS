@@ -437,7 +437,7 @@ export function PosManagement({ tenantId }: Props) {
       <Button
         onClick={() => setCarritoAbierto(true)}
         data-tour="pos-carrito"
-        className="fixed bottom-5 right-5 z-40 h-14 gap-2 rounded-full bg-emerald-600 px-5 shadow-lg hover:bg-emerald-700"
+        className="fixed bottom-5 right-5 z-40 h-14 gap-2 rounded-full px-5 text-base tabular-nums shadow-lg"
       >
         <ShoppingCart className="h-5 w-5" />
         {carrito.length > 0 ? (

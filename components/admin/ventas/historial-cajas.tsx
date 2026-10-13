@@ -13,6 +13,7 @@ import { descargarCajaPDF, type EmisorCaja } from "@/lib/ventas/caja-pdf"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { Caja } from "@/lib/supabase/types"
 import { EstadoBadge } from "@/components/admin/estado-badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Props {
   tenantId: string
@@ -41,8 +42,10 @@ export function HistorialCajas({ tenantId, cajas, cargando, emisor }: Props) {
 
   if (cargando) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-2 py-2" aria-busy="true" aria-label="Cargando cajas">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
       </div>
     )
   }
