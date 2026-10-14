@@ -206,9 +206,9 @@ export async function deleteTenant(tenantId: string): Promise<void> {
  * segundo falla.
  *
  * `trialDias`: si se pasa, el tenant queda con `trial_expires_at = now() +
- * trialDias` (ver `crear_veterinaria` en 011_trial_demo.sql). Si se pasa,
- * además se llama a `seed_demo_data` — falla silenciosa: si el seed no anda,
- * el registro no se aborta, el tenant ya existe con su admin asignado.
+ * trialDias` (ver `crear_veterinaria` en 011_trial_demo.sql). La veterinaria
+ * arranca vacía: ya no se cargan datos de ejemplo (`seed_demo_data`), porque
+ * quedaban mezclados con los reales y no había forma de borrarlos.
  *
  * Lanza Error("SLUG_TAKEN") si el slug ya está ocupado.
  */
@@ -245,12 +245,5 @@ export async function createTenant(
   }
   if (Object.keys(resto).length > 0) {
     await supabase.from("tenants").update(resto).eq("slug", tenantId)
-  }
-
-  if (trialDias != null) {
-    const { error: seedError } = await supabase.rpc("seed_demo_data", { p_tenant_id: tenantId })
-    if (seedError) {
-      console.error("No se pudo cargar la demo inicial:", seedError.message)
-    }
   }
 }

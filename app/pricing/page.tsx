@@ -49,7 +49,7 @@ const FEATURE_LABELS: { key: Feature; label: string }[] = [
 const FAQS: { q: string; a: string }[] = [
   {
     q: "¿Cómo funciona la prueba gratis?",
-    a: `Al registrarte tenés ${TRIAL_DIAS} días de plan Pro completo, sin tarjeta y con datos de ejemplo para probar. Cuando termina, elegís con qué plan seguir: Básico o Pro. No se cobra nada sin que lo confirmes.`,
+    a: `Al registrarte tenés ${TRIAL_DIAS} días de plan Pro completo, sin tarjeta. Cuando termina, elegís con qué plan seguir: Básico o Pro. No se cobra nada sin que lo confirmes.`,
   },
   {
     q: "¿Cómo se paga?",

@@ -431,7 +431,7 @@ export default function RegistroPage() {
                   ¡Listo! Tu veterinaria está creada
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Plan Pro activo por 10 días, con datos de ejemplo cargados —
+                  Plan Pro activo por 10 días —
                   redirigiendo a tu panel...
                 </p>
               </div>

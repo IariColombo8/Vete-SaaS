@@ -12,7 +12,7 @@ export interface PreguntaFrecuente {
 export const FAQS: PreguntaFrecuente[] = [
   {
     q: "¿Puedo probarlo gratis?",
-    a: "Sí. Al registrarte tenés 10 días del plan Pro completo, sin tarjeta y con datos de ejemplo. Cuando termina, elegís con qué plan seguir: Básico ($50.000/mes) o Pro ($80.000/mes). No se cobra nada sin que lo confirmes.",
+    a: "Sí. Al registrarte tenés 10 días del plan Pro completo, sin tarjeta. Cuando termina, elegís con qué plan seguir: Básico ($50.000/mes) o Pro ($80.000/mes). No se cobra nada sin que lo confirmes.",
   },
   {
     q: "¿Necesito instalar algo o saber de tecnología?",
