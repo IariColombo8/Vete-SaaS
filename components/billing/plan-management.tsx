@@ -20,9 +20,9 @@ import { PLANS, PLAN_LIST, formatPrecioPlan, getTrialStatus, type PlanId } from 
 import {
   cancelarSuscripcion,
   getEstadoBilling,
-  iniciarCheckout,
   type EstadoBilling,
 } from "@/components/billing/use-billing"
+import { CheckoutDialog } from "@/components/billing/checkout-dialog"
 
 interface Props {
   tenantId: string
@@ -52,6 +52,7 @@ export function PlanManagement({ tenantId }: Props) {
   const [errorCarga, setErrorCarga] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<PlanId | "cancelar" | "sync" | null>(null)
   const [confirmar, setConfirmar] = useState<"cancelar" | PlanId | null>(null)
+  const [planCheckout, setPlanCheckout] = useState<PlanId | null>(null)
 
   const cargar = useCallback(
     async (sync = false) => {
@@ -77,18 +78,9 @@ export function PlanManagement({ tenantId }: Props) {
     cargar()
   }, [cargar])
 
-  async function contratar(plan: PlanId) {
-    setOcupado(plan)
-    try {
-      window.location.href = await iniciarCheckout(tenantId, plan)
-    } catch (error) {
-      toast({
-        title: "No se pudo iniciar el pago",
-        description: error instanceof Error ? error.message : undefined,
-        variant: "destructive",
-      })
-      setOcupado(null)
-    }
+  // El checkout pasa por `CheckoutDialog`, que pide el email de Mercado Pago.
+  function contratar(plan: PlanId) {
+    setPlanCheckout(plan)
   }
 
   async function cancelar() {
@@ -318,6 +310,8 @@ export function PlanManagement({ tenantId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CheckoutDialog tenantId={tenantId} plan={planCheckout} onClose={() => setPlanCheckout(null)} />
     </div>
   )
 }

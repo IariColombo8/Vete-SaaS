@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     )
   }
 
-  let payload: { tenantId?: string; planId?: string }
+  let payload: { tenantId?: string; planId?: string; payerEmail?: string }
   try {
     payload = await request.json()
   } catch {
@@ -73,7 +73,13 @@ export async function POST(request: Request) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.vetpanel.com.ar"
-  const payerEmail = auth.email || (tenant.email as string | null) || ""
+  // MP solo deja pagar a la cuenta cuyo email coincide con `payer_email`, y el
+  // de Mercado Pago muchas veces no es el del login: lo elige el dueño.
+  const emailElegido = payload.payerEmail?.trim() ?? ""
+  if (emailElegido && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailElegido)) {
+    return NextResponse.json({ ok: false, error: "El email de Mercado Pago no es válido" }, { status: 400 })
+  }
+  const payerEmail = emailElegido || auth.email || (tenant.email as string | null) || ""
   if (!payerEmail) {
     return NextResponse.json({ ok: false, error: "Tu cuenta no tiene email" }, { status: 400 })
   }

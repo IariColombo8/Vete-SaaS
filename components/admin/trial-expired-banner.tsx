@@ -2,11 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, Loader2, MessageCircle } from "lucide-react"
+import { AlertTriangle, MessageCircle } from "lucide-react"
 import { SERVITEC } from "@/lib/marca"
 import { formatPrecioPlan, type PlanId } from "@/lib/plans"
-import { useToast } from "@/hooks/use-toast"
-import { iniciarCheckout } from "@/components/billing/use-billing"
+import { CheckoutDialog } from "@/components/billing/checkout-dialog"
 
 const WHATSAPP_SERVITEC = "https://wa.me/5493442646670"
 
@@ -24,22 +23,7 @@ interface Props {
  * Antes mandaba a hablar con ServiTec por WhatsApp; eso queda como ayuda.
  */
 export function TrialExpiredBanner({ tenantId, puedeGestionar, motivo }: Props) {
-  const { toast } = useToast()
-  const [ocupado, setOcupado] = useState<PlanId | null>(null)
-
-  async function suscribirse(plan: PlanId) {
-    setOcupado(plan)
-    try {
-      window.location.href = await iniciarCheckout(tenantId, plan)
-    } catch (error) {
-      toast({
-        title: "No se pudo iniciar el pago",
-        description: error instanceof Error ? error.message : "Intentá más tarde.",
-        variant: "destructive",
-      })
-      setOcupado(null)
-    }
-  }
+  const [planElegido, setPlanElegido] = useState<PlanId | null>(null)
 
   const titulo =
     motivo === "trial"
@@ -65,20 +49,16 @@ export function TrialExpiredBanner({ tenantId, puedeGestionar, motivo }: Props) 
           <>
             <button
               type="button"
-              onClick={() => suscribirse("pro")}
-              disabled={ocupado !== null}
-              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              onClick={() => setPlanElegido("pro")}
+              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
             >
-              {ocupado === "pro" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Contratar Pro
             </button>
             <button
               type="button"
-              onClick={() => suscribirse("basico")}
-              disabled={ocupado !== null}
-              className="inline-flex items-center gap-1.5 rounded-md border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60 dark:text-amber-300 dark:hover:bg-amber-900/40"
+              onClick={() => setPlanElegido("basico")}
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40"
             >
-              {ocupado === "basico" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Contratar Básico
             </button>
             <Link
@@ -100,6 +80,8 @@ export function TrialExpiredBanner({ tenantId, puedeGestionar, motivo }: Props) 
           Ayuda
         </a>
       </div>
+
+      <CheckoutDialog tenantId={tenantId} plan={planElegido} onClose={() => setPlanElegido(null)} />
     </div>
   )
 }

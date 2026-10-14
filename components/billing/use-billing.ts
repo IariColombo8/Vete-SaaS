@@ -41,13 +41,16 @@ export async function getEstadoBilling(tenantId: string, sync = false): Promise<
   return json as EstadoBilling
 }
 
-/** Crea la suscripción al plan y devuelve la URL de pago de Mercado Pago. */
-export async function iniciarCheckout(tenantId: string, planId: PlanId): Promise<string> {
+/**
+ * Crea la suscripción al plan y devuelve la URL de pago de Mercado Pago.
+ * `payerEmail` es el de la cuenta de MP que va a pagar (ver `CheckoutDialog`).
+ */
+export async function iniciarCheckout(tenantId: string, planId: PlanId, payerEmail: string): Promise<string> {
   const headers = await authHeaders()
   const res = await fetch("/api/billing/checkout", {
     method: "POST",
     headers,
-    body: JSON.stringify({ tenantId, planId }),
+    body: JSON.stringify({ tenantId, planId, payerEmail }),
   })
   const json = await res.json()
   if (!json?.ok || !json.initPoint) throw new Error(json?.error || "No se pudo iniciar el pago")
