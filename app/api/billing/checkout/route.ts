@@ -18,6 +18,22 @@ import { getPlan, normalizePlan } from "@/lib/plans"
  * momento `aplicarEstadoPreapproval` cancela la vieja. Sin vigente, el
  * pendiente pasa a ser el id principal.
  */
+/**
+ * Monto reducido para probar el cobro real de punta a punta sin pagar el plan
+ * completo. Solo con `BILLING_PRECIO_PRUEBA` cargado y para los emails de
+ * `BILLING_PRUEBA_EMAILS` (separados por coma); al resto se le cobra el precio
+ * del plan. Sacar las dos variables cuando termine la prueba.
+ */
+function precioDePrueba(email: string): number | null {
+  const precio = Number(process.env.BILLING_PRECIO_PRUEBA)
+  if (!Number.isFinite(precio) || precio <= 0 || !email) return null
+  const emails = (process.env.BILLING_PRUEBA_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  return emails.includes(email.toLowerCase()) ? precio : null
+}
+
 export async function POST(request: Request) {
   if (!isMercadoPagoConfigured()) {
     return NextResponse.json(
@@ -62,12 +78,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Tu cuenta no tiene email" }, { status: 400 })
   }
 
+  const monto = precioDePrueba(auth.email) ?? plan.precioMensual
+
   try {
     const suscripcion = await crearSuscripcion({
       tenantId,
       planId,
       planNombre: plan.nombre,
-      montoMensual: plan.precioMensual,
+      montoMensual: monto,
       payerEmail,
       backUrl: `${appUrl}/${tenantId}/admin/Dashboard?billing=ok`,
     })
@@ -87,7 +105,7 @@ export async function POST(request: Request) {
       origen: "checkout",
       tipo: "pending",
       preapproval_id: suscripcion.id,
-      detalle: { usuario: auth.userId, plan: planId, monto: plan.precioMensual, cambioDePlan: suscripcionActiva },
+      detalle: { usuario: auth.userId, plan: planId, monto, cambioDePlan: suscripcionActiva },
     })
 
     return NextResponse.json({ ok: true, initPoint: suscripcion.initPoint, id: suscripcion.id })
