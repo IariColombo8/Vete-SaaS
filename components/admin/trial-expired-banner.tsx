@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, MessageCircle } from "lucide-react"
 import { SERVITEC } from "@/lib/marca"
-import { formatPrecioPlan, type PlanId } from "@/lib/plans"
+import { PLAN_RECOMENDADO, formatPesos, getPlanList, type PlanId } from "@/lib/plans"
 import { CheckoutDialog } from "@/components/billing/checkout-dialog"
 
 const WHATSAPP_SERVITEC = "https://wa.me/5493442646670"
@@ -19,11 +19,16 @@ interface Props {
 
 /**
  * Aviso de panel en solo lectura: la prueba terminó o la suscripción se
- * cortó. El dueño contrata acá mismo Básico o Pro (checkout de Mercado Pago).
+ * cortó. El dueño contrata acá mismo un plan (checkout de Mercado Pago).
  * Antes mandaba a hablar con ServiTec por WhatsApp; eso queda como ayuda.
  */
 export function TrialExpiredBanner({ tenantId, puedeGestionar, motivo }: Props) {
   const [planElegido, setPlanElegido] = useState<PlanId | null>(null)
+  // El layout del panel ya leyó la config, y con ella el catálogo de planes.
+  const planes = [...getPlanList()].sort(
+    (a, b) => Number(b.id === PLAN_RECOMENDADO) - Number(a.id === PLAN_RECOMENDADO),
+  )
+  const opciones = planes.map((p) => `${p.nombre} ${formatPesos(p.precioMensual)}/mes`).join(", ")
 
   const titulo =
     motivo === "trial"
@@ -38,7 +43,7 @@ export function TrialExpiredBanner({ tenantId, puedeGestionar, motivo }: Props) 
           <p className="font-medium">{titulo}</p>
           <p className="text-xs opacity-80">
             {puedeGestionar
-              ? `Elegí un plan para seguir operando: Básico ${formatPrecioPlan("basico")}/mes o Pro ${formatPrecioPlan("pro")}/mes. Tus datos están guardados y no se tocan.`
+              ? `Elegí un plan para seguir operando (${opciones}). Tus datos están guardados y no se tocan.`
               : "Pedile al dueño de la veterinaria que contrate un plan desde Configuración → Plan."}
           </p>
         </div>
@@ -47,20 +52,20 @@ export function TrialExpiredBanner({ tenantId, puedeGestionar, motivo }: Props) 
       <div className="flex flex-wrap gap-2">
         {puedeGestionar && (
           <>
-            <button
-              type="button"
-              onClick={() => setPlanElegido("pro")}
-              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-            >
-              Contratar Pro
-            </button>
-            <button
-              type="button"
-              onClick={() => setPlanElegido("basico")}
-              className="inline-flex items-center gap-1.5 rounded-md border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40"
-            >
-              Contratar Básico
-            </button>
+            {planes.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPlanElegido(p.id)}
+                className={
+                  p.id === PLAN_RECOMENDADO
+                    ? "inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                    : "inline-flex items-center gap-1.5 rounded-md border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40"
+                }
+              >
+                Contratar {p.nombre}
+              </button>
+            ))}
             <Link
               href={`/${tenantId}/admin/Configuracion?tab=plan`}
               className="inline-flex items-center rounded-md px-2 py-1.5 text-xs font-medium underline-offset-2 hover:underline"

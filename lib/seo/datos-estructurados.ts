@@ -1,6 +1,6 @@
 import { FAQS } from "@/lib/landing/faqs"
 import { SERVITEC } from "@/lib/marca"
-import { PLAN_LIST, TRIAL_DIAS } from "@/lib/plans"
+import { PLAN_RECOMENDADO, TRIAL_DIAS, getPlanList, type PlanDefinition } from "@/lib/plans"
 import { APP_URL, SITIO } from "./sitio"
 
 /**
@@ -11,8 +11,9 @@ import { APP_URL, SITIO } from "./sitio"
  * de opiniones reales y verificables, y publicarlas sin eso puede costar una
  * penalización manual.
  *
- * Los precios salen de `lib/plans.ts`, el mismo catálogo que ven la landing,
- * /pricing y el panel: no pueden desincronizarse.
+ * Los precios salen del catálogo de planes (tabla `planes`), el mismo que ven
+ * la landing, /pricing y el panel: no pueden desincronizarse. Las páginas lo
+ * cargan antes con `cargarPlanesServidor` y lo pasan.
  */
 
 function organizacion() {
@@ -32,8 +33,8 @@ function organizacion() {
 }
 
 /** Una `Offer` por plan, con precio mensual en ARS y la prueba gratis. */
-export function ofertasPlanes(): Record<string, unknown>[] {
-  return PLAN_LIST.map((plan) => ({
+export function ofertasPlanes(planes: PlanDefinition[] = getPlanList()): Record<string, unknown>[] {
+  return planes.map((plan) => ({
     "@type": "Offer",
     name: `Plan ${plan.nombre}`,
     description: plan.highlights.join(". "),
@@ -51,11 +52,11 @@ export function ofertasPlanes(): Record<string, unknown>[] {
     url: `${APP_URL}/pricing`,
     eligibleCustomerType: "https://schema.org/Business",
     // schema.org no tiene campo de "prueba gratis": va en la descripción.
-    ...(plan.id === "pro" ? { description: `${TRIAL_DIAS} días de prueba gratis sin tarjeta. ${plan.highlights.join(". ")}` } : {}),
+    ...(plan.id === PLAN_RECOMENDADO ? { description: `${TRIAL_DIAS} días de prueba gratis sin tarjeta. ${plan.highlights.join(". ")}` } : {}),
   }))
 }
 
-export function aplicacion(): Record<string, unknown> {
+export function aplicacion(planes?: PlanDefinition[]): Record<string, unknown> {
   return {
     "@type": "SoftwareApplication",
     "@id": `${APP_URL}/#aplicacion`,
@@ -77,11 +78,11 @@ export function aplicacion(): Record<string, unknown> {
       "Factura electrónica (ARCA)",
       "Cobro con Mercado Pago Point",
     ],
-    offers: ofertasPlanes(),
+    offers: ofertasPlanes(planes),
   }
 }
 
-export function datosEstructuradosLanding(): Record<string, unknown> {
+export function datosEstructuradosLanding(planes?: PlanDefinition[]): Record<string, unknown> {
   const org = organizacion()
 
   const sitioWeb = {
@@ -103,11 +104,14 @@ export function datosEstructuradosLanding(): Record<string, unknown> {
     })),
   }
 
-  return { "@context": "https://schema.org", "@graph": [org, sitioWeb, aplicacion(), preguntas] }
+  return { "@context": "https://schema.org", "@graph": [org, sitioWeb, aplicacion(planes), preguntas] }
 }
 
 /** JSON-LD de /pricing: la aplicación con sus ofertas y las FAQ de precios. */
-export function datosEstructuradosPricing(faqs: { q: string; a: string }[]): Record<string, unknown> {
+export function datosEstructuradosPricing(
+  faqs: { q: string; a: string }[],
+  planes?: PlanDefinition[],
+): Record<string, unknown> {
   const preguntas = {
     "@type": "FAQPage",
     "@id": `${APP_URL}/pricing#preguntas`,
@@ -126,7 +130,7 @@ export function datosEstructuradosPricing(faqs: { q: string; a: string }[]): Rec
     isPartOf: { "@id": `${APP_URL}/#sitio` },
     about: { "@id": `${APP_URL}/#aplicacion` },
   }
-  return { "@context": "https://schema.org", "@graph": [organizacion(), pagina, aplicacion(), preguntas] }
+  return { "@context": "https://schema.org", "@graph": [organizacion(), pagina, aplicacion(planes), preguntas] }
 }
 
 /**

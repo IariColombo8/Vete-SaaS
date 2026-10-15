@@ -2,28 +2,33 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { AlertTriangle, RefreshCw, Search, Shield } from "lucide-react"
+import { AlertTriangle, BarChart3, Layers, RefreshCw, Search, Shield, Stethoscope } from "lucide-react"
 import { getUsuarios, getTenantsFull, updateTenantConfig, deleteTenant, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TRIAL_DIAS, formatPesos, getPlan, getPlanList, type PlanDefinition, type PlanId } from "@/lib/plans"
+import { cargarPlanes } from "@/lib/supabase/planes"
+import { getFacturacionPlataforma } from "@/lib/supabase/superadmin"
+import { calcularIngresos, resumirIngresos, type EventoBilling, type SuscripcionTenant } from "@/lib/superadmin/ingresos"
+import { serieMensual, supuestosReales } from "@/lib/superadmin/metricas"
 import {
   filtrarTenants, filtrarUsuarios, resumenPlataforma,
-  type EstadoFiltro, type PlanFiltro, type RolFiltro,
+  type EstadoFiltro, type RolFiltro,
 } from "@/lib/superadmin/resumen"
 import { Indicadores } from "@/components/superadmin/indicadores"
 import { TablaVeterinarias } from "@/components/superadmin/tabla-veterinarias"
 import { TablaUsuarios } from "@/components/superadmin/tabla-usuarios"
-import { NOMBRE_PLAN } from "@/components/superadmin/etiquetas"
 import { ConfirmarAccionDialog, type AccionPendiente } from "@/components/superadmin/confirmar-accion-dialog"
+import { GestionPlanes } from "@/components/superadmin/gestion-planes"
+import { MetricasPlataforma } from "@/components/superadmin/metricas-plataforma"
 import {
   ActividadDialog, EditarTenantDialog, EliminarTenantDialog,
   type ActividadTenant, type FormEdicion,
 } from "@/components/superadmin/dialogos-tenant"
-
-type Plan = NonNullable<TenantFull["plan"]>
 
 const DIAS_EXTENSION_TRIAL = 10
 const FORM_VACIO: FormEdicion = { nombre: "", telefono: "", email: "", direccion: "", ciudad: "" }
@@ -38,6 +43,12 @@ export default function SuperAdminPage() {
   const [turnosPorSlug, setTurnosPorSlug] = useState<Record<string, number>>({})
   const [loading, setLoading]         = useState(true)
   const [errorCarga, setErrorCarga]   = useState<string | null>(null)
+  const [planes, setPlanes]           = useState<PlanDefinition[]>(() => getPlanList({ incluirOcultos: true }))
+  // La tabla `planes` no se pudo leer (p. ej. falta aplicar 056_planes_editables.sql).
+  const [sinTablaPlanes, setSinTablaPlanes] = useState(false)
+  const [suscripciones, setSuscripciones] = useState<SuscripcionTenant[]>([])
+  const [eventosBilling, setEventosBilling] = useState<EventoBilling[]>([])
+  const [errorFacturacion, setErrorFacturacion] = useState<string | null>(null)
 
   // slug con una operación en curso: bloquea los botones de esa fila.
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -51,7 +62,7 @@ export default function SuperAdminPage() {
   // Filtros
   const [busqueda, setBusqueda]         = useState("")
   const [filtroEstado, setFiltroEstado] = useState<EstadoFiltro>("todas")
-  const [filtroPlan, setFiltroPlan]     = useState<PlanFiltro>("todos")
+  const [filtroPlan, setFiltroPlan]     = useState<string>("todos")
   const [busquedaUsuario, setBusquedaUsuario] = useState("")
   const [filtroRol, setFiltroRol]       = useState<RolFiltro>("todos")
 
@@ -69,11 +80,22 @@ export default function SuperAdminPage() {
     setLoading(true)
     setErrorCarga(null)
     try {
-      const [users, vets] = await Promise.all([getUsuarios(), getTenantsFull()])
+      const [users, vets, catalogo] = await Promise.all([getUsuarios(), getTenantsFull(), cargarPlanes({ forzar: true })])
       const counts = await Promise.all(vets.map((v) => getTurnosCount(v.slug)))
       setUsuarios(users)
       setTenants(vets)
       setTurnosPorSlug(Object.fromEntries(vets.map((v, i) => [v.slug, counts[i]])))
+      setSinTablaPlanes(catalogo.length === 0)
+      setPlanes(catalogo.length > 0 ? catalogo : getPlanList({ incluirOcultos: true }))
+      // La facturación va aparte: si falla, el resto del panel sigue andando.
+      try {
+        const facturacion = await getFacturacionPlataforma()
+        setSuscripciones(facturacion.suscripciones)
+        setEventosBilling(facturacion.eventos)
+        setErrorFacturacion(null)
+      } catch (error) {
+        setErrorFacturacion(mensajeError(error, "No se pudo leer la facturación"))
+      }
     } catch (error) {
       console.error("Error al cargar el panel superadmin:", error)
       setErrorCarga(mensajeError(error, "No se pudieron cargar los datos"))
@@ -85,6 +107,38 @@ export default function SuperAdminPage() {
   useEffect(() => { load() }, [])
 
   const resumen = useMemo(() => resumenPlataforma(tenants, usuarios), [tenants, usuarios])
+  const usuariosPorSlug = useMemo(() => {
+    const cuenta: Record<string, number> = {}
+    for (const u of usuarios) {
+      if (u.tenantId && (u.role === "veterinario" || u.role === "empleado")) {
+        cuenta[u.tenantId] = (cuenta[u.tenantId] ?? 0) + 1
+      }
+    }
+    return cuenta
+  }, [usuarios])
+  const tenantsPorPlan = useMemo(() => {
+    const cuenta: Record<string, number> = {}
+    for (const t of tenants) {
+      const plan = t.plan ?? "basico"
+      cuenta[plan] = (cuenta[plan] ?? 0) + 1
+    }
+    return cuenta
+  }, [tenants])
+  const ingresos = useMemo(
+    () => calcularIngresos(suscripciones, eventosBilling, (plan) => getPlan(plan).precioMensual),
+    // `planes` entra porque getPlan lee el catálogo que se acaba de cargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [suscripciones, eventosBilling, planes],
+  )
+  const resumenIngresos = useMemo(() => resumirIngresos(ingresos), [ingresos])
+  const serie = useMemo(() => serieMensual(tenants, ingresos, new Date()), [tenants, ingresos])
+  const supuestos = useMemo(() => {
+    const visibles = planes.filter((p) => p.visible)
+    const ticketSinDatos = visibles.length > 0
+      ? Math.round(visibles.reduce((acc, p) => acc + p.precioMensual, 0) / visibles.length)
+      : 0
+    return supuestosReales(tenants, ingresos, new Date(), { diasPrueba: TRIAL_DIAS, ticketSinDatos })
+  }, [tenants, ingresos, planes])
   const totalTurnos = useMemo(
     () => Object.values(turnosPorSlug).reduce((acc, c) => acc + c, 0),
     [turnosPorSlug],
@@ -131,20 +185,22 @@ export default function SuperAdminPage() {
     }
   }
 
-  function pedirCambioPlan(t: TenantFull, plan: Plan) {
+  function pedirCambioPlan(t: TenantFull, plan: PlanId) {
     const actual = t.plan ?? "basico"
     if (plan === actual) return
     const nombre = t.nombre ?? t.slug
+    const nombrePlan = (id: string) => planes.find((p) => p.id === id)?.nombre ?? id
     setAccion({
       titulo: `Cambiar el plan de ${nombre}`,
       descripcion: (
         <p>
-          Pasa de <strong>{NOMBRE_PLAN[actual]}</strong> a <strong>{NOMBRE_PLAN[plan]}</strong>.
+          Pasa de <strong>{nombrePlan(actual)}</strong> a <strong>{nombrePlan(plan)}</strong>.
           Las secciones que no incluya el plan nuevo dejan de estar disponibles en su panel.
+          No cambia lo que le cobra Mercado Pago: eso solo pasa cuando contrata desde su panel.
         </p>
       ),
-      confirmar: `Pasar a ${NOMBRE_PLAN[plan]}`,
-      ejecutar: () => ejecutar(t.slug, { plan }, `${nombre} ahora tiene el plan ${NOMBRE_PLAN[plan]}`),
+      confirmar: `Pasar a ${nombrePlan(plan)}`,
+      ejecutar: () => ejecutar(t.slug, { plan }, `${nombre} ahora tiene el plan ${nombrePlan(plan)}`),
     })
   }
 
@@ -193,7 +249,7 @@ export default function SuperAdminPage() {
       descripcion: (
         <p>
           Deja de tener fecha de vencimiento y sigue con el plan{" "}
-          <strong>{NOMBRE_PLAN[t.plan ?? "basico"]}</strong> sin límite de tiempo. Usalo cuando
+          <strong>{planes.find((p) => p.id === (t.plan ?? "basico"))?.nombre ?? t.plan}</strong> sin límite de tiempo. Usalo cuando
           ya está pagando. Revisá que el plan sea el que contrató.
         </p>
       ),
@@ -296,7 +352,7 @@ export default function SuperAdminPage() {
         </div>
       </header>
 
-      <main className="container mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="container mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         {errorCarga && (
           <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
             <div className="flex items-start gap-2">
@@ -310,109 +366,162 @@ export default function SuperAdminPage() {
           </div>
         )}
 
-        <Indicadores resumen={resumen} totalTurnos={totalTurnos} cargando={loading} />
+        <Tabs defaultValue="clientes" className="gap-6">
+          <TabsList className="h-10 w-full justify-start overflow-x-auto sm:w-auto">
+            <TabsTrigger value="clientes" className="gap-1.5 px-4">
+              <Stethoscope className="h-4 w-4" /> Clientes
+            </TabsTrigger>
+            <TabsTrigger value="planes" className="gap-1.5 px-4">
+              <Layers className="h-4 w-4" /> Planes
+            </TabsTrigger>
+            <TabsTrigger value="metricas" className="gap-1.5 px-4">
+              <BarChart3 className="h-4 w-4" /> Métricas
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Veterinarias */}
-        <section aria-labelledby="titulo-veterinarias" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-          <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="titulo-veterinarias" className="text-lg font-bold">Veterinarias</h2>
-              <p className="text-xs text-muted-foreground">
-                Activas primero. Cambiar el plan, pausar o quitar la prueba pide confirmación.
+          <TabsContent value="clientes" className="space-y-10">
+            <Indicadores resumen={resumen} totalTurnos={totalTurnos} cargando={loading} />
+
+            {errorFacturacion && (
+              <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                No se pudo leer la facturación, así que los ingresos figuran en cero: {errorFacturacion}
               </p>
-            </div>
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {hayFiltros ? `${tenantsVisibles.length} de ${tenants.length}` : `${tenants.length} en total`}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre o slug…"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="h-9 pl-8"
-                aria-label="Buscar veterinarias"
-              />
-            </div>
-            <Select value={filtroEstado} onValueChange={(v) => setFiltroEstado(v as EstadoFiltro)}>
-              <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filtrar por estado">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todos los estados</SelectItem>
-                <SelectItem value="activas">Solo activas</SelectItem>
-                <SelectItem value="pausadas">Solo pausadas</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filtroPlan} onValueChange={(v) => setFiltroPlan(v as PlanFiltro)}>
-              <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filtrar por plan">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los planes</SelectItem>
-                {(Object.keys(NOMBRE_PLAN) as Plan[]).map((p) => (
-                  <SelectItem key={p} value={p}>{NOMBRE_PLAN[p]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {hayFiltros && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9"
-                onClick={() => { setBusqueda(""); setFiltroEstado("todas"); setFiltroPlan("todos") }}
-              >
-                Limpiar
-              </Button>
             )}
-          </div>
 
-          <TablaVeterinarias
-            tenants={tenantsVisibles}
-            hayTenants={tenants.length > 0}
-            cargando={loading}
-            turnosPorSlug={turnosPorSlug}
-            ocupado={ocupado}
-            onCambiarPlan={pedirCambioPlan}
-            onPausar={pedirPausa}
-            onExtenderTrial={extenderTrial}
-            onQuitarTrial={pedirQuitarTrial}
-            onActividad={verActividad}
-            onEditar={abrirEdicion}
-            onEliminar={(t) => { setDeleteTarget(t); setDeleteConfirm("") }}
-          />
-        </section>
+            {/* Veterinarias */}
+            <section aria-labelledby="titulo-veterinarias" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+              <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 id="titulo-veterinarias" className="text-lg font-bold">Veterinarias</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Activas primero. Ingreso/mes es lo que cobra hoy su suscripción de Mercado Pago
+                    {loading ? "" : ` (total: ${formatPesos(resumenIngresos.mensual)} por mes)`}. Cambiar el plan,
+                    pausar o quitar la prueba pide confirmación.
+                  </p>
+                </div>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {hayFiltros ? `${tenantsVisibles.length} de ${tenants.length}` : `${tenants.length} en total`}
+                </span>
+              </div>
 
-        {/* Usuarios */}
-        <section aria-labelledby="titulo-usuarios" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-          <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="titulo-usuarios" className="text-lg font-bold">Usuarios</h2>
-              <p className="text-xs text-muted-foreground">
-                Para dar acceso a alguien al panel, invitalo desde Configuración → Equipo de su
-                veterinaria, o editá <code className="rounded bg-muted px-1 py-0.5">usuarios.role</code> en Supabase.
+              <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nombre o slug…"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="h-9 pl-8"
+                    aria-label="Buscar veterinarias"
+                  />
+                </div>
+                <Select value={filtroEstado} onValueChange={(v) => setFiltroEstado(v as EstadoFiltro)}>
+                  <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filtrar por estado">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todos los estados</SelectItem>
+                    <SelectItem value="activas">Solo activas</SelectItem>
+                    <SelectItem value="pausadas">Solo pausadas</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filtroPlan} onValueChange={(v) => setFiltroPlan(v)}>
+                  <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filtrar por plan">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los planes</SelectItem>
+                    {planes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {hayFiltros && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9"
+                    onClick={() => { setBusqueda(""); setFiltroEstado("todas"); setFiltroPlan("todos") }}
+                  >
+                    Limpiar
+                  </Button>
+                )}
+              </div>
+
+              <TablaVeterinarias
+                tenants={tenantsVisibles}
+                hayTenants={tenants.length > 0}
+                cargando={loading}
+                turnosPorSlug={turnosPorSlug}
+                usuariosPorSlug={usuariosPorSlug}
+                ingresos={ingresos}
+                planes={planes}
+                ocupado={ocupado}
+                onCambiarPlan={pedirCambioPlan}
+                onPausar={pedirPausa}
+                onExtenderTrial={extenderTrial}
+                onQuitarTrial={pedirQuitarTrial}
+                onActividad={verActividad}
+                onEditar={abrirEdicion}
+                onEliminar={(t) => { setDeleteTarget(t); setDeleteConfirm("") }}
+              />
+            </section>
+
+            {/* Usuarios */}
+            <section aria-labelledby="titulo-usuarios" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+              <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 id="titulo-usuarios" className="text-lg font-bold">Usuarios</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Para dar acceso a alguien al panel, invitalo desde Configuración → Equipo de su
+                    veterinaria, o editá <code className="rounded bg-muted px-1 py-0.5">usuarios.role</code> en Supabase.
+                  </p>
+                </div>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {usuariosVisibles.length === usuarios.length
+                    ? `${usuarios.length} en total`
+                    : `${usuariosVisibles.length} de ${usuarios.length}`}
+                </span>
+              </div>
+              <TablaUsuarios
+                usuarios={usuariosVisibles}
+                totalUsuarios={usuarios.length}
+                tenants={tenants}
+                cargando={loading}
+                busqueda={busquedaUsuario}
+                rol={filtroRol}
+                onBusqueda={setBusquedaUsuario}
+                onRol={setFiltroRol}
+              />
+            </section>
+          </TabsContent>
+
+          <TabsContent value="planes">
+            {sinTablaPlanes && !loading && (
+              <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                No se pudo leer la tabla de planes: se muestran los valores de respaldo y no se pueden guardar
+                cambios. Si todavía no se aplicó, correr <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/50">supabase/056_planes_editables.sql</code>.
               </p>
-            </div>
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {usuariosVisibles.length === usuarios.length
-                ? `${usuarios.length} en total`
-                : `${usuariosVisibles.length} de ${usuarios.length}`}
-            </span>
-          </div>
-          <TablaUsuarios
-            usuarios={usuariosVisibles}
-            totalUsuarios={usuarios.length}
-            tenants={tenants}
-            cargando={loading}
-            busqueda={busquedaUsuario}
-            rol={filtroRol}
-            onBusqueda={setBusquedaUsuario}
-            onRol={setFiltroRol}
-          />
-        </section>
+            )}
+            <GestionPlanes
+              planes={planes}
+              tenantsPorPlan={tenantsPorPlan}
+              cargando={loading}
+              onCambio={load}
+              onPedirAccion={setAccion}
+            />
+          </TabsContent>
+
+          <TabsContent value="metricas">
+            <MetricasPlataforma
+              serie={serie}
+              supuestosBase={supuestos}
+              resumen={resumenIngresos}
+              totalVeterinarias={tenants.length}
+              cargando={loading}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <ConfirmarAccionDialog

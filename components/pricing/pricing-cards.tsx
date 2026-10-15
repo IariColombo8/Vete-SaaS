@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Check, Star } from "lucide-react"
-import { PLAN_LIST, type PlanDefinition } from "@/lib/plans"
+import { PLAN_RECOMENDADO, TRIAL_DIAS, type PlanDefinition } from "@/lib/plans"
 
 /** Formatea un precio mensual del catálogo a texto para mostrar. */
 function formatPrecio(plan: PlanDefinition): { price: string; period: string } {
@@ -10,14 +10,21 @@ function formatPrecio(plan: PlanDefinition): { price: string; period: string } {
   }
 }
 
-const DESCRIPCIONES: Record<string, string> = {
-  basico: "La clínica completa",
-  pro: "Para clínicas en funcionamiento",
+/**
+ * Columnas según cuántos planes haya: con dos, las tarjetas quedan anchas y
+ * centradas como siempre; con más, se reparten sin quedar angostas.
+ */
+export function clasesGrillaPlanes(cantidad: number): string {
+  if (cantidad <= 2) return "md:grid-cols-2 max-w-3xl"
+  if (cantidad === 3) return "md:grid-cols-3 max-w-5xl"
+  return "md:grid-cols-2 xl:grid-cols-4 max-w-6xl"
 }
 
 type PricingVariant = "dark" | "light"
 
 interface PricingCardsProps {
+  /** Planes visibles, en orden (los lee la página desde la tabla `planes`). */
+  planes: PlanDefinition[]
   /** Href base del CTA (por defecto /registro). */
   ctaHref?: string
   /** Tema visual: `dark` (página /pricing) o `light` (landing cálido). */
@@ -69,19 +76,19 @@ function styles(variant: PricingVariant) {
 }
 
 /**
- * Tarjetas de planes basadas en el catálogo único (`lib/plans`).
+ * Tarjetas de planes basadas en el catálogo único (tabla `planes`).
  * Se usa tanto en la landing (variant="light") como en /pricing (dark).
  */
-export function PricingCards({ ctaHref = "/registro", variant = "dark" }: PricingCardsProps) {
+export function PricingCards({ planes, ctaHref = "/registro", variant = "dark" }: PricingCardsProps) {
   const s = styles(variant)
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-      {PLAN_LIST.map((plan) => {
-        const highlight = plan.id === "pro"
+    <div className={`grid gap-6 mx-auto ${clasesGrillaPlanes(planes.length)}`}>
+      {planes.map((plan) => {
+        const highlight = plan.id === PLAN_RECOMENDADO
         const muted = false
         const { price, period } = formatPrecio(plan)
-        const cta = plan.id === "pro" ? "Probar Pro 10 días gratis" : "Contratar Básico"
+        const cta = highlight ? `Probar ${plan.nombre} ${TRIAL_DIAS} días gratis` : `Contratar ${plan.nombre}`
 
         const cardTone = highlight ? s.highlightCard : muted ? s.mutedCard : s.baseCard
         const titleTone = muted ? s.titleMuted : s.title
@@ -105,7 +112,7 @@ export function PricingCards({ ctaHref = "/registro", variant = "dark" }: Pricin
             <div className="mb-6">
               {/* h2: en /pricing van después del h1 y antes de "Comparación de planes". */}
               <h2 className={`font-display text-xl font-semibold mb-1 ${titleTone}`}>{plan.nombre}</h2>
-              <p className={`text-sm mb-4 ${s.desc}`}>{DESCRIPCIONES[plan.id]}</p>
+              <p className={`text-sm mb-4 ${s.desc}`}>{plan.descripcion}</p>
               <div className="flex items-baseline gap-1">
                 <span className={`font-display text-4xl font-semibold ${priceTone}`}>{price}</span>
                 {period && <span className={`text-sm ${s.period}`}>{period}</span>}

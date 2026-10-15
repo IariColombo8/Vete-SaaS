@@ -1,6 +1,6 @@
 import "server-only"
 import { SERVITEC } from "@/lib/marca"
-import { formatPrecioPlan } from "@/lib/plans"
+import { PLAN_RECOMENDADO, formatPesos, getPlanList } from "@/lib/plans"
 
 /**
  * Emails transaccionales del ciclo de vida del plan, enviados por el cron de
@@ -55,12 +55,22 @@ function layout(titulo: string, cuerpo: string, cta: { href: string; texto: stri
   </div>`
 }
 
-const planes = () =>
-  `<p>Tenés dos planes para seguir, los dos se pagan con Mercado Pago y se cancelan cuando quieras:</p>
+/** Planes que se ofrecen, con el precio vigente (el cron carga el catálogo antes). */
+const planes = () => {
+  const lista = [...getPlanList()].sort(
+    (a, b) => Number(b.id === PLAN_RECOMENDADO) - Number(a.id === PLAN_RECOMENDADO),
+  )
+  const items = lista
+    .map((p) => {
+      const detalle = p.id === PLAN_RECOMENDADO ? "todo lo que estuviste usando" : p.descripcion
+      return `<li><strong>${p.nombre}</strong> — ${formatPesos(p.precioMensual)}/mes${detalle ? `: ${detalle}` : ""}.</li>`
+    })
+    .join("\n     ")
+  return `<p>Para seguir, elegís un plan. Se pagan con Mercado Pago y se cancelan cuando quieras:</p>
    <ul>
-     <li><strong>Pro</strong> — ${formatPrecioPlan("pro")}/mes: todo lo que estuviste usando (turnos ilimitados, mostrador, caja, WhatsApp, factura electrónica, Point).</li>
-     <li><strong>Básico</strong> — ${formatPrecioPlan("basico")}/mes: página pública, turnos (hasta 10 por mes), clientes, libreta e historia clínica.</li>
+     ${items}
    </ul>`
+}
 
 export function emailTrialPorVencer(params: {
   nombreVeterinaria: string

@@ -3,23 +3,20 @@
 import Link from "next/link"
 import { track } from "@vercel/analytics"
 import { Check, Star } from "lucide-react"
-import { PLAN_LIST, TRIAL_DIAS, formatPrecioPlan } from "@/lib/plans"
+import { PLAN_RECOMENDADO, TRIAL_DIAS, formatPesos, type PlanDefinition } from "@/lib/plans"
+import { clasesGrillaPlanes } from "@/components/pricing/pricing-cards"
 import { Reveal } from "@/components/landing/reveal"
 
-const DESCRIPCIONES: Record<string, string> = {
-  basico: "La clínica completa",
-  pro: "Para clínicas en funcionamiento",
-}
-
 /**
- * Sección de precios de la landing. Lee el catálogo único (`lib/plans`): los
- * precios que ve el visitante son los mismos que cobra el checkout.
+ * Sección de precios de la landing. Recibe el catálogo de la tabla `planes`
+ * (lo lee la página en el servidor): los precios que ve el visitante son los
+ * mismos que cobra el checkout.
  *
  * Solo precio mensual: el checkout crea suscripciones mensuales. Un plan
  * anual con descuento está en el backlog (`planautomatizacion.md`); hasta que
  * exista no se promete.
  */
-export function PricingSection() {
+export function PricingSection({ planes }: { planes: PlanDefinition[] }) {
   return (
     <section id="precios" className="bg-cream py-24">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,10 +28,10 @@ export function PricingSection() {
           </p>
         </Reveal>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto items-stretch">
-          {PLAN_LIST.map((plan, i) => {
-            const highlight = plan.id === "pro"
-            const cta = plan.id === "pro" ? `Probar Pro ${TRIAL_DIAS} días gratis` : `Contratar ${plan.nombre}`
+        <div className={`grid gap-6 mx-auto items-stretch ${clasesGrillaPlanes(planes.length)}`}>
+          {planes.map((plan, i) => {
+            const highlight = plan.id === PLAN_RECOMENDADO
+            const cta = highlight ? `Probar ${plan.nombre} ${TRIAL_DIAS} días gratis` : `Contratar ${plan.nombre}`
 
             return (
               <Reveal key={plan.id} delay={i * 0.08}>
@@ -55,9 +52,9 @@ export function PricingSection() {
 
                   <div className="mb-6">
                     <h3 className="font-display text-xl font-semibold mb-1 text-ink">{plan.nombre}</h3>
-                    <p className="text-sm text-ink-muted mb-4">{DESCRIPCIONES[plan.id]}</p>
+                    <p className="text-sm text-ink-muted mb-4">{plan.descripcion}</p>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="font-display text-4xl font-semibold text-ink">{formatPrecioPlan(plan.id)}</span>
+                      <span className="font-display text-4xl font-semibold text-ink">{formatPesos(plan.precioMensual)}</span>
                       <span className="text-sm text-ink-muted">/mes</span>
                     </div>
                   </div>

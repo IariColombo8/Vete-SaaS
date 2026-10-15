@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest"
-import { planAllows, getPlanLimits, normalizePlan, getPlan, getTrialStatus } from "./plans"
+import {
+  planAllows, getPlanLimits, normalizePlan, getPlan, getTrialStatus,
+  filaAPlan, planAFila, registrarPlanes, getPlanList, PLANES_BASE,
+} from "./plans"
 
 describe("normalizePlan", () => {
   it("acepta planes válidos", () => {
@@ -93,5 +96,35 @@ describe("getTrialStatus", () => {
     expect(status.enTrial).toBe(true)
     expect(status.vencido).toBe(true)
     expect(status.diasRestantes).toBe(0)
+  })
+})
+
+describe("catálogo editable", () => {
+  it("filaAPlan y planAFila son inversas y descartan features desconocidas", () => {
+    const fila = {
+      id: "premium", nombre: "Premium", descripcion: "Para cadenas", precio_mensual: "120000.00",
+      max_turnos_mes: null, max_usuarios: 10, features: ["ventas", "inexistente"],
+      highlights: ["Todo Pro"], orden: 30, visible: false,
+    }
+    const plan = filaAPlan(fila)
+    expect(plan.precioMensual).toBe(120000)
+    expect(plan.features.ventas).toBe(true)
+    expect(plan.features.whatsapp).toBe(false)
+    expect(planAFila(plan)).toEqual({ ...fila, precio_mensual: 120000, features: ["ventas"] })
+  })
+
+  it("un plan registrado se reconoce; los ocultos no salen en la lista pública", () => {
+    const premium = filaAPlan({ id: "premium", nombre: "Premium", precio_mensual: 1, features: ["whatsapp"], visible: false })
+    registrarPlanes([...PLANES_BASE, premium])
+    expect(normalizePlan("premium")).toBe("premium")
+    expect(planAllows("premium", "whatsapp")).toBe(true)
+    expect(getPlanList().map((p) => p.id)).toEqual(["basico", "pro"])
+    expect(getPlanList({ incluirOcultos: true }).map((p) => p.id)).toContain("premium")
+    registrarPlanes(PLANES_BASE)
+  })
+
+  it("una lista vacía no borra el catálogo", () => {
+    registrarPlanes([])
+    expect(getPlan("pro").nombre).toBe("Pro")
   })
 })

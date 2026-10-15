@@ -15,18 +15,23 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { EstadoVacio } from "@/components/admin/estado-vacio"
 import type { TenantFull } from "@/lib/supabase/types"
 import { estadoTrial } from "@/lib/superadmin/resumen"
-import { EstadoTenant, EtiquetaTrial, NOMBRE_PLAN } from "./etiquetas"
-
-type Plan = NonNullable<TenantFull["plan"]>
+import type { IngresoTenant } from "@/lib/superadmin/ingresos"
+import { formatPesos, type PlanDefinition, type PlanId } from "@/lib/plans"
+import { EstadoTenant, EtiquetaTrial } from "./etiquetas"
 
 interface Props {
   tenants: TenantFull[]
   hayTenants: boolean
   cargando: boolean
   turnosPorSlug: Record<string, number>
+  /** Usuarios del panel (veterinario + empleados) por veterinaria. */
+  usuariosPorSlug: Record<string, number>
+  ingresos: Record<string, IngresoTenant>
+  /** Todos los planes, también los ocultos: el superadmin puede asignar cualquiera. */
+  planes: PlanDefinition[]
   /** slug de la veterinaria con una operación en curso, para bloquear sus botones. */
   ocupado: string | null
-  onCambiarPlan: (t: TenantFull, plan: Plan) => void
+  onCambiarPlan: (t: TenantFull, plan: PlanId) => void
   onPausar: (t: TenantFull) => void
   onExtenderTrial: (t: TenantFull) => void
   onQuitarTrial: (t: TenantFull) => void
@@ -70,13 +75,15 @@ export function TablaVeterinarias(props: Props) {
   }
 
   return (
-    // Con 6 columnas no entra en un celular: scrollea la tabla, no la página.
+    // Con 8 columnas no entra en un celular: scrollea la tabla, no la página.
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[860px] text-sm">
+      <table className="w-full min-w-[1040px] text-sm">
         <thead className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left font-semibold">Veterinaria</th>
             <th className="px-4 py-3 text-left font-semibold">Plan</th>
+            <th className="px-4 py-3 text-right font-semibold">Usuarios</th>
+            <th className="px-4 py-3 text-right font-semibold">Ingreso/mes</th>
             <th className="px-4 py-3 text-right font-semibold">Turnos</th>
             <th className="px-4 py-3 text-left font-semibold">Estado</th>
             <th className="px-4 py-3 text-left font-semibold">Prueba</th>
@@ -96,7 +103,7 @@ export function TablaVeterinarias(props: Props) {
 }
 
 function FilaVeterinaria({
-  tenant: t, turnosPorSlug, ocupado,
+  tenant: t, turnosPorSlug, usuariosPorSlug, ingresos, planes, ocupado,
   onCambiarPlan, onPausar, onExtenderTrial, onQuitarTrial, onActividad, onEditar, onEliminar,
 }: Props & { tenant: TenantFull }) {
   const pausada = t.status === "pausado"
@@ -104,6 +111,8 @@ function FilaVeterinaria({
   const trial = estadoTrial(t.trialExpiresAt)
   const alta = fechaAlta(t.createdAt)
   const nombre = t.nombre ?? t.slug
+  const ingreso = ingresos[t.slug]
+  const planActual = t.plan ?? "basico"
 
   return (
     <tr className={`transition-colors hover:bg-muted/30 ${pausada ? "bg-muted/20" : ""}`}>
@@ -130,19 +139,41 @@ function FilaVeterinaria({
 
       <td className="px-4 py-3">
         <Select
-          value={t.plan ?? "basico"}
-          onValueChange={(v) => onCambiarPlan(t, v as Plan)}
+          value={planActual}
+          onValueChange={(v) => onCambiarPlan(t, v)}
           disabled={bloqueada}
         >
-          <SelectTrigger className="h-8 w-28 text-xs" aria-label={`Plan de ${nombre}`}>
+          <SelectTrigger className="h-8 w-32 text-xs" aria-label={`Plan de ${nombre}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(NOMBRE_PLAN) as Plan[]).map((p) => (
-              <SelectItem key={p} value={p}>{NOMBRE_PLAN[p]}</SelectItem>
+            {planes.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.nombre}{p.visible ? "" : " (oculto)"}
+              </SelectItem>
             ))}
+            {!planes.some((p) => p.id === planActual) && (
+              <SelectItem value={planActual}>{planActual}</SelectItem>
+            )}
           </SelectContent>
         </Select>
+      </td>
+
+      <td className="px-4 py-3 text-right font-mono tabular-nums">{usuariosPorSlug[t.slug] ?? 0}</td>
+
+      <td className="px-4 py-3 text-right">
+        {ingreso?.pagando ? (
+          <div>
+            <div className="font-mono font-semibold tabular-nums">{formatPesos(ingreso.montoMensual)}</div>
+            {ingreso.clienteDesde && (
+              <div className="text-xs text-muted-foreground">
+                desde {new Date(ingreso.clienteDesde).toLocaleDateString("es-AR", { month: "short", year: "numeric" })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">No paga</span>
+        )}
       </td>
 
       <td className="px-4 py-3 text-right font-mono tabular-nums">{turnosPorSlug[t.slug] ?? 0}</td>

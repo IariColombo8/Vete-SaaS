@@ -1,6 +1,7 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { normalizePlan, type PlanId } from "@/lib/plans"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 import { cancelarPreapproval, parseExternalReference, type PreapprovalInfo } from "./mercadopago"
 
 /**
@@ -10,7 +11,7 @@ import { cancelarPreapproval, parseExternalReference, type PreapprovalInfo } fro
  * la misma regla:
  *
  *  - authorized          → el plan que dice el `external_reference`
- *                          ("tenant:basico" o "tenant:pro"), status activo,
+ *                          ("tenant:<id del plan>"), status activo,
  *                          se apaga el trial. Si había OTRA suscripción
  *                          autorizada (cambio de plan), se cancela en MP para
  *                          no cobrar dos veces.
@@ -40,6 +41,8 @@ export async function aplicarEstadoPreapproval(
 ): Promise<ResultadoAplicar | null> {
   const ref = parseExternalReference(info.externalReference)
   if (!ref) return null
+  // El plan del external_reference puede ser uno creado desde el superadmin.
+  await cargarPlanesServidor({ fresco: true })
   const { tenantId } = ref
 
   const { data: tenant, error: errTenant } = await admin

@@ -68,8 +68,3 @@ export function EtiquetaRol({ rol }: { rol: UserRole }) {
   const r = ROLES[rol] ?? ROLES.usuario
   return <Pastilla className={r.className}>{r.label}</Pastilla>
 }
-
-export const NOMBRE_PLAN: Record<NonNullable<TenantFull["plan"]>, string> = {
-  basico: "Básico",
-  pro: "Pro",
-}

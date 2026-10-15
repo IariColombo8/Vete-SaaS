@@ -10,7 +10,7 @@ import { getPromocionesPublicadas } from "@/lib/supabase/promociones"
 import { getSorteoActivo } from "@/lib/supabase/sorteos"
 import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
-import { normalizePlan, PLANS } from "@/lib/plans"
+import { planAllows } from "@/lib/plans"
 import type { TenantConfig } from "@/lib/supabase/queries"
 import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
 import { Button } from "@/components/ui/button"
@@ -52,8 +52,8 @@ export default function ProductosPublicosPage() {
       getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug), getSorteoActivo(slug),
     ]).then(
       async ([t, cfg, prods, promos, sorteo]) => {
-        const tieneProductos = PLANS[normalizePlan(cfg?.plan)].features.productos && prods.length > 0
-        const tienePromos = PLANS[normalizePlan(cfg?.plan)].features.promosSorteos && promos.length > 0
+        const tieneProductos = planAllows(cfg?.plan, "productos") && prods.length > 0
+        const tienePromos = planAllows(cfg?.plan, "promosSorteos") && promos.length > 0
         if (!t || (!tieneProductos && !tienePromos)) {
           router.replace(`/${slug}`)
           return

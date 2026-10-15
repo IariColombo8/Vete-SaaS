@@ -3,6 +3,7 @@ import { autorizarDueno } from "@/lib/billing/dueno"
 import { getPreapproval, isMercadoPagoConfigured } from "@/lib/billing/mercadopago"
 import { aplicarEstadoPreapproval } from "@/lib/billing/aplicar-estado"
 import { normalizePlan } from "@/lib/plans"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 
 /**
  * Estado de la suscripción de un tenant, para la pestaña "Plan" del panel.
@@ -19,6 +20,8 @@ const COLUMNAS =
   "plan, status, trial_expires_at, mp_preapproval_id, mp_preapproval_status, mp_next_payment_date, mp_payer_email, mp_preapproval_pendiente"
 
 export async function GET(request: Request) {
+  // Sin el catálogo cargado, un plan creado desde el superadmin se leería como Básico.
+  await cargarPlanesServidor({ fresco: true })
   const url = new URL(request.url)
   const tenantId = url.searchParams.get("tenantId")
   const sync = url.searchParams.get("sync") === "1"

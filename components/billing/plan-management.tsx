@@ -16,7 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { PLANS, PLAN_LIST, formatPrecioPlan, getTrialStatus, type PlanId } from "@/lib/plans"
+import { PLAN_RECOMENDADO, formatPrecioPlan, getPlan, getPlanList, getTrialStatus, type PlanId } from "@/lib/plans"
+import { cargarPlanes } from "@/lib/supabase/planes"
 import {
   cancelarSuscripcion,
   getEstadoBilling,
@@ -58,7 +59,9 @@ export function PlanManagement({ tenantId }: Props) {
     async (sync = false) => {
       try {
         setErrorCarga(null)
-        setEstado(await getEstadoBilling(tenantId, sync))
+        // El catálogo (precios, planes nuevos) puede haber cambiado desde el superadmin.
+        const [nuevo] = await Promise.all([getEstadoBilling(tenantId, sync), cargarPlanes()])
+        setEstado(nuevo)
       } catch (error) {
         setErrorCarga(error instanceof Error ? error.message : "No se pudo leer el estado del plan")
         toast({
@@ -121,7 +124,11 @@ export function PlanManagement({ tenantId }: Props) {
     )
   }
 
-  const plan = PLANS[estado.plan]
+  const plan = getPlan(estado.plan)
+  // Recomendado primero: es el botón principal cuando no hay suscripción.
+  const contratables = [...getPlanList()].sort(
+    (a, b) => Number(b.id === PLAN_RECOMENDADO) - Number(a.id === PLAN_RECOMENDADO),
+  )
   const trial = getTrialStatus({ trialExpiresAt: estado.trialExpiresAt })
   const sus = estado.suscripcion
   const susActiva = sus?.status === "authorized"
@@ -129,7 +136,6 @@ export function PlanManagement({ tenantId }: Props) {
   const estadoSus = sus?.status ? ESTADO_SUSCRIPCION[sus.status] : undefined
   const enPrueba = trial.enTrial && !trial.vencido && !susActiva
   const bloqueado = trial.vencido && !susActiva
-  const otroPlan: PlanId = estado.plan === "pro" ? "basico" : "pro"
 
   return (
     <div className="space-y-6">
@@ -197,7 +203,7 @@ export function PlanManagement({ tenantId }: Props) {
 
           {bloqueado && (
             <p className="text-sm text-muted-foreground">
-              El panel está en solo lectura. Contratá Básico o Pro para seguir operando: la plata se cobra con tu
+              El panel está en solo lectura. Contratá un plan para seguir operando: la plata se cobra con tu
               cuenta de Mercado Pago, todos los meses, y podés cancelar cuando quieras.
             </p>
           )}
@@ -207,37 +213,39 @@ export function PlanManagement({ tenantId }: Props) {
           )}
 
           <div className="flex flex-wrap gap-2 pt-1">
-            {!susActiva && (
-              <>
+            {!susActiva &&
+              contratables.map((p) => (
                 <Button
-                  onClick={() => contratar("pro")}
+                  key={p.id}
+                  onClick={() => contratar(p.id)}
                   disabled={ocupado !== null || !estado.mercadoPagoConfigurado}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className={p.id === PLAN_RECOMENDADO ? "bg-emerald-600 hover:bg-emerald-700" : undefined}
+                  variant={p.id === PLAN_RECOMENDADO ? "default" : "outline"}
                 >
-                  {ocupado === "pro" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-                  Contratar Pro · {formatPrecioPlan("pro")}/mes
+                  {ocupado === p.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    p.id === PLAN_RECOMENDADO && <CreditCard className="mr-2 h-4 w-4" />
+                  )}
+                  Contratar {p.nombre} · {formatPrecioPlan(p.id)}/mes
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => contratar("basico")}
-                  disabled={ocupado !== null || !estado.mercadoPagoConfigurado}
-                >
-                  {ocupado === "basico" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Contratar Básico · {formatPrecioPlan("basico")}/mes
-                </Button>
-              </>
-            )}
+              ))}
             {susActiva && (
               <>
-                <Button
-                  onClick={() => setConfirmar(otroPlan)}
-                  disabled={ocupado !== null || !estado.mercadoPagoConfigurado}
-                  className={otroPlan === "pro" ? "bg-emerald-600 hover:bg-emerald-700" : undefined}
-                  variant={otroPlan === "pro" ? "default" : "outline"}
-                >
-                  {ocupado === otroPlan && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Cambiar a {PLANS[otroPlan].nombre} · {formatPrecioPlan(otroPlan)}/mes
-                </Button>
+                {contratables
+                  .filter((p) => p.id !== estado.plan)
+                  .map((p) => (
+                    <Button
+                      key={p.id}
+                      onClick={() => setConfirmar(p.id)}
+                      disabled={ocupado !== null || !estado.mercadoPagoConfigurado}
+                      className={p.id === PLAN_RECOMENDADO ? "bg-emerald-600 hover:bg-emerald-700" : undefined}
+                      variant={p.id === PLAN_RECOMENDADO ? "default" : "outline"}
+                    >
+                      {ocupado === p.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Cambiar a {p.nombre} · {formatPrecioPlan(p.id)}/mes
+                    </Button>
+                  ))}
                 <Button variant="ghost" onClick={() => setConfirmar("cancelar")} disabled={ocupado !== null}>
                   {ocupado === "cancelar" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Cancelar suscripción
@@ -249,15 +257,15 @@ export function PlanManagement({ tenantId }: Props) {
       </Card>
 
       {/* ── Comparación ── */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {PLAN_LIST.map((p) => {
+      <div className={`grid gap-4 sm:grid-cols-2 ${contratables.length > 2 ? "lg:grid-cols-3" : ""}`}>
+        {getPlanList().map((p) => {
           const esActual = p.id === estado.plan
           return (
             <Card key={p.id} className={esActual ? "border-emerald-500/50" : undefined}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between text-base">
                   <span className="flex items-center gap-2">
-                    {p.id === "pro" && <Sparkles className="h-4 w-4 text-violet-500" />}
+                    {p.id === PLAN_RECOMENDADO && <Sparkles className="h-4 w-4 text-violet-500" />}
                     {p.nombre}
                   </span>
                   {esActual && <Badge variant="secondary">Tu plan</Badge>}
@@ -285,14 +293,14 @@ export function PlanManagement({ tenantId }: Props) {
             <AlertDialogTitle>
               {confirmar === "cancelar"
                 ? "¿Cancelar la suscripción?"
-                : `¿Cambiar al plan ${confirmar ? PLANS[confirmar].nombre : ""}?`}
+                : `¿Cambiar al plan ${confirmar ? getPlan(confirmar).nombre : ""}?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmar === "cancelar"
                 ? "Se cancela en Mercado Pago y no se hacen más cobros. El panel queda en solo lectura (nada se borra) hasta que contrates un plan de nuevo."
-                : confirmar === "pro"
-                  ? `Vas a pagar ${formatPrecioPlan("pro")} por mes. Te lleva al checkout de Mercado Pago; cuando se confirme el pago, la suscripción anterior se cancela sola y todas las secciones de Pro se habilitan.`
-                  : `Vas a pagar ${formatPrecioPlan("basico")} por mes. Te lleva al checkout de Mercado Pago; cuando se confirme, la suscripción anterior se cancela sola. Las secciones de Pro quedan ocultas, pero nada se borra.`}
+                : confirmar
+                  ? `Vas a pagar ${formatPrecioPlan(confirmar)} por mes. Te lleva al checkout de Mercado Pago; cuando se confirme el pago, la suscripción anterior se cancela sola. Las secciones que no incluya ${getPlan(confirmar).nombre} quedan ocultas, pero nada se borra.`
+                  : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -2,49 +2,52 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Check, Minus, ArrowRight } from "lucide-react"
 import { PricingCards } from "@/components/pricing/pricing-cards"
-import { PLAN_LIST, TRIAL_DIAS, formatPrecioPlan, type Feature } from "@/lib/plans"
+import { FEATURES, PLAN_RECOMENDADO, TRIAL_DIAS, formatPesos, type PlanDefinition } from "@/lib/plans"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 import { datosEstructuradosPricing, serializarJsonLd } from "@/lib/seo/datos-estructurados"
 import { APP_URL, SITIO } from "@/lib/seo/sitio"
 
 const TITULO = "Precios y planes — VetPanel"
-const DESCRIPCION = `Software de gestión para veterinarias desde ${formatPrecioPlan("basico")}/mes. Plan Pro (${formatPrecioPlan("pro")}/mes) con turnos ilimitados, WhatsApp, mostrador, factura electrónica y Mercado Pago Point. ${TRIAL_DIAS} días de prueba gratis, sin tarjeta.`
 
-export const metadata: Metadata = {
-  title: TITULO,
-  description: DESCRIPCION,
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    type: "website",
-    locale: "es_AR",
-    url: `${APP_URL}/pricing`,
-    siteName: SITIO.nombre,
-    title: TITULO,
-    description: DESCRIPCION,
-    images: [{ url: SITIO.imagen, width: 1200, height: 630, alt: "VetPanel — precios y planes" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: TITULO,
-    description: DESCRIPCION,
-    images: [SITIO.imagen],
-  },
+// Los precios salen de la tabla `planes` (editable desde el superadmin): la
+// página se regenera cada 5 minutos.
+export const revalidate = 300
+
+function descripcion(planes: PlanDefinition[]): string {
+  if (planes.length === 0) return `Software de gestión para veterinarias. ${TRIAL_DIAS} días de prueba gratis, sin tarjeta.`
+  const desde = Math.min(...planes.map((p) => p.precioMensual))
+  const pro = planes.find((p) => p.id === PLAN_RECOMENDADO)
+  const textoPro = pro ? ` Plan ${pro.nombre} (${formatPesos(pro.precioMensual)}/mes) con turnos ilimitados, WhatsApp, mostrador, factura electrónica y Mercado Pago Point.` : ""
+  return `Software de gestión para veterinarias desde ${formatPesos(desde)}/mes.${textoPro} ${TRIAL_DIAS} días de prueba gratis, sin tarjeta.`
 }
 
-/** Filas de la tabla comparativa: etiqueta legible por feature. */
-const FEATURE_LABELS: { key: Feature; label: string }[] = [
-  { key: "analytics", label: "Dashboard de métricas" },
-  { key: "multiUsuario", label: "Varios usuarios por clínica" },
-  { key: "whatsapp", label: "Notificaciones por WhatsApp" },
-  { key: "pdfLibreta", label: "Libreta sanitaria en PDF" },
-  { key: "qrMascota", label: "QR público por mascota" },
-  { key: "recordatoriosVacunas", label: "Recordatorios de vacunas" },
-  { key: "multipleProfesionales", label: "Múltiples profesionales" },
-  { key: "productos", label: "Productos y control de stock" },
-  { key: "ventas", label: "Mostrador, caja y remitos" },
-  { key: "promosSorteos", label: "Ofertas, promos y sorteos" },
-  { key: "facturacionElectronica", label: "Factura electrónica (ARCA)" },
-  { key: "mercadoPagoPoint", label: "Cobro con Mercado Pago Point" },
-]
+async function planesVisibles(): Promise<PlanDefinition[]> {
+  return (await cargarPlanesServidor()).filter((p) => p.visible)
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const DESCRIPCION = descripcion(await planesVisibles())
+  return {
+    title: TITULO,
+    description: DESCRIPCION,
+    alternates: { canonical: "/pricing" },
+    openGraph: {
+      type: "website",
+      locale: "es_AR",
+      url: `${APP_URL}/pricing`,
+      siteName: SITIO.nombre,
+      title: TITULO,
+      description: DESCRIPCION,
+      images: [{ url: SITIO.imagen, width: 1200, height: 630, alt: "VetPanel — precios y planes" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: TITULO,
+      description: DESCRIPCION,
+      images: [SITIO.imagen],
+    },
+  }
+}
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -73,13 +76,15 @@ function formatLimite(valor: number | null, sufijo: string): string {
   return valor === null ? "Ilimitado" : `${valor} ${sufijo}`
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const planes = await planesVisibles()
+
   return (
     <main className="bg-slate-950 min-h-screen">
       <script
         type="application/ld+json"
         // Generado en el servidor desde datos propios, escapado en serializarJsonLd.
-        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosPricing(FAQS)) }}
+        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosPricing(FAQS, planes)) }}
       />
 
       {/* Hero */}
@@ -105,7 +110,7 @@ export default function PricingPage() {
       {/* Tarjetas */}
       <section className="py-16 sm:py-20">
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <PricingCards />
+          <PricingCards planes={planes} />
         </div>
       </section>
 
@@ -120,10 +125,10 @@ export default function PricingPage() {
               <thead>
                 <tr className="border-b border-slate-800">
                   <th className="text-left py-4 px-3 text-slate-400 font-medium">Funcionalidad</th>
-                  {PLAN_LIST.map((plan) => (
+                  {planes.map((plan) => (
                     <th key={plan.id} className="py-4 px-3 text-center text-white font-bold">
                       {plan.nombre}
-                      <span className="block text-xs font-medium text-slate-400">{formatPrecioPlan(plan.id)}/mes</span>
+                      <span className="block text-xs font-medium text-slate-400">{formatPesos(plan.precioMensual)}/mes</span>
                     </th>
                   ))}
                 </tr>
@@ -131,7 +136,7 @@ export default function PricingPage() {
               <tbody>
                 <tr className="border-b border-slate-800/60">
                   <td className="py-3 px-3 text-slate-300">Turnos por mes</td>
-                  {PLAN_LIST.map((plan) => (
+                  {planes.map((plan) => (
                     <td key={plan.id} className="py-3 px-3 text-center text-slate-200">
                       {formatLimite(plan.limits.maxTurnosMes, "")}
                     </td>
@@ -139,16 +144,16 @@ export default function PricingPage() {
                 </tr>
                 <tr className="border-b border-slate-800/60">
                   <td className="py-3 px-3 text-slate-300">Usuarios</td>
-                  {PLAN_LIST.map((plan) => (
+                  {planes.map((plan) => (
                     <td key={plan.id} className="py-3 px-3 text-center text-slate-200">
                       {formatLimite(plan.limits.maxUsuarios, "")}
                     </td>
                   ))}
                 </tr>
-                {FEATURE_LABELS.map(({ key, label }) => (
+                {FEATURES.map(({ key, label }) => (
                   <tr key={key} className="border-b border-slate-800/60">
                     <td className="py-3 px-3 text-slate-300">{label}</td>
-                    {PLAN_LIST.map((plan) => (
+                    {planes.map((plan) => (
                       <td key={plan.id} className="py-3 px-3 text-center">
                         {plan.features[key] ? (
                           <Check className="h-4 w-4 text-emerald-400 inline" aria-label="Incluido" />

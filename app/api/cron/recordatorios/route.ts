@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAdminDb } from "@/lib/supabase/admin"
 import { planAllows } from "@/lib/plans"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 import { sendWhatsAppTemplate } from "@/lib/notifications/whatsapp"
 
 /**
@@ -33,6 +34,7 @@ function isAuthorized(request: Request): boolean {
 }
 
 export async function GET(request: Request) {
+  await cargarPlanesServidor({ fresco: true })
   if (!isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 })
   }

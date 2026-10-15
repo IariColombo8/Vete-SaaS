@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase/config"
-import { PLANS, formatPrecioPlan, type PlanId } from "@/lib/plans"
+import { formatPrecioPlan, getPlan, type PlanId } from "@/lib/plans"
 import { iniciarCheckout } from "@/components/billing/use-billing"
 
 interface Props {
@@ -71,7 +71,7 @@ export function CheckoutDialog({ tenantId, plan, onClose }: Props) {
       <DialogContent className="sm:max-w-md">
         <form onSubmit={irAPagar} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>Contratar {plan ? PLANS[plan].nombre : ""}</DialogTitle>
+            <DialogTitle>Contratar {plan ? getPlan(plan).nombre : ""}</DialogTitle>
             <DialogDescription>
               {plan ? `${formatPrecioPlan(plan)} por mes, con Mercado Pago. Cancelás cuando quieras.` : null}
             </DialogDescription>

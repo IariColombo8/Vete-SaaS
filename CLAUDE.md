@@ -330,23 +330,41 @@ Los meses se guardan como `date` el día 1 (`"YYYY-MM-01"`, ver `lib/gastos/mese
 
 ### Planes y suscripción (autoservicio con Mercado Pago)
 
-Dos planes en `lib/plans.ts`, los dos pagos: **Básico** ($50.000/mes, la
+Dos planes de base (más los que se creen desde el superadmin), los dos pagos: **Básico** ($50.000/mes, la
 clínica completa: turnos ilimitados, hasta 2 usuarios, libreta en PDF y QR) y **Pro** ($80.000/mes, todo; `PLAN_RECOMENDADO`). No
 hay plan gratis: lo gratis es la prueba de 10 días de Pro (`TRIAL_DIAS`) al
-registrarse. Plus se eliminó: el enum de
-Postgres lo conserva y `normalizePlan("plus")` devuelve `pro`; `aConfig` en
-`lib/supabase/tenants.ts` normaliza al leer, así ningún componente ve "plus".
+registrarse. Plus se eliminó: `normalizePlan("plus")` devuelve `pro`
+(056 pasó a Pro las filas que quedaban).
 Diagnóstico, decisiones y roadmap completo en **`planautomatizacion.md`**.
 
 **Básico vs Pro (desde 2026-10-12).** La línea es el comercio y lo que tiene
 costo por uso: Pro suma productos, mostrador, caja, ARCA, Point, promos,
 WhatsApp, métricas y varios profesionales. Los **recordatorios de vacunas
 quedan en Pro** porque salen por WhatsApp (el cron filtra por `whatsapp`):
-habilitarlos sin WhatsApp prometería algo que nunca se envía. Los límites
-tienen espejo en Postgres (`plan_limites`, `054_plan_basico_clinica.sql`):
-`crear_turno` aplica el de turnos y un trigger en `invitaciones` el de
-usuarios (dueño + cada invitación). Si cambian en `lib/plans.ts`, cambiarlos
-también ahí.
+habilitarlos sin WhatsApp prometería algo que nunca se envía.
+
+**Catálogo editable (`056_planes_editables.sql`).** Los planes viven en la
+tabla `planes` y se editan desde /superadmin → Planes: precio, límites,
+secciones (`features`, claves de `Feature`), bullets, orden y `visible`
+(oculto = no se ofrece ni se contrata, solo lo asigna el superadmin).
+`tenants.plan` es text con FK a `planes` (un plan en uso no se borra;
+Básico y Pro nunca, los nombra el código) y `plan_limites` es una vista
+sobre `planes`: `crear_turno` y el trigger de `invitaciones` aplican los
+límites sin espejo a mano. Un precio nuevo vale para contrataciones nuevas;
+las suscripciones autorizadas en MP siguen con su monto.
+
+- `lib/plans.ts` es sincrónico: guarda el catálogo en memoria y `PLANES_BASE`
+  es el respaldo. **Antes de preguntar por un plan hay que cargarlo**:
+  `getTenantConfig`/`getTenantsFull` ya llaman a `cargarPlanes()`
+  (`lib/supabase/planes.ts`); en el servidor, `cargarPlanesServidor()`
+  (`lib/planes-servidor.ts`, `fresco: true` en checkout, webhook y crons).
+- **Componentes cliente de páginas públicas reciben los planes por props**
+  (landing, /pricing) o el resultado ya calculado (`vidriera` en
+  `vet-public-view`): si leyeran el catálogo en memoria, el SSR y la
+  hidratación verían planes distintos. Landing y /pricing tienen
+  `revalidate = 300`.
+- Una sección nueva de la app sigue pidiendo código: agregarla a `Feature` y
+  `FEATURES` en `lib/plans.ts`.
 
 - **El plan no se toca desde el cliente.** Trigger `tenants_proteger_billing`
   (`049_billing_autoservicio.sql`): con sesión de usuario, cambiar `plan`,
@@ -529,7 +547,7 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |
 | `/blog`, `/blog/[slug]` | Blog SEO (file-based, `content/blog/*.md`) | Público |
-| `/superadmin` | Panel global | solo `superadmin` |
+| `/superadmin` | Panel global. Solapas: Clientes (veterinarias con plan, usuarios e ingreso/mes; usuarios), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
 
 **Navbar:** componente inteligente en `components/navbar.tsx`:
 - `/` → `SaasNavbar` (dark, logo VetPanel, CTA Contratar)

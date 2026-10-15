@@ -1,6 +1,7 @@
 import { supabase } from "./config"
 import { throwIfSupabaseError } from "./assert"
 import { normalizePlan, planAllows, type Feature } from "../plans"
+import { cargarPlanes } from "./planes"
 import type { Tenant, TenantConfig, TenantFull, TurnoConfig } from "./types"
 
 /**
@@ -90,8 +91,13 @@ export async function getTenant(tenantId: string): Promise<Tenant | null> {
 }
 
 export async function getTenantConfig(tenantId: string): Promise<TenantConfig | null> {
-  const { data, error } = await supabase
-    .from("tenants").select("*").eq("slug", tenantId).maybeSingle()
+  // El catálogo de planes se carga junto con la config: quien lee `config.plan`
+  // pregunta por features enseguida, y un plan creado desde el superadmin no
+  // está en el respaldo de lib/plans.ts.
+  const [{ data, error }] = await Promise.all([
+    supabase.from("tenants").select("*").eq("slug", tenantId).maybeSingle(),
+    cargarPlanes(),
+  ])
   if (error) {
     console.error("Error al leer config del tenant:", error.message)
     return null
@@ -167,7 +173,10 @@ export async function getTenants(): Promise<Tenant[]> {
 }
 
 export async function getTenantsFull(): Promise<TenantFull[]> {
-  const { data, error } = await supabase.from("tenants").select("*")
+  const [{ data, error }] = await Promise.all([
+    supabase.from("tenants").select("*"),
+    cargarPlanes(),
+  ])
   if (error) {
     console.error("Error al listar tenants:", error.message)
     return []

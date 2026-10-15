@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { cache } from "react"
 import { getTenantConfig, type TenantConfig } from "@/lib/supabase/queries"
+import { planAllows } from "@/lib/plans"
 import { serializarJsonLd } from "@/lib/seo/datos-estructurados"
 import { datosEstructuradosVeterinaria } from "@/lib/seo/veterinaria"
 import { APP_URL as BASE_URL } from "@/lib/seo/sitio"
@@ -151,7 +152,14 @@ export default async function Page({ params }: Props) {
         />
       )}
       {config && <PreloadFotoHero config={config} />}
-      <VetPublicView configInicial={config ? configPublica(config) : null} />
+      <VetPublicView
+        configInicial={config ? configPublica(config) : null}
+        // getTenantConfig ya cargó el catálogo de planes.
+        vidriera={{
+          productos: planAllows(config?.plan, "productos"),
+          promos: planAllows(config?.plan, "promosSorteos"),
+        }}
+      />
     </>
   )
 }

@@ -116,7 +116,8 @@ export interface TurnoConfig {
 
 export interface TenantConfig {
   nombre?: string
-  plan?: "basico" | "pro"
+  /** Id de `planes` (ver lib/plans.ts). */
+  plan?: string
   status?: "activo" | "pausado"
   adminIds?: string[]
   createdAt?: string

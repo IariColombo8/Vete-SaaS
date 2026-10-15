@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { autorizarDueno } from "@/lib/billing/dueno"
 import { crearSuscripcion, isMercadoPagoConfigured } from "@/lib/billing/mercadopago"
-import { getPlan, normalizePlan } from "@/lib/plans"
+import { buscarPlan, normalizePlan } from "@/lib/plans"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 
 /**
  * Crea una suscripción de Mercado Pago para contratar (o cambiar a) un plan.
  *
- * Body: { tenantId, planId: "basico" | "pro" }
+ * Body: { tenantId, planId } — un plan visible de la tabla `planes`.
  * Auth: header `Authorization: Bearer <Supabase access token>` — debe ser el
  * veterinario dueño del tenant (o superadmin).
  *
@@ -52,8 +53,13 @@ export async function POST(request: Request) {
   const auth = await autorizarDueno(request, payload.tenantId)
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status })
   const tenantId = payload.tenantId as string
-  const planId = normalizePlan(payload.planId)
-  const plan = getPlan(planId)
+  // Precio vigente, sin cache: si el superadmin lo acaba de cambiar, se cobra el nuevo.
+  await cargarPlanesServidor({ fresco: true })
+  const plan = buscarPlan(payload.planId)
+  if (!plan || !plan.visible) {
+    return NextResponse.json({ ok: false, error: "Ese plan no se puede contratar" }, { status: 400 })
+  }
+  const planId = plan.id
 
   const { data: tenant, error: errTenant } = await auth.admin
     .from("tenants")

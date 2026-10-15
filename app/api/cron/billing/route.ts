@@ -5,6 +5,7 @@ import { getPreapproval, isMercadoPagoConfigured } from "@/lib/billing/mercadopa
 import { aplicarEstadoPreapproval } from "@/lib/billing/aplicar-estado"
 import { emailTrialPorVencer, emailTrialVencido, enviarEmailBilling, isResendConfigured } from "@/lib/billing/emails-trial"
 import { getTrialStatus } from "@/lib/plans"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 
 /**
  * Cron diario de billing (service_role).
@@ -29,6 +30,8 @@ function isAuthorized(request: Request): boolean {
 }
 
 export async function GET(request: Request) {
+  // Los emails de fin de prueba listan los planes con su precio vigente.
+  await cargarPlanesServidor({ fresco: true })
   if (!isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 })
   }

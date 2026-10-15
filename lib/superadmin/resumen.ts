@@ -3,7 +3,8 @@ import type { TenantFull, UserRole, Usuario } from "@/lib/supabase/types"
 const DIA_MS = 24 * 60 * 60 * 1000
 
 export type EstadoFiltro = "todas" | "activas" | "pausadas"
-export type PlanFiltro = "todos" | NonNullable<TenantFull["plan"]>
+/** "todos" o el id de un plan. */
+export type PlanFiltro = string
 export type RolFiltro = "todos" | UserRole
 
 export interface EstadoTrial {

@@ -13,7 +13,6 @@ import {
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { tieneOferta } from "@/lib/productos/precios"
-import { normalizePlan, PLANS } from "@/lib/plans"
 import type { Producto, Promocion, Sorteo } from "@/lib/supabase/types"
 import { SERVITEC } from "@/lib/marca"
 import { FOTOS_DEFAULT_DESKTOP, FOTOS_DEFAULT_MOBILE } from "./fotos-default"
@@ -412,7 +411,19 @@ function VidrieraCarrusel({ children }: { children: ReactNode }) {
 
 /* ═══════════════════════ MAIN PAGE ═══════════════════════ */
 
-export default function VetPublicPage({ configInicial }: { configInicial: TenantConfig | null }) {
+/** Qué secciones de la vidriera habilita el plan. Lo calcula el servidor: el catálogo de planes no viaja al navegador. */
+export interface VidrieraPlan {
+  productos: boolean
+  promos: boolean
+}
+
+export default function VetPublicPage({
+  configInicial,
+  vidriera,
+}: {
+  configInicial: TenantConfig | null
+  vidriera: VidrieraPlan
+}) {
   const params = useParams()
   const slug = params.slug as string
   const router = useRouter()
@@ -498,9 +509,9 @@ export default function VetPublicPage({ configInicial }: { configInicial: Tenant
   const hayFotos    = fotosDesktop.length > 0 || fotosMobile.length > 0
   const srcMapa     = googleMapsUrl ? srcDeMapa(googleMapsUrl) : null
   const muestraMapa = (modalidad === "local" || modalidad === "ambos") && !!srcMapa
-  const tieneFeatureProductos = PLANS[normalizePlan(config?.plan)].features.productos
+  const tieneFeatureProductos = vidriera.productos
   const muestraProductos = tieneFeatureProductos && productos.length > 0
-  const tieneFeaturePromos = PLANS[normalizePlan(config?.plan)].features.promosSorteos
+  const tieneFeaturePromos = vidriera.promos
   const muestraPromociones = tieneFeaturePromos && promociones.length > 0
   // Prioridad en la vidriera: ofertas primero, después los que tienen foto,
   // el resto al final.

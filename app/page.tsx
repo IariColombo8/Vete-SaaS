@@ -8,6 +8,7 @@ import { Testimonials } from "@/components/landing/testimonials"
 import { SaasFooter } from "@/components/landing/footer"
 import { SITIO } from "@/lib/seo/sitio"
 import { datosEstructuradosLanding, serializarJsonLd } from "@/lib/seo/datos-estructurados"
+import { cargarPlanesServidor } from "@/lib/planes-servidor"
 
 export const metadata: Metadata = {
   title: { absolute: SITIO.titulo },
@@ -55,13 +56,19 @@ const FinalCta = dynamic(() =>
   import("@/components/landing/final-cta").then((m) => m.FinalCta),
 )
 
-export default function SaasLandingPage() {
+// Los precios salen de la tabla `planes` (editable desde el superadmin): la
+// landing se regenera cada 5 minutos.
+export const revalidate = 300
+
+export default async function SaasLandingPage() {
+  const planes = (await cargarPlanesServidor()).filter((p) => p.visible)
+
   return (
     <main className="bg-cream">
       <script
         type="application/ld+json"
         // Generado en el servidor desde datos propios, escapado en serializarJsonLd.
-        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosLanding()) }}
+        dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosEstructuradosLanding(planes)) }}
       />
       <Hero />
       <TrustMarquee />
@@ -70,7 +77,7 @@ export default function SaasLandingPage() {
       <Stats />
       <FeaturesBento />
       <Testimonials />
-      <PricingSection />
+      <PricingSection planes={planes} />
       <Faq />
       <FinalCta />
       <SaasFooter />
