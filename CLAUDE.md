@@ -102,7 +102,8 @@ app/api/                   → server routes (email, whatsapp, billing, google, 
 - `clientes` / `mascotas` / `historias` / `historia_clinica` — historial clínico, todas con `tenant_id`
 - `turnos` — tabla raíz con datos denormalizados (snapshot de cliente/mascota) para lectura rápida en admin
 - `dias_bloqueados` — disponibilidad
-- `usuarios` — espejo de `auth.users`, con `role` y `tenant_id`
+- `usuarios` — espejo de `auth.users`, con `role` y `tenant_id`. Ojo: `last_login` solo se escribe al registrarse (la sesión de Google se renueva sola), no sirve para medir uso
+- `actividad_panel` — contador de uso: una fila por usuario/veterinaria/día con `aperturas`, la escribe la RPC `registrar_actividad` desde `VetAdminLayout` (057). Solo la lee el superadmin
 - `productos` / `ventas` / `venta_items` / `cajas` — catálogo, stock y POS (ver sección "Productos y stock")
 
 **Aislamiento entre tenants:** todas las tablas de negocio tienen `tenant_id` y RLS habilitada. Las policies usan `es_staff(tenant_id)` (función `security definer` en Postgres) para que el filtrado ocurra en la base, no en el cliente. Nunca se accede a Supabase con la `service_role` key desde código que sirve datos al usuario — solo en webhooks/crons, y ahí el filtro por tenant se hace a mano en el propio route.
@@ -547,7 +548,7 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |
 | `/blog`, `/blog/[slug]` | Blog SEO (file-based, `content/blog/*.md`) | Público |
-| `/superadmin` | Panel global. Solapas: Clientes (veterinarias con plan, usuarios e ingreso/mes; usuarios), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
+| `/superadmin` | Panel global. Solapas: Clientes (veterinarias con plan, usuarios, uso e ingreso/mes), Usuarios (con uso del panel), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
 
 **Navbar:** componente inteligente en `components/navbar.tsx`:
 - `/` → `SaasNavbar` (dark, logo VetPanel, CTA Contratar)

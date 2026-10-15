@@ -17,7 +17,9 @@ import type { TenantFull } from "@/lib/supabase/types"
 import { estadoTrial } from "@/lib/superadmin/resumen"
 import type { IngresoTenant } from "@/lib/superadmin/ingresos"
 import { formatPesos, type PlanDefinition, type PlanId } from "@/lib/plans"
+import type { UsoResumen } from "@/lib/superadmin/actividad"
 import { EstadoTenant, EtiquetaTrial } from "./etiquetas"
+import { UsoPanel } from "./uso-panel"
 
 interface Props {
   tenants: TenantFull[]
@@ -29,6 +31,9 @@ interface Props {
   ingresos: Record<string, IngresoTenant>
   /** Todos los planes, también los ocultos: el superadmin puede asignar cualquiera. */
   planes: PlanDefinition[]
+  /** Uso del panel en los últimos 30 días, por slug. */
+  usoPorSlug: Record<string, UsoResumen>
+  ahora: Date
   /** slug de la veterinaria con una operación en curso, para bloquear sus botones. */
   ocupado: string | null
   onCambiarPlan: (t: TenantFull, plan: PlanId) => void
@@ -75,14 +80,15 @@ export function TablaVeterinarias(props: Props) {
   }
 
   return (
-    // Con 8 columnas no entra en un celular: scrollea la tabla, no la página.
+    // Con 9 columnas no entra en un celular: scrollea la tabla, no la página.
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1040px] text-sm">
+      <table className="w-full min-w-[1220px] text-sm">
         <thead className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left font-semibold">Veterinaria</th>
             <th className="px-4 py-3 text-left font-semibold">Plan</th>
             <th className="px-4 py-3 text-right font-semibold">Usuarios</th>
+            <th className="w-44 px-4 py-3 text-left font-semibold">Uso (30 días)</th>
             <th className="px-4 py-3 text-right font-semibold">Ingreso/mes</th>
             <th className="px-4 py-3 text-right font-semibold">Turnos</th>
             <th className="px-4 py-3 text-left font-semibold">Estado</th>
@@ -103,7 +109,7 @@ export function TablaVeterinarias(props: Props) {
 }
 
 function FilaVeterinaria({
-  tenant: t, turnosPorSlug, usuariosPorSlug, ingresos, planes, ocupado,
+  tenant: t, turnosPorSlug, usuariosPorSlug, ingresos, planes, usoPorSlug, ahora, ocupado,
   onCambiarPlan, onPausar, onExtenderTrial, onQuitarTrial, onActividad, onEditar, onEliminar,
 }: Props & { tenant: TenantFull }) {
   const pausada = t.status === "pausado"
@@ -160,6 +166,8 @@ function FilaVeterinaria({
       </td>
 
       <td className="px-4 py-3 text-right font-mono tabular-nums">{usuariosPorSlug[t.slug] ?? 0}</td>
+
+      <td className="px-4 py-3"><UsoPanel uso={usoPorSlug[t.slug]} ahora={ahora} compacto /></td>
 
       <td className="px-4 py-3 text-right">
         {ingreso?.pagando ? (

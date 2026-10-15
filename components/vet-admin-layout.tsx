@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { getUsuarioData, signOut } from "@/lib/supabase/auth"
 import { getTenantConfig } from "@/lib/supabase/queries"
+import { registrarActividad } from "@/lib/supabase/actividad"
 import { VetAdminSidebar } from "@/components/vet-admin-sidebar"
 import {
   SidebarInset, SidebarProvider, SidebarTrigger,
@@ -92,6 +93,9 @@ export function VetAdminLayout({ slug, children }: Props) {
       const perteneceAlTenant = userTenantId === slug && (userRole === "veterinario" || userRole === "empleado")
       const isOwner = perteneceAlTenant || userRole === "superadmin"
       if (!isOwner) { router.push("/"); return }
+      // Contador de uso para el superadmin: una apertura del panel por montaje.
+      // La RPC ignora al superadmin; acá se evita el viaje.
+      if (perteneceAlTenant) void registrarActividad(slug)
       setRole(userRole)
       setVetNombre(config?.nombre || slug)
       setPlan(config?.plan)

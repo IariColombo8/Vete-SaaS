@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { AlertTriangle, BarChart3, Layers, RefreshCw, Search, Shield, Stethoscope } from "lucide-react"
+import { AlertTriangle, BarChart3, Layers, RefreshCw, Search, Shield, Stethoscope, Users } from "lucide-react"
 import { getUsuarios, getTenantsFull, updateTenantConfig, deleteTenant, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TRIAL_DIAS, formatPesos, getPlan, getPlanList, type PlanDefinition, type PlanId } from "@/lib/plans"
 import { cargarPlanes } from "@/lib/supabase/planes"
 import { getFacturacionPlataforma } from "@/lib/supabase/superadmin"
+import { getActividadPlataforma } from "@/lib/supabase/actividad"
+import { resumirActividad, type FilaActividad } from "@/lib/superadmin/actividad"
 import { calcularIngresos, resumirIngresos, type EventoBilling, type SuscripcionTenant } from "@/lib/superadmin/ingresos"
 import { serieMensual, supuestosReales } from "@/lib/superadmin/metricas"
 import {
@@ -49,6 +51,10 @@ export default function SuperAdminPage() {
   const [suscripciones, setSuscripciones] = useState<SuscripcionTenant[]>([])
   const [eventosBilling, setEventosBilling] = useState<EventoBilling[]>([])
   const [errorFacturacion, setErrorFacturacion] = useState<string | null>(null)
+  const [actividadPanel, setActividadPanel] = useState<FilaActividad[]>([])
+  const [errorActividad, setErrorActividad] = useState<string | null>(null)
+  // "Hoy"/"Ayer" se calculan contra la hora de la última carga, no contra cada render.
+  const [ahora, setAhora] = useState(() => new Date())
 
   // slug con una operación en curso: bloquea los botones de esa fila.
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -96,6 +102,13 @@ export default function SuperAdminPage() {
       } catch (error) {
         setErrorFacturacion(mensajeError(error, "No se pudo leer la facturación"))
       }
+      try {
+        setActividadPanel(await getActividadPlataforma(31))
+        setErrorActividad(null)
+      } catch (error) {
+        setErrorActividad(mensajeError(error, "No se pudo leer el uso del panel"))
+      }
+      setAhora(new Date())
     } catch (error) {
       console.error("Error al cargar el panel superadmin:", error)
       setErrorCarga(mensajeError(error, "No se pudieron cargar los datos"))
@@ -131,6 +144,7 @@ export default function SuperAdminPage() {
     [suscripciones, eventosBilling, planes],
   )
   const resumenIngresos = useMemo(() => resumirIngresos(ingresos), [ingresos])
+  const uso = useMemo(() => resumirActividad(actividadPanel, ahora), [actividadPanel, ahora])
   const serie = useMemo(() => serieMensual(tenants, ingresos, new Date()), [tenants, ingresos])
   const supuestos = useMemo(() => {
     const visibles = planes.filter((p) => p.visible)
@@ -371,6 +385,9 @@ export default function SuperAdminPage() {
             <TabsTrigger value="clientes" className="gap-1.5 px-4">
               <Stethoscope className="h-4 w-4" /> Clientes
             </TabsTrigger>
+            <TabsTrigger value="usuarios" className="gap-1.5 px-4">
+              <Users className="h-4 w-4" /> Usuarios
+            </TabsTrigger>
             <TabsTrigger value="planes" className="gap-1.5 px-4">
               <Layers className="h-4 w-4" /> Planes
             </TabsTrigger>
@@ -456,6 +473,8 @@ export default function SuperAdminPage() {
                 usuariosPorSlug={usuariosPorSlug}
                 ingresos={ingresos}
                 planes={planes}
+                usoPorSlug={uso.porTenant}
+                ahora={ahora}
                 ocupado={ocupado}
                 onCambiarPlan={pedirCambioPlan}
                 onPausar={pedirPausa}
@@ -466,6 +485,14 @@ export default function SuperAdminPage() {
                 onEliminar={(t) => { setDeleteTarget(t); setDeleteConfirm("") }}
               />
             </section>
+          </TabsContent>
+
+          <TabsContent value="usuarios" className="space-y-4">
+            {errorActividad && (
+              <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                No se pudo leer el uso del panel: {errorActividad}
+              </p>
+            )}
 
             {/* Usuarios */}
             <section aria-labelledby="titulo-usuarios" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -473,8 +500,9 @@ export default function SuperAdminPage() {
                 <div>
                   <h2 id="titulo-usuarios" className="text-lg font-bold">Usuarios</h2>
                   <p className="text-xs text-muted-foreground">
-                    Para dar acceso a alguien al panel, invitalo desde Configuración → Equipo de su
-                    veterinaria, o editá <code className="rounded bg-muted px-1 py-0.5">usuarios.role</code> en Supabase.
+                    Uso del panel: cada vez que alguien del equipo abre el panel de su veterinaria
+                    (se cuenta desde el 15/10/2026). Para dar acceso a alguien, invitalo desde
+                    Configuración → Equipo de su veterinaria.
                   </p>
                 </div>
                 <span className="text-xs tabular-nums text-muted-foreground">
@@ -492,6 +520,8 @@ export default function SuperAdminPage() {
                 rol={filtroRol}
                 onBusqueda={setBusquedaUsuario}
                 onRol={setFiltroRol}
+                uso={uso.porUsuario}
+                ahora={ahora}
               />
             </section>
           </TabsContent>

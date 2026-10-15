@@ -8,7 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { EstadoVacio } from "@/components/admin/estado-vacio"
 import type { TenantFull, UserRole, Usuario } from "@/lib/supabase/types"
 import { rolDeUsuario, type RolFiltro } from "@/lib/superadmin/resumen"
+import type { UsoResumen } from "@/lib/superadmin/actividad"
 import { ETIQUETA_ROL, EtiquetaRol } from "./etiquetas"
+import { UsoPanel } from "./uso-panel"
 
 interface Props {
   usuarios: Usuario[]
@@ -19,9 +21,14 @@ interface Props {
   rol: RolFiltro
   onBusqueda: (v: string) => void
   onRol: (v: RolFiltro) => void
+  /** Uso del panel en los últimos 30 días, por uid. */
+  uso: Record<string, UsoResumen>
+  ahora: Date
 }
 
-export function TablaUsuarios({ usuarios, totalUsuarios, tenants, cargando, busqueda, rol, onBusqueda, onRol }: Props) {
+export function TablaUsuarios({
+  usuarios, totalUsuarios, tenants, cargando, busqueda, rol, onBusqueda, onRol, uso, ahora,
+}: Props) {
   const nombreTenant = new Map(tenants.map((t) => [t.slug, t.nombre ?? t.slug]))
 
   return (
@@ -60,13 +67,14 @@ export function TablaUsuarios({ usuarios, totalUsuarios, tenants, cargando, busq
         <EstadoVacio icono={<Search />} titulo="Ningún resultado" descripcion="Ningún usuario coincide con la búsqueda o el rol elegido." />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[880px] text-sm">
             <thead className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold">Usuario</th>
                 <th className="px-4 py-3 text-left font-semibold">Email</th>
                 <th className="px-4 py-3 text-left font-semibold">Veterinaria</th>
                 <th className="px-4 py-3 text-left font-semibold">Rol</th>
+                <th className="w-64 px-4 py-3 text-left font-semibold">Uso del panel (30 días)</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -101,6 +109,13 @@ export function TablaUsuarios({ usuarios, totalUsuarios, tenants, cargando, busq
                     )}
                   </td>
                   <td className="px-4 py-3"><EtiquetaRol rol={rolDeUsuario(u)} /></td>
+                  <td className="px-4 py-3">
+                    {u.role === "veterinario" || u.role === "empleado" ? (
+                      <UsoPanel uso={uso[u.uid]} ahora={ahora} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
