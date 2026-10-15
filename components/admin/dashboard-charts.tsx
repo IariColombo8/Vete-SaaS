@@ -131,7 +131,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
             <Skeleton key={i} className="h-[118px] rounded-xl" />
           ))}
         </div>
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <Skeleton className="h-[320px] rounded-xl lg:col-span-8" />
           <Skeleton className="h-[320px] rounded-xl lg:col-span-4" />
         </div>
@@ -456,7 +456,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       </div>
 
       {/* Charts Grid Principal */}
-      <div className="grid gap-6 lg:grid-cols-12 mb-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 mb-6">
         {/* Turnos por Día - Línea suave */}
         <Card className="lg:col-span-8">
           <CardHeader className="pb-4">
@@ -620,7 +620,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       </div>
 
       {/* Segunda fila de gráficos */}
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Tipos de Mascotas - Donut mejorado */}
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
@@ -826,7 +826,7 @@ export function DashboardCharts({ tenantId, onNavigateToTurnos }: DashboardChart
       </div>
 
       {/* Tercera fila: servicios top + métricas clave */}
-      <div className="grid gap-6 lg:grid-cols-12 mt-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 mt-6">
         {/* Servicios más solicitados */}
         <Card className="lg:col-span-8">
           <CardHeader className="pb-4">

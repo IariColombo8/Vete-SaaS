@@ -537,12 +537,15 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
       {/* Mini dashboard */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Card>
-          <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+          <CardContent className="p-2.5 sm:p-4 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <div className="p-1.5 sm:p-2.5 rounded-lg bg-primary shrink-0">
               <Users className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium truncate">Clientes totales</p>
+              <p className="text-xs text-muted-foreground font-medium truncate">
+                <span className="sm:hidden">Clientes</span>
+                <span className="hidden sm:inline">Clientes totales</span>
+              </p>
               {stats ? (
                 <p className="text-sm sm:text-xl font-black text-foreground">{stats.totalClientes}</p>
               ) : (
@@ -552,12 +555,15 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+          <CardContent className="p-2.5 sm:p-4 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <div className="p-1.5 sm:p-2.5 rounded-lg bg-primary shrink-0">
               <PawPrint className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium truncate">Mascotas registradas</p>
+              <p className="text-xs text-muted-foreground font-medium truncate">
+                <span className="sm:hidden">Mascotas</span>
+                <span className="hidden sm:inline">Mascotas registradas</span>
+              </p>
               {stats ? (
                 <p className="text-sm sm:text-xl font-black text-foreground">{stats.totalMascotas}</p>
               ) : (
@@ -567,12 +573,15 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+          <CardContent className="p-2.5 sm:p-4 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <div className="p-1.5 sm:p-2.5 rounded-lg bg-amber-600 shrink-0">
               <UserPlus className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium truncate">Nuevos este mes</p>
+              <p className="text-xs text-muted-foreground font-medium truncate">
+                <span className="sm:hidden">Nuevos (mes)</span>
+                <span className="hidden sm:inline">Nuevos este mes</span>
+              </p>
               {stats ? (
                 <p className="text-sm sm:text-xl font-black text-foreground">{stats.clientesNuevosMes}</p>
               ) : (
@@ -619,7 +628,73 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                 </p>
               </div>
             ) : (
-              <Table>
+              <>
+              {/* Celular: una tarjeta por cliente. La tabla de 6 columnas obligaba
+                  a deslizar de costado para llegar a las acciones. */}
+              <ul className="divide-y divide-border md:hidden">
+                {filtered.map((c) => {
+                  const mascotas = c.id ? mascotasByClienteId[c.id] : undefined;
+                  return (
+                    <li key={c.id} className="space-y-2 px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => openDetails(c)}
+                        className="flex w-full items-center gap-3 text-left"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground/80">
+                          {getIniciales(c.nombre ?? "")}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-foreground">{c.nombre}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {c.dni ? <span className="font-mono">DNI {c.dni}</span> : "Sin DNI"}
+                            {c.telefono && <> · {c.telefono}</>}
+                          </p>
+                        </div>
+                      </button>
+                      {mascotas && mascotas.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pl-12">
+                          {mascotas.map((m) => {
+                            const Icon = getMascotaIcon(m.tipo ?? "");
+                            return (
+                              <Badge
+                                key={m.id}
+                                variant="secondary"
+                                className="inline-flex items-center gap-1 border-0 bg-muted text-[11px] font-normal text-foreground/80"
+                              >
+                                <Icon className="h-3 w-3 shrink-0" />
+                                {m.nombre ?? "—"}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className="flex gap-2 pl-12">
+                        {c.telefono && (
+                          <a
+                            href={getWhatsAppUrl(c.telefono)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-2.5 text-xs font-medium text-primary"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            WhatsApp
+                          </a>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => openDetails(c)} className="h-8 text-xs">
+                          <Eye className="mr-1 h-3.5 w-3.5" />
+                          Ver
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => openEdit(c)} className="h-8 text-xs">
+                          <Edit className="mr-1 h-3.5 w-3.5" />
+                          Editar
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow className="border-border bg-muted/50">
                     <TableHead className="text-[10px] sm:text-xs font-bold text-foreground/80 uppercase tracking-wide">
@@ -738,6 +813,7 @@ export function ClientesManagement({ tenantId }: { tenantId: string }) {
                   })}
                 </TableBody>
               </Table>
+              </>
             )}
           </div>
 

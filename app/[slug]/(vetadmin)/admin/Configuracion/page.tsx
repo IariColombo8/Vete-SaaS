@@ -307,7 +307,7 @@ export default function ConfiguracionPage() {
                     <Label>Nombre *</Label>
                     <Input value={basic.nombre} onChange={e => setBasic(p => ({ ...p, nombre: e.target.value }))} required />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Teléfono</Label>
                       <Input value={basic.telefono} onChange={e => setBasic(p => ({ ...p, telefono: e.target.value }))} placeholder="+54 11 1234-5678" />
@@ -317,7 +317,7 @@ export default function ConfiguracionPage() {
                       <Input type="email" value={basic.email} onChange={e => setBasic(p => ({ ...p, email: e.target.value }))} placeholder="clinica@ejemplo.com" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Ciudad</Label>
                       <Input value={basic.ciudad} onChange={e => setBasic(p => ({ ...p, ciudad: e.target.value }))} placeholder="Buenos Aires" />

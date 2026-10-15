@@ -119,7 +119,7 @@ export function MiFirmaManagement({ tenantId }: { tenantId: string }) {
               <Label>Nombre y apellido</Label>
               <Input value={nombreProfesional} onChange={(e) => setNombreProfesional(e.target.value)} placeholder="Dra. Priscila Gómez" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Especialidad</Label>
                 <Input value={especialidad} onChange={(e) => setEspecialidad(e.target.value)} placeholder="Médico Veterinario" />

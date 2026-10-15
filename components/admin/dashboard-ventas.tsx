@@ -77,7 +77,7 @@ export function DashboardVentas({ tenantId, onNavigateToVentas, onNavigateToPos 
             <Skeleton key={i} className="h-[96px] rounded-xl" />
           ))}
         </div>
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <Skeleton className="h-[300px] rounded-xl lg:col-span-8" />
           <Skeleton className="h-[300px] rounded-xl lg:col-span-4" />
         </div>
@@ -133,10 +133,12 @@ export function DashboardVentas({ tenantId, onNavigateToVentas, onNavigateToPos 
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
+      {/* grid-cols-1 (minmax(0,1fr)): sin columna explícita, en celular la
+          columna se estiraba al ancho del encabezado y el gráfico se salía. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <Card className="lg:col-span-8">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-primary shadow-sm">
                   <BarChart3 className="h-5 w-5 text-white" strokeWidth={2.5} />

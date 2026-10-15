@@ -188,7 +188,7 @@ export default function TurnosManagement({ tenantId, targetDate }: TurnosManagem
     return (
       <div className="space-y-4" aria-busy="true" aria-label="Cargando turnos">
         <Skeleton className="h-[76px] w-full rounded-xl" />
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <Skeleton className="h-[420px] rounded-xl lg:col-span-4" />
           <div className="space-y-3 lg:col-span-8">
             <Skeleton className="h-9 w-56" />

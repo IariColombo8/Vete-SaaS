@@ -39,16 +39,22 @@ export function TablaSaldos({ clientes, cargando, onVerDetalle }: Props) {
       <TableHeader>
         <TableRow>
           <TableHead>Cliente</TableHead>
-          <TableHead>Teléfono</TableHead>
+          {/* En celular el teléfono va debajo del nombre: con 4 columnas el saldo quedaba fuera de pantalla. */}
+          <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
           <TableHead className="text-right">Saldo</TableHead>
-          <TableHead className="w-32 text-right">Detalle</TableHead>
+          <TableHead className="text-right sm:w-32">
+            <span className="sr-only sm:not-sr-only">Detalle</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {clientes.map((c) => (
           <TableRow key={c.clienteId}>
-            <TableCell className="font-medium">{c.nombre}</TableCell>
-            <TableCell className="text-sm text-muted-foreground">{c.telefono || "—"}</TableCell>
+            <TableCell className="max-w-[9rem] whitespace-normal font-medium sm:max-w-none">
+              {c.nombre}
+              {c.telefono && <span className="block text-xs font-normal text-muted-foreground sm:hidden">{c.telefono}</span>}
+            </TableCell>
+            <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">{c.telefono || "—"}</TableCell>
             <TableCell className="text-right">
               {c.saldo > 0 ? (
                 <span className="font-semibold tabular-nums text-destructive">
@@ -62,7 +68,8 @@ export function TablaSaldos({ clientes, cargando, onVerDetalle }: Props) {
             </TableCell>
             <TableCell className="text-right">
               <Button variant="outline" size="sm" onClick={() => onVerDetalle(c)}>
-                Ver / cobrar
+                <span className="sm:hidden">Ver</span>
+                <span className="hidden sm:inline">Ver / cobrar</span>
               </Button>
             </TableCell>
           </TableRow>

@@ -68,9 +68,122 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
     )
   }
 
+  const pago = (venta: Venta, anulada: boolean) => (
+    anulada ? (
+      <EstadoBadge tono="peligro">Anulada</EstadoBadge>
+    ) : venta.esPagoCtaCte ? (
+      <EstadoBadge tono="info">Pago cta. cte.</EstadoBadge>
+    ) : (
+      <span className="flex items-center gap-1">
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-xs font-medium",
+            COLOR_MEDIO_PAGO[venta.medioPago],
+          )}
+        >
+          {MEDIOS_PAGO.find((m) => m.id === venta.medioPago)?.label}
+          {venta.medioPago === "credito" && venta.cuotas ? ` x${venta.cuotas}` : ""}
+        </span>
+        {venta.medioPago === "mixto" && venta.pagos && venta.pagos.length > 0 && (
+          <span
+            className="text-xs text-muted-foreground"
+            title={venta.pagos
+              .map((p) => `${MEDIOS_PAGO.find((m) => m.id === p.medioPago)?.label}: ${formatCurrency(p.monto)}`)
+              .join(" · ")}
+          >
+            ⓘ
+          </span>
+        )}
+      </span>
+    )
+  )
+
+  const acciones = (venta: Venta, anulada: boolean) => (
+    <div className="flex justify-end gap-0.5">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        title="Descargar PDF"
+        onClick={() => void descargar(venta)}
+      >
+        <Download className="h-3.5 w-3.5" />
+      </Button>
+      {tenantId && facturacion?.configurado && (
+        <FacturarButton
+          tenantId={tenantId}
+          venta={venta}
+          emisor={emisor}
+          facturacion={facturacion}
+          comprobante={facturas?.get(venta.id) ?? null}
+          notaCredito={notasCredito?.get(venta.id) ?? null}
+          variante="fila"
+        />
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        title="Enviar por WhatsApp"
+        onClick={() => {
+          // La ventana se abre antes de generar el PDF: después
+          // del await el navegador la bloquea como popup.
+          window.open(
+            linkWhatsApp(venta, emisor),
+            "_blank",
+            "noopener,noreferrer",
+          )
+          void descargar(venta)
+        }}
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+      </Button>
+      {!anulada && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-red-600"
+          title="Anular venta"
+          onClick={() => setAAnular(venta)}
+        >
+          <Ban className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  )
+
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Celular: una tarjeta por venta con el total a la vista. En la tabla,
+          el total y las acciones quedaban fuera de pantalla. */}
+      <ul className="divide-y md:hidden">
+        {ventas.map((venta) => {
+          const anulada = venta.estado === "anulada"
+          return (
+            <li key={venta.id} className={cn("space-y-2 px-4 py-3", anulada && "opacity-55")}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {venta.clienteNombre || <span className="text-muted-foreground">Consumidor final</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-mono tabular-nums">N° {String(venta.numero).padStart(5, "0")}</span>
+                    {" · "}
+                    {formatDateTime(venta.createdAt)}
+                  </p>
+                </div>
+                <p className="shrink-0 text-base font-semibold tabular-nums">{formatCurrency(venta.total)}</p>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm">{pago(venta, anulada)}</div>
+                {acciones(venta, anulada)}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+
+      <div className="hidden overflow-x-auto md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -101,91 +214,11 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
                       <span className="text-muted-foreground">Consumidor final</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {anulada ? (
-                      <EstadoBadge tono="peligro">Anulada</EstadoBadge>
-                    ) : venta.esPagoCtaCte ? (
-                      <EstadoBadge tono="info">Pago cta. cte.</EstadoBadge>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-xs font-medium",
-                            COLOR_MEDIO_PAGO[venta.medioPago],
-                          )}
-                        >
-                          {MEDIOS_PAGO.find((m) => m.id === venta.medioPago)?.label}
-                          {venta.medioPago === "credito" && venta.cuotas ? ` x${venta.cuotas}` : ""}
-                        </span>
-                        {venta.medioPago === "mixto" && venta.pagos && venta.pagos.length > 0 && (
-                          <span
-                            className="text-xs text-muted-foreground"
-                            title={venta.pagos
-                              .map((p) => `${MEDIOS_PAGO.find((m) => m.id === p.medioPago)?.label}: ${formatCurrency(p.monto)}`)
-                              .join(" · ")}
-                          >
-                            ⓘ
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </TableCell>
+                  <TableCell className="text-sm">{pago(venta, anulada)}</TableCell>
                   <TableCell className="text-right font-medium tabular-nums">
                     {formatCurrency(venta.total)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Descargar PDF"
-                        onClick={() => void descargar(venta)}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                      {tenantId && facturacion?.configurado && (
-                        <FacturarButton
-                          tenantId={tenantId}
-                          venta={venta}
-                          emisor={emisor}
-                          facturacion={facturacion}
-                          comprobante={facturas?.get(venta.id) ?? null}
-                          notaCredito={notasCredito?.get(venta.id) ?? null}
-                          variante="fila"
-                        />
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Enviar por WhatsApp"
-                        onClick={() => {
-                          // La ventana se abre antes de generar el PDF: después
-                          // del await el navegador la bloquea como popup.
-                          window.open(
-                            linkWhatsApp(venta, emisor),
-                            "_blank",
-                            "noopener,noreferrer",
-                          )
-                          void descargar(venta)
-                        }}
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </Button>
-                      {!anulada && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                          title="Anular venta"
-                          onClick={() => setAAnular(venta)}
-                        >
-                          <Ban className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+                  <TableCell>{acciones(venta, anulada)}</TableCell>
                 </TableRow>
               )
             })}
