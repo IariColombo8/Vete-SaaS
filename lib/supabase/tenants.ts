@@ -43,6 +43,7 @@ function aConfig(fila: FilaTenant): TenantConfig {
     onboardingCompletado: (fila.onboarding_completado as boolean) ?? false,
     trialExpiresAt: (fila.trial_expires_at as string) ?? undefined,
     mpPreapprovalStatus: (fila.mp_preapproval_status as string | null) ?? null,
+    cobroManual: (fila.cobro_manual as boolean | null) ?? false,
   }
 }
 
@@ -73,6 +74,7 @@ function aFila(data: Partial<TenantConfig>): Record<string, unknown> {
     onboardingCompletado: "onboarding_completado",
     trialExpiresAt: "trial_expires_at",
     mpPreapprovalStatus: "mp_preapproval_status",
+    cobroManual: "cobro_manual",
   }
   const fila: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(data)) {

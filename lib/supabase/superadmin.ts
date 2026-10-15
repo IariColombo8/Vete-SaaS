@@ -1,6 +1,8 @@
 import { supabase } from "./config"
 import { throwIfSupabaseError } from "./assert"
 import type { EventoBilling, SuscripcionTenant } from "../superadmin/ingresos"
+import type { PagoManual } from "../billing/cobro-manual"
+import { getPagosManuales } from "./pagos-manuales"
 
 /**
  * Datos de facturación de toda la plataforma, para /superadmin. Las policies
@@ -9,15 +11,17 @@ import type { EventoBilling, SuscripcionTenant } from "../superadmin/ingresos"
 export async function getFacturacionPlataforma(): Promise<{
   suscripciones: SuscripcionTenant[]
   eventos: EventoBilling[]
+  pagosManuales: PagoManual[]
 }> {
-  const [tenants, eventos] = await Promise.all([
+  const [tenants, eventos, pagosManuales] = await Promise.all([
     supabase
       .from("tenants")
-      .select("slug, plan, mp_preapproval_status, mp_preapproval_id, mp_next_payment_date, mp_payer_email"),
+      .select("slug, plan, mp_preapproval_status, mp_preapproval_id, mp_next_payment_date, mp_payer_email, cobro_manual"),
     supabase
       .from("billing_eventos")
       .select("tenant_id, tipo, preapproval_id, detalle, created_at")
       .order("created_at", { ascending: true }),
+    getPagosManuales(),
   ])
   throwIfSupabaseError(tenants.error, "Error al leer las suscripciones")
   throwIfSupabaseError(eventos.error, "Error al leer los eventos de billing")
@@ -30,7 +34,9 @@ export async function getFacturacionPlataforma(): Promise<{
       preapprovalId: (t.mp_preapproval_id as string | null) ?? null,
       proximoCobro: (t.mp_next_payment_date as string | null) ?? null,
       payerEmail: (t.mp_payer_email as string | null) ?? null,
+      cobroManual: (t.cobro_manual as boolean | null) ?? false,
     })),
+    pagosManuales,
     eventos: (eventos.data ?? []).map((e) => ({
       tenantId: e.tenant_id as string,
       tipo: e.tipo as string,

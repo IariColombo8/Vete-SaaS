@@ -19,6 +19,9 @@ import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
 import { getTrialStatus } from "@/lib/plans"
 import { ReadOnlyProvider } from "@/lib/auth/read-only-context"
 import { TrialExpiredBanner } from "@/components/admin/trial-expired-banner"
+import { AvisoPagoManual } from "@/components/admin/aviso-pago-manual"
+import { estadoCobroManual, type EstadoCobroManual } from "@/lib/billing/cobro-manual"
+import { getPagosManuales } from "@/lib/supabase/pagos-manuales"
 import { TourPagina } from "@/components/admin/tour-pagina"
 import { TOURS } from "@/lib/ayuda/tours"
 
@@ -73,6 +76,8 @@ export function VetAdminLayout({ slug, children }: Props) {
   const [vetNombre, setVetNombre] = useState<string>("")
   const [plan, setPlan] = useState<string | undefined>(undefined)
   const [trialVencido, setTrialVencido] = useState(false)
+  // Solo para las que pagan en efectivo: aviso desde el día 7 si el mes no figura pago.
+  const [cobroManual, setCobroManual] = useState<EstadoCobroManual | null>(null)
   const [motivoBloqueo, setMotivoBloqueo] = useState<"trial" | "suscripcion">("trial")
   const [role, setRole] = useState<UserRole | null>(null)
 
@@ -99,6 +104,11 @@ export function VetAdminLayout({ slug, children }: Props) {
       setRole(userRole)
       setVetNombre(config?.nombre || slug)
       setPlan(config?.plan)
+      if (config?.cobroManual) {
+        getPagosManuales(slug)
+          .then((pagos) => setCobroManual(estadoCobroManual(pagos, new Date())))
+          .catch((error) => console.warn("No se pudo leer el estado del pago:", error))
+      }
       setTrialVencido(getTrialStatus(config ?? {}).vencido)
       // Sin suscripción activa el servidor deja `trial_expires_at` en el pasado:
       // el aviso tiene que decir "suscripción" y no "prueba" en ese caso.
@@ -157,6 +167,7 @@ export function VetAdminLayout({ slug, children }: Props) {
               motivo={motivoBloqueo}
             />
           )}
+          {cobroManual?.avisar && !trialVencido && <AvisoPagoManual estado={cobroManual} />}
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-1 h-4" />

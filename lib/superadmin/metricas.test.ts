@@ -42,7 +42,7 @@ describe("calcularIngresos", () => {
 
   it("usa el monto del checkout de la suscripción vigente, no el precio actual", () => {
     const ingresos = calcularIngresos(
-      [{ slug: "a", plan: "pro", estado: "authorized", preapprovalId: "p1", proximoCobro: null, payerEmail: null }],
+      [{ slug: "a", plan: "pro", estado: "authorized", preapprovalId: "p1", proximoCobro: null, payerEmail: null, cobroManual: false }],
       [
         evento("a", "pending", "2026-01-01T00:00:00Z", { preapprovalId: "p1", detalle: { monto: 70000 } }),
         evento("a", "authorized", "2026-01-02T00:00:00Z", { preapprovalId: "p1" }),
@@ -56,8 +56,8 @@ describe("calcularIngresos", () => {
   it("sin checkout registrado cae al precio del plan; sin suscripción, 0", () => {
     const ingresos = calcularIngresos(
       [
-        { slug: "a", plan: "pro", estado: "authorized", preapprovalId: "x", proximoCobro: null, payerEmail: null },
-        { slug: "b", plan: "basico", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null },
+        { slug: "a", plan: "pro", estado: "authorized", preapprovalId: "x", proximoCobro: null, payerEmail: null, cobroManual: false },
+        { slug: "b", plan: "basico", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null, cobroManual: false },
       ],
       [],
       precio,
@@ -78,9 +78,9 @@ describe("serieMensual y supuestos", () => {
   ]
   const ingresos = calcularIngresos(
     [
-      { slug: "a", plan: "pro", estado: "authorized", preapprovalId: null, proximoCobro: null, payerEmail: null },
-      { slug: "b", plan: "pro", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null },
-      { slug: "c", plan: "pro", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null },
+      { slug: "a", plan: "pro", estado: "authorized", preapprovalId: null, proximoCobro: null, payerEmail: null, cobroManual: false },
+      { slug: "b", plan: "pro", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null, cobroManual: false },
+      { slug: "c", plan: "pro", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null, cobroManual: false },
     ],
     [evento("a", "authorized", new Date(2026, 8, 1).toISOString())],
     () => 80000,
@@ -132,5 +132,32 @@ describe("proyectar y estimarMetas", () => {
     const sin = proyectar({ veterinarias: 10, pagantes: 10 }, supuestos, ahora, 6)
     const con = proyectar({ veterinarias: 10, pagantes: 10 }, { ...supuestos, bajaMensual: 0.1 }, ahora, 6)
     expect(con[5].pagantes).toBeLessThan(sin[5].pagantes)
+  })
+})
+
+describe("ingresos de las que pagan en efectivo", () => {
+  const ahora = new Date("2026-10-08T15:00:00Z")
+  const pago = (periodo: string, monto = 80000) => ({
+    id: periodo, tenantId: "vipvet", periodo, monto, medio: "efectivo" as const, pagadoEl: periodo,
+    nota: null, createdAt: periodo, anuladoAt: null, motivoAnulacion: null,
+  })
+  const sus = [{ slug: "vipvet", plan: "pro", estado: null, preapprovalId: null, proximoCobro: null, payerEmail: null, cobroManual: true }]
+
+  it("con el mes anterior pago sigue pagando (todavía está en plazo) y vale el último monto", () => {
+    const i = calcularIngresos(sus, [], () => 1, [pago("2026-08-01", 70000), pago("2026-09-01", 75000)], ahora)
+    expect(i.vipvet).toMatchObject({ pagando: true, via: "manual", montoMensual: 75000 })
+    expect(i.vipvet.periodos).toHaveLength(1)
+    expect(i.vipvet.periodos[0].hasta).toBeNull()
+  })
+
+  it("sin pagar hace dos meses ya no cuenta como pagando", () => {
+    const i = calcularIngresos(sus, [], () => 1, [pago("2026-07-01")], ahora)
+    expect(i.vipvet.pagando).toBe(false)
+    expect(i.vipvet.montoMensual).toBe(0)
+  })
+
+  it("un mes salteado parte el tramo en dos", () => {
+    const i = calcularIngresos(sus, [], () => 1, [pago("2026-06-01"), pago("2026-08-01"), pago("2026-09-01")], ahora)
+    expect(i.vipvet.periodos).toHaveLength(2)
   })
 })

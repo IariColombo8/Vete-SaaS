@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { AlertTriangle, BarChart3, Layers, RefreshCw, Search, Shield, Stethoscope, Users } from "lucide-react"
+import { AlertTriangle, Banknote, BarChart3, Layers, RefreshCw, Search, Shield, Stethoscope, Users } from "lucide-react"
 import { getUsuarios, getTenantsFull, updateTenantConfig, deleteTenant, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
@@ -27,6 +27,8 @@ import { TablaUsuarios } from "@/components/superadmin/tabla-usuarios"
 import { ConfirmarAccionDialog, type AccionPendiente } from "@/components/superadmin/confirmar-accion-dialog"
 import { GestionPlanes } from "@/components/superadmin/gestion-planes"
 import { MetricasPlataforma } from "@/components/superadmin/metricas-plataforma"
+import { GestionPagos } from "@/components/superadmin/gestion-pagos"
+import type { PagoManual } from "@/lib/billing/cobro-manual"
 import {
   ActividadDialog, EditarTenantDialog, EliminarTenantDialog,
   type ActividadTenant, type FormEdicion,
@@ -50,6 +52,7 @@ export default function SuperAdminPage() {
   const [sinTablaPlanes, setSinTablaPlanes] = useState(false)
   const [suscripciones, setSuscripciones] = useState<SuscripcionTenant[]>([])
   const [eventosBilling, setEventosBilling] = useState<EventoBilling[]>([])
+  const [pagosManuales, setPagosManuales] = useState<PagoManual[]>([])
   const [errorFacturacion, setErrorFacturacion] = useState<string | null>(null)
   const [actividadPanel, setActividadPanel] = useState<FilaActividad[]>([])
   const [errorActividad, setErrorActividad] = useState<string | null>(null)
@@ -98,6 +101,7 @@ export default function SuperAdminPage() {
         const facturacion = await getFacturacionPlataforma()
         setSuscripciones(facturacion.suscripciones)
         setEventosBilling(facturacion.eventos)
+        setPagosManuales(facturacion.pagosManuales)
         setErrorFacturacion(null)
       } catch (error) {
         setErrorFacturacion(mensajeError(error, "No se pudo leer la facturación"))
@@ -138,10 +142,10 @@ export default function SuperAdminPage() {
     return cuenta
   }, [tenants])
   const ingresos = useMemo(
-    () => calcularIngresos(suscripciones, eventosBilling, (plan) => getPlan(plan).precioMensual),
+    () => calcularIngresos(suscripciones, eventosBilling, (plan) => getPlan(plan).precioMensual, pagosManuales, ahora),
     // `planes` entra porque getPlan lee el catálogo que se acaba de cargar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [suscripciones, eventosBilling, planes],
+    [suscripciones, eventosBilling, planes, pagosManuales, ahora],
   )
   const resumenIngresos = useMemo(() => resumirIngresos(ingresos), [ingresos])
   const uso = useMemo(() => resumirActividad(actividadPanel, ahora), [actividadPanel, ahora])
@@ -385,6 +389,9 @@ export default function SuperAdminPage() {
             <TabsTrigger value="clientes" className="gap-1.5 px-4">
               <Stethoscope className="h-4 w-4" /> Clientes
             </TabsTrigger>
+            <TabsTrigger value="pagos" className="gap-1.5 px-4">
+              <Banknote className="h-4 w-4" /> Pagos
+            </TabsTrigger>
             <TabsTrigger value="usuarios" className="gap-1.5 px-4">
               <Users className="h-4 w-4" /> Usuarios
             </TabsTrigger>
@@ -485,6 +492,18 @@ export default function SuperAdminPage() {
                 onEliminar={(t) => { setDeleteTarget(t); setDeleteConfirm("") }}
               />
             </section>
+          </TabsContent>
+
+          <TabsContent value="pagos">
+            <GestionPagos
+              tenants={tenants}
+              pagos={pagosManuales}
+              ingresos={ingresos}
+              ahora={ahora}
+              cargando={loading}
+              onCambio={load}
+              onPedirAccion={setAccion}
+            />
           </TabsContent>
 
           <TabsContent value="usuarios" className="space-y-4">

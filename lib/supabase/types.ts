@@ -145,6 +145,8 @@ export interface TenantConfig {
   /** Vencimiento del trial de plan Pro. null/undefined = sin trial. */
   trialExpiresAt?: string | null
   /** Estado de la suscripción de Mercado Pago (authorized/pending/paused/cancelled). Solo lectura. */
+  /** Paga en efectivo/transferencia directo a VetPanel, no por Mercado Pago (058). */
+  cobroManual?: boolean
   mpPreapprovalStatus?: string | null
 }
 

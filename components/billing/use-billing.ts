@@ -25,6 +25,8 @@ export interface EstadoBilling {
   trialExpiresAt: string | null
   /** Hay un checkout iniciado (cambio de plan) que MP todavía no confirmó. */
   checkoutPendiente: boolean
+  /** Paga en efectivo/transferencia directo a VetPanel (058): no usa Mercado Pago. */
+  cobroManual: boolean
   suscripcion: {
     id: string
     status: string | null

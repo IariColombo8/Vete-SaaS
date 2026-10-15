@@ -367,6 +367,21 @@ las suscripciones autorizadas en MP siguen con su monto.
 - Una sección nueva de la app sigue pidiendo código: agregarla a `Feature` y
   `FEATURES` en `lib/plans.ts`.
 
+**Pago en efectivo (`058_cobro_manual.sql`).** Algunas veterinarias (VipVet,
+Mundo Animal) no usan Mercado Pago: le pagan en mano al superadmin.
+`tenants.cobro_manual` las marca (protegido por `tenants_proteger_billing`) y
+cada pago va a `pagos_manuales` (un pago vigente por mes, se anula con motivo,
+nunca se borra). Se registra desde /superadmin → Pagos.
+
+- El mes se paga del 1 al 10 (`lib/billing/cobro-manual.ts`, días en hora de
+  Argentina). Desde el 7 sin pago: cartel en el panel (`AvisoPagoManual` en
+  `VetAdminLayout`) y el cron de billing manda un email a la veterinaria y un
+  resumen al superadmin (`BILLING_AVISOS_EMAIL`, o todos los superadmin), una
+  vez por mes (`billing_eventos.tipo = 'aviso_pago_manual'`). Pasado el 10
+  queda "atrasado"; **el panel nunca se bloquea por esto**.
+- En ingresos y métricas cuentan como pagando si tienen pago del mes en curso o
+  del anterior, con el monto del último pago.
+
 - **El plan no se toca desde el cliente.** Trigger `tenants_proteger_billing`
   (`049_billing_autoservicio.sql`): con sesión de usuario, cambiar `plan`,
   `status`, `trial_expires_at` o `mp_*` falla salvo superadmin. El
@@ -548,7 +563,7 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |
 | `/blog`, `/blog/[slug]` | Blog SEO (file-based, `content/blog/*.md`) | Público |
-| `/superadmin` | Panel global. Solapas: Clientes (veterinarias con plan, usuarios, uso e ingreso/mes), Usuarios (con uso del panel), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
+| `/superadmin` | Panel global. Solapas: Clientes (veterinarias con plan, usuarios, uso e ingreso/mes), Pagos (quién pagó el mes, registrar pagos en efectivo), Usuarios (con uso del panel), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
 
 **Navbar:** componente inteligente en `components/navbar.tsx`:
 - `/` → `SaasNavbar` (dark, logo VetPanel, CTA Contratar)

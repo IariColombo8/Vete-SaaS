@@ -173,6 +173,7 @@ function FilaVeterinaria({
         {ingreso?.pagando ? (
           <div>
             <div className="font-mono font-semibold tabular-nums">{formatPesos(ingreso.montoMensual)}</div>
+            <div className="text-xs text-muted-foreground">{ingreso.via === "manual" ? "Efectivo" : "Mercado Pago"}</div>
             {ingreso.clienteDesde && (
               <div className="text-xs text-muted-foreground">
                 desde {new Date(ingreso.clienteDesde).toLocaleDateString("es-AR", { month: "short", year: "numeric" })}

@@ -3,6 +3,11 @@
  * billing: el estado de la suscripción en `tenants` y la bitácora
  * `billing_eventos`. Puro, para testear sin base.
  *
+ * Las que pagan en efectivo (`cobro_manual`, 058) se cuentan con sus
+ * `pagos_manuales`: cada mes pagado es un mes activo, y siguen "pagando"
+ * mientras tengan pago del mes en curso o del anterior (el mes se paga del 1
+ * al 10). Su ingreso mensual es el monto del último pago.
+ *
  * Lo que se sabe y lo que no:
  *  - El monto de cada suscripción es el que se mandó a Mercado Pago al crearla
  *    (`detalle.monto` del evento `checkout`). Si no aparece, el precio actual
@@ -12,6 +17,8 @@
  *    mensual: el "cobrado" histórico no se puede saber con exactitud y no se
  *    inventa.
  */
+
+import { periodoActual, sumarMeses, ultimoPago, vigentes, type PagoManual } from "../billing/cobro-manual"
 
 export interface EventoBilling {
   tenantId: string
@@ -28,6 +35,8 @@ export interface SuscripcionTenant {
   preapprovalId: string | null
   proximoCobro: string | null
   payerEmail: string | null
+  /** Paga en efectivo/transferencia, no por Mercado Pago. */
+  cobroManual: boolean
 }
 
 export interface PeriodoPago {
@@ -37,8 +46,10 @@ export interface PeriodoPago {
 }
 
 export interface IngresoTenant {
-  /** Suscripción autorizada hoy en Mercado Pago. */
+  /** Suscripción autorizada en Mercado Pago, o pago en efectivo al día. */
   pagando: boolean
+  /** Cómo paga: suscripción de MP o en mano. */
+  via: "mercadopago" | "manual"
   /** Lo que se le cobra por mes (0 si no paga). */
   montoMensual: number
   /** Primer día que se autorizó una suscripción. */
@@ -87,10 +98,34 @@ export function montoSuscripcion(
   return precioPlan
 }
 
+/**
+ * Tramos de las que pagan en mano: meses pagados seguidos forman un tramo. El
+ * último queda abierto si cubre el mes en curso o el anterior.
+ */
+export function periodosManuales(pagos: PagoManual[], ahora: Date): PeriodoPago[] {
+  const meses = [...new Set(vigentes(pagos).map((p) => p.periodo))].sort()
+  const periodos: PeriodoPago[] = []
+  for (const mes of meses) {
+    const ultimo = periodos[periodos.length - 1]
+    const siguiente = sumarMeses(mes, 1)
+    if (ultimo && ultimo.hasta === `${mes}T03:00:00.000Z`) {
+      ultimo.hasta = `${siguiente}T03:00:00.000Z`
+    } else {
+      periodos.push({ desde: `${mes}T03:00:00.000Z`, hasta: `${siguiente}T03:00:00.000Z` })
+    }
+  }
+  const ultimo = periodos[periodos.length - 1]
+  const alDia = sumarMeses(periodoActual(ahora), -1)
+  if (ultimo && meses[meses.length - 1] >= alDia) ultimo.hasta = null
+  return periodos
+}
+
 export function calcularIngresos(
   suscripciones: SuscripcionTenant[],
   eventos: EventoBilling[],
   precioPlan: (plan: string | undefined) => number,
+  pagosManuales: PagoManual[] = [],
+  ahora: Date = new Date(),
 ): Record<string, IngresoTenant> {
   const porTenant = new Map<string, EventoBilling[]>()
   for (const e of eventos) {
@@ -101,6 +136,20 @@ export function calcularIngresos(
 
   const resultado: Record<string, IngresoTenant> = {}
   for (const s of suscripciones) {
+    if (s.cobroManual) {
+      const propios = pagosManuales.filter((p) => p.tenantId === s.slug)
+      const periodos = periodosManuales(propios, ahora)
+      const pagando = periodos.length > 0 && periodos[periodos.length - 1].hasta === null
+      resultado[s.slug] = {
+        pagando,
+        via: "manual",
+        montoMensual: pagando ? (ultimoPago(propios)?.monto ?? precioPlan(s.plan)) : 0,
+        clienteDesde: periodos[0]?.desde ?? null,
+        proximoCobro: null,
+        periodos,
+      }
+      continue
+    }
     const propios = porTenant.get(s.slug) ?? []
     const pagando = s.estado === "authorized"
     const periodos = periodosDePago(propios)
@@ -111,6 +160,7 @@ export function calcularIngresos(
     }
     resultado[s.slug] = {
       pagando,
+      via: "mercadopago",
       montoMensual: pagando ? montoSuscripcion(s.preapprovalId, propios, precioPlan(s.plan)) : 0,
       clienteDesde: periodos[0]?.desde ?? null,
       proximoCobro: pagando ? s.proximoCobro : null,

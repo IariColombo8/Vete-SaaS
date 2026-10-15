@@ -40,7 +40,7 @@ export async function enviarEmailBilling(params: {
   return true
 }
 
-function layout(titulo: string, cuerpo: string, cta: { href: string; texto: string }): string {
+export function layout(titulo: string, cuerpo: string, cta: { href: string; texto: string }): string {
   return `
   <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f172a">
     <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#059669;margin:0 0 12px">VetPanel</p>

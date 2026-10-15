@@ -16,8 +16,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { PLAN_RECOMENDADO, formatPrecioPlan, getPlan, getPlanList, getTrialStatus, type PlanId } from "@/lib/plans"
+import { PLAN_RECOMENDADO, formatPesos, formatPrecioPlan, getPlan, getPlanList, getTrialStatus, type PlanId } from "@/lib/plans"
 import { cargarPlanes } from "@/lib/supabase/planes"
+import { getPagosManuales } from "@/lib/supabase/pagos-manuales"
+import {
+  DIA_VENCIMIENTO, MEDIOS_PAGO_MANUAL, estadoCobroManual, nombreMes, sumarMeses, ultimoPago, type PagoManual,
+} from "@/lib/billing/cobro-manual"
 import {
   cancelarSuscripcion,
   getEstadoBilling,
@@ -54,6 +58,7 @@ export function PlanManagement({ tenantId }: Props) {
   const [ocupado, setOcupado] = useState<PlanId | "cancelar" | "sync" | null>(null)
   const [confirmar, setConfirmar] = useState<"cancelar" | PlanId | null>(null)
   const [planCheckout, setPlanCheckout] = useState<PlanId | null>(null)
+  const [pagosManuales, setPagosManuales] = useState<PagoManual[]>([])
 
   const cargar = useCallback(
     async (sync = false) => {
@@ -62,6 +67,7 @@ export function PlanManagement({ tenantId }: Props) {
         // El catálogo (precios, planes nuevos) puede haber cambiado desde el superadmin.
         const [nuevo] = await Promise.all([getEstadoBilling(tenantId, sync), cargarPlanes()])
         setEstado(nuevo)
+        if (nuevo.cobroManual) setPagosManuales(await getPagosManuales(tenantId))
       } catch (error) {
         setErrorCarga(error instanceof Error ? error.message : "No se pudo leer el estado del plan")
         toast({
@@ -139,6 +145,11 @@ export function PlanManagement({ tenantId }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Las que pagan en efectivo no usan Mercado Pago: sin botones de contratar ni cancelar. */}
+      {estado.cobroManual ? (
+        <TarjetaCobroManual planNombre={plan.nombre} pagos={pagosManuales} />
+      ) : (
+      <>
       {/* ── Plan actual ── */}
       <Card>
         <CardHeader>
@@ -256,6 +267,9 @@ export function PlanManagement({ tenantId }: Props) {
         </CardContent>
       </Card>
 
+      </>
+      )}
+
       {/* ── Comparación ── */}
       <div className={`grid gap-4 sm:grid-cols-2 ${contratables.length > 2 ? "lg:grid-cols-3" : ""}`}>
         {getPlanList().map((p) => {
@@ -321,5 +335,48 @@ export function PlanManagement({ tenantId }: Props) {
 
       <CheckoutDialog tenantId={tenantId} plan={planCheckout} onClose={() => setPlanCheckout(null)} />
     </div>
+  )
+}
+
+/** Plan actual de una veterinaria que paga en efectivo/transferencia directo a VetPanel. */
+function TarjetaCobroManual({ planNombre, pagos }: { planNombre: string; pagos: PagoManual[] }) {
+  const ahora = new Date()
+  const estado = estadoCobroManual(pagos, ahora)
+  const ultimo = ultimoPago(pagos)
+  const proximo = estado.fase === "pagado" ? sumarMeses(estado.periodo, 1) : estado.periodo
+  const badge =
+    estado.fase === "pagado"
+      ? { label: "Al día", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" }
+      : estado.fase === "atrasado"
+        ? { label: "Pago atrasado", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" }
+        : { label: `Vence el ${DIA_VENCIMIENTO}`, className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          Plan {planNombre}
+          <Badge className={badge.className}>{badge.label}</Badge>
+        </CardTitle>
+        <CardDescription>
+          Pagás directo a VetPanel, en efectivo o por transferencia, del 1 al {DIA_VENCIMIENTO} de cada mes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">Último pago</dt>
+            <dd className="font-medium">
+              {ultimo
+                ? `${nombreMes(ultimo.periodo)} · ${formatPesos(ultimo.monto)} · ${MEDIOS_PAGO_MANUAL.find((m) => m.id === ultimo.medio)?.label.toLowerCase()}`
+                : "Todavía no hay pagos registrados"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Próximo vencimiento</dt>
+            <dd className="font-medium">{DIA_VENCIMIENTO} de {nombreMes(proximo)}</dd>
+          </div>
+        </dl>
+      </CardContent>
+    </Card>
   )
 }

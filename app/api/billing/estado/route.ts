@@ -17,7 +17,7 @@ import { cargarPlanesServidor } from "@/lib/planes-servidor"
  * no llegó o se perdió.
  */
 const COLUMNAS =
-  "plan, status, trial_expires_at, mp_preapproval_id, mp_preapproval_status, mp_next_payment_date, mp_payer_email, mp_preapproval_pendiente"
+  "plan, status, trial_expires_at, mp_preapproval_id, mp_preapproval_status, mp_next_payment_date, mp_payer_email, mp_preapproval_pendiente, cobro_manual"
 
 export async function GET(request: Request) {
   // Sin el catálogo cargado, un plan creado desde el superadmin se leería como Básico.
@@ -63,6 +63,7 @@ export async function GET(request: Request) {
       status: tenant.status,
       trialExpiresAt: tenant.trial_expires_at,
       checkoutPendiente: Boolean(tenant.mp_preapproval_pendiente),
+      cobroManual: Boolean(tenant.cobro_manual),
       suscripcion: tenant.mp_preapproval_id
         ? {
             id: tenant.mp_preapproval_id,
