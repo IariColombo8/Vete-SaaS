@@ -77,9 +77,19 @@ export async function POST(request: Request) {
         ? "Mercado Pago rechazó el token de la veterinaria. Revisá la integración."
         : error.status === 409
           ? "La terminal ya tiene un cobro en curso. Cancelalo o esperá a que termine."
-          : "Mercado Pago no aceptó la orden. Verificá que la terminal esté encendida y en modo PDV."
+          : `Mercado Pago no aceptó la orden. Verificá que la terminal esté encendida y en modo PDV. (${detalleMP(error.detalle)})`
       return NextResponse.json({ ok: false, error: msg }, { status: 502 })
     }
     return NextResponse.json({ ok: false, error: "No se pudo enviar el cobro a la terminal" }, { status: 500 })
+  }
+}
+
+/** Código de error de MP (p. ej. `minimum_amount_not_met`), para que el mostrador lo pueda reportar. */
+function detalleMP(cuerpo: string): string {
+  try {
+    const json = JSON.parse(cuerpo) as { errors?: { code?: string }[]; error?: string; message?: string }
+    return json.errors?.[0]?.code ?? json.error ?? json.message ?? "sin detalle"
+  } catch {
+    return cuerpo.slice(0, 80) || "sin detalle"
   }
 }

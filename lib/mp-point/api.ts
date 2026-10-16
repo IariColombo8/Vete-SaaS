@@ -139,15 +139,19 @@ export async function crearOrdenPoint(token: string, p: CrearOrdenParams): Promi
         terminal_id: p.terminalId,
         print_on_terminal: p.imprimirTicket === false ? "no_ticket" : "seller_ticket",
       },
-      ...(p.tipoTarjeta
+      // Cuotas e `installments_cost` solo con crédito: con débito MP rechaza
+      // la orden entera (`invalid_payment_method_for_installments`).
+      ...(p.tipoTarjeta === "credit_card"
         ? {
             payment_method: {
               default_type: p.tipoTarjeta,
-              default_installments: p.tipoTarjeta === "credit_card" ? (p.cuotas ?? 1) : 1,
+              default_installments: p.cuotas ?? 1,
               installments_cost: "seller",
             },
           }
-        : {}),
+        : p.tipoTarjeta
+          ? { payment_method: { default_type: p.tipoTarjeta } }
+          : {}),
     },
   }
   if (p.descripcion) body.description = p.descripcion.slice(0, 250)
