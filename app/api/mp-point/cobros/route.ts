@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { autorizarStaff, getConfigPoint } from "@/lib/mp-point/auth"
-import { crearOrdenPoint, MercadoPagoError, type TipoTarjeta } from "@/lib/mp-point/api"
+import { crearOrdenPoint, MercadoPagoError, MONTO_MINIMO_POINT, type TipoTarjeta } from "@/lib/mp-point/api"
+import { formatCurrency } from "@/lib/format"
 
 /**
  * Manda un cobro a la terminal Point de la veterinaria.
@@ -27,6 +28,12 @@ export async function POST(request: Request) {
   const monto = Math.round(Number(payload.monto) * 100) / 100
   if (!Number.isFinite(monto) || monto <= 0) {
     return NextResponse.json({ ok: false, error: "Monto inválido" }, { status: 400 })
+  }
+  if (monto < MONTO_MINIMO_POINT) {
+    return NextResponse.json(
+      { ok: false, error: `El mínimo para cobrar con Point es ${formatCurrency(MONTO_MINIMO_POINT)}. Cobrá este monto en efectivo o por transferencia.` },
+      { status: 400 },
+    )
   }
 
   try {

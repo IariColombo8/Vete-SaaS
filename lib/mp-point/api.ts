@@ -82,6 +82,9 @@ export async function configurarTerminalPDV(token: string, terminalId: string): 
 
 export type TipoTarjeta = "credit_card" | "debit_card"
 
+/** MP rechaza órdenes Point por debajo de esto (`amount must be >= 15.00`). */
+export const MONTO_MINIMO_POINT = 15
+
 export interface CrearOrdenParams {
   terminalId: string
   /** Pesos con centavos; se manda como string con 2 decimales. */
