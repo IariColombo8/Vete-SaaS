@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,21 @@ export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatic
   const [items, setItems] = useState<RecordatorioVacuna[] | null>(null)
   const [verTodos, setVerTodos] = useState(false)
   const hoy = fechaArgentina(new Date())
+  // El email automático sale solo del Gmail de la veterinaria. null = cargando
+  // o no se pudo saber (no se muestra el aviso de "conectá tu Gmail").
+  const [gmailConectado, setGmailConectado] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!envioAutomatico) return
+    let cancelado = false
+    fetch(`/api/gmail/credentials?tenant=${encodeURIComponent(tenantId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((estado: { conectado?: boolean } | null) => {
+        if (!cancelado && estado) setGmailConectado(Boolean(estado.conectado))
+      })
+      .catch(() => {})
+    return () => { cancelado = true }
+  }, [tenantId, envioAutomatico])
 
   useEffect(() => {
     let cancelado = false
@@ -59,8 +75,9 @@ export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatic
   if (items === null) return null
 
   const rango = rangoCron(new Date())
+  const automatico = envioAutomatico && gmailConectado === true
   const saleSolo = (r: RecordatorioVacuna) =>
-    envioAutomatico &&
+    automatico &&
     r.estado === "pendiente" &&
     (r.intentos ?? 0) < MAX_INTENTOS &&
     Boolean(r.clienteEmail) &&
@@ -110,10 +127,21 @@ export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatic
           {items.length > 0 && <Badge variant="secondary">{items.length}</Badge>}
         </CardTitle>
         <CardDescription>
-          {envioAutomatico
-            ? "Al que tiene email le llega un aviso solo, 7 días antes. A los demás, avisales por WhatsApp desde acá."
-            : "Avisale al dueño por WhatsApp con un click. En el plan Pro les llega además un email automático."}
+          {automatico
+            ? "Al que tiene email le llega un aviso solo desde tu Gmail, 7 días antes. A los demás, avisales por WhatsApp desde acá."
+            : envioAutomatico
+              ? "Avisale al dueño por WhatsApp con un click."
+              : "Avisale al dueño por WhatsApp con un click. En el plan Pro les llega además un email automático."}
         </CardDescription>
+        {envioAutomatico && gmailConectado === false && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+            Para que los recordatorios salgan solos por email,{" "}
+            <Link href={`/${tenantId}/admin/Configuracion?tab=integraciones`} className="font-medium underline">
+              conectá tu Gmail en Configuración → Integraciones
+            </Link>
+            .
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (

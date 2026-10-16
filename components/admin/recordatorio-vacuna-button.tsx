@@ -41,8 +41,8 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
   const [vacuna, setVacuna] = useState("")
   const [fecha, setFecha] = useState("")
 
-  // En cualquier plan: en Pro le llega un email al cliente; en todos aparece en
-  // el Dashboard ("Vacunas por vencer") para avisar a mano con wa.me.
+  // En cualquier plan aparece en el Dashboard ("Vacunas por vencer") para avisar
+  // a mano con wa.me; en Pro, con Gmail conectado, al cliente le llega un email.
   const [envioAutomatico, setEnvioAutomatico] = useState(false)
 
   const handleAbrir = async () => {
@@ -69,7 +69,7 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
       toast({
         title: "Recordatorio programado",
         description: envioAutomatico
-          ? `Le llega un email al cliente antes del ${fecha} y te aparece en el Dashboard.`
+          ? `Te aparece en el Dashboard antes del ${fecha}. Si conectaste tu Gmail, al cliente le llega un email.`
           : "Te va a aparecer en el Dashboard para avisarle al dueño.",
       })
       setOpen(false)
@@ -105,7 +105,7 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
             <DialogTitle>Recordatorio de vacuna</DialogTitle>
             <DialogDescription>
               {envioAutomatico
-                ? "Unos días antes de la próxima dosis le llega un email al cliente, y te aparece en el Dashboard para avisarle por WhatsApp."
+                ? "Unos días antes te aparece en el Dashboard para avisarle por WhatsApp, y si conectaste tu Gmail, al cliente le llega un email."
                 : "Unos días antes te aparece en el Dashboard para avisarle al dueño por WhatsApp."}
               {" "}Si la cargás como próxima dosis en la historia, no hace falta: se crea sola.
             </DialogDescription>

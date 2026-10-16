@@ -29,8 +29,9 @@ import { APP_URL } from "@/lib/seo/sitio"
  *
  * El punto 2 es para tenants con el feature `recordatoriosVacunas` (Pro). Los
  * demás, y los clientes sin email, avisan a mano desde el Dashboard (wa.me).
- * El email sale por el Gmail de la veterinaria si lo conectó, si no por
- * Resend con reply_to a su email (ver lib/email/enviar-cliente.ts).
+ * El email sale SOLO del Gmail que conectó la veterinaria (ver
+ * lib/email/enviar-cliente.ts). Sin Gmail conectado no se manda nada y el
+ * recordatorio queda pendiente en el Dashboard, sin gastar intentos.
  *
  * Seguridad: header `Authorization: Bearer <CRON_SECRET>` (lo envía Vercel Cron).
  */
@@ -54,7 +55,6 @@ interface FilaRecordatorio {
 
 interface DatosVeterinaria {
   nombre: string
-  email?: string
   telefono?: string
   direccion?: string
   logo?: string
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   try {
     const { data: tenants, error: errTenants } = await admin
       .from("tenants")
-      .select("slug, plan, nombre, email, telefono, direccion, logo")
+      .select("slug, plan, nombre, telefono, direccion, logo")
     if (errTenants) throw errTenants
 
     const conWhatsapp = (tenants ?? []).filter((t) => planAllows(t.plan, "whatsapp"))
@@ -125,7 +125,6 @@ export async function GET(request: Request) {
           t.slug as string,
           {
             nombre: (t.nombre as string) || (t.slug as string),
-            email: (t.email as string) || undefined,
             telefono: (t.telefono as string) || undefined,
             direccion: (t.direccion as string) || undefined,
             logo: (t.logo as string) || undefined,
@@ -171,11 +170,9 @@ export async function GET(request: Request) {
           to: destino,
           subject: asuntoRecordatorio(datos, hoy),
           html: htmlRecordatorio(datos, hoy),
-          remitente: vet.nombre,
-          replyTo: vet.email,
         })
 
-        // Sin ningún proveedor de email configurado no se gasta un intento.
+        // Sin Gmail conectado no se gasta un intento: queda para avisar a mano.
         if (r.skipped) continue
 
         if (r.ok) {

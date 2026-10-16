@@ -481,8 +481,10 @@ intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
   hasta +7), no una fecha exacta, así un día sin cron no pierde avisos.
   Hasta 3 intentos; usa el email actual del cliente (sin email: `fallido`
   con "Sin email", queda en el Dashboard). Envío en
-  `lib/email/enviar-cliente.ts`: Gmail propio de la veterinaria → Resend con
-  su nombre como remitente y `reply_to` a su email → Gmail compartido.
+  `lib/email/enviar-cliente.ts`: **solo el Gmail que conectó la veterinaria**
+  (decisión del 2026-10-16; ni Resend ni cuenta compartida). Sin Gmail
+  conectado no se manda nada ni se gastan intentos, y el Dashboard pide
+  conectarlo (Configuración → Integraciones).
   Contenido del email en `lib/recordatorios/email.ts` (testeado).
 - **Aviso manual con wa.me en cualquier plan** (tarjeta "Vacunas por vencer"
   del Dashboard): gratis, sale del WhatsApp de la veterinaria. Avisar a mano
