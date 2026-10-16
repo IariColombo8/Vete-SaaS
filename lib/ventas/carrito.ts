@@ -299,6 +299,12 @@ export interface ItemRPC {
   cantidad: number
   precio_unitario: number
   subtotal: number
+  /**
+   * Solo en cobros de monto libre: lo que se escribió ("Corte de uñas"). La
+   * RPC lo usa como nombre en el remito si el producto es un servicio sin
+   * stock (064); sin esa migración se ignora y queda el nombre del servicio.
+   */
+  concepto?: string
 }
 
 /**
@@ -382,6 +388,7 @@ export function itemsParaRPC(carrito: LineaCarrito[], promociones: Promocion[] =
             ? round2(linea.producto.precio)
             : precioFinal(linea.producto),
       subtotal,
+      ...(linea.precioManual != null && linea.motivo ? { concepto: linea.motivo } : {}),
     }
   })
 }

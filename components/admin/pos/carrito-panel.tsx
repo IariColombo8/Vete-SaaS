@@ -475,7 +475,8 @@ function LineaItem({
     <li className="rounded-lg border bg-card p-2.5">
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0 flex-1 text-sm font-medium leading-snug">
-          {descripcionLinea(linea.producto)}
+          {/* Monto libre: el concepto es el título, como sale en el remito. */}
+          {esServicioManual && linea.motivo ? linea.motivo : descripcionLinea(linea.producto)}
         </span>
         {!esServicioManual && (
           <Button
@@ -500,17 +501,15 @@ function LineaItem({
         </Button>
       </div>
 
-      {(linea.vinculo || linea.motivo) && (
+      {linea.vinculo && (
         <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-          {linea.vinculo?.mascotaNombre}
-          {linea.vinculo && linea.motivo ? " · " : ""}
-          {linea.motivo}
+          {linea.vinculo.mascotaNombre}
         </p>
       )}
 
       <div className="mt-2 flex items-center justify-between">
         {esServicioManual ? (
-          <span className="text-xs text-muted-foreground">1 atención</span>
+          <span className="text-xs text-muted-foreground">Monto libre</span>
         ) : (
           <div className="flex items-center gap-1">
             <Button

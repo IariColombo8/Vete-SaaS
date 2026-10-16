@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2, Stethoscope } from "lucide-react"
+import { HandCoins, Loader2 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -73,40 +73,45 @@ export function AtencionDialog({ abierto, tenantId, cliente, onCerrar, onConfirm
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Stethoscope className="h-4 w-4" /> Atención veterinaria
+            <HandCoins className="h-4 w-4" /> Cobrar monto libre
           </DialogTitle>
           <DialogDescription>
-            Cargá el motivo y el costo de la atención para cobrarla en esta venta.
+            Para lo que no está cargado como producto: un corte de uñas, tomar la
+            presión, una consulta. Escribí qué es y cuánto cobrás.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="atencion-costo">Costo</Label>
+            <Label htmlFor="atencion-motivo">Concepto</Label>
+            <Input
+              id="atencion-motivo"
+              value={motivo}
+              autoFocus
+              maxLength={120}
+              placeholder="Ej: Corte de uñas, toma de presión"
+              onChange={(e) => setMotivo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") document.getElementById("atencion-costo")?.focus()
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="atencion-costo">Monto</Label>
             <Input
               id="atencion-costo"
               type="number"
               inputMode="decimal"
               min={0}
               step={100}
-              autoFocus
               value={costo}
-              placeholder="Ej: 15000"
+              placeholder="Ej: 5000"
               onChange={(e) => setCosto(e.target.value)}
-              className="h-12 text-lg"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="atencion-motivo">Motivo (opcional)</Label>
-            <Input
-              id="atencion-motivo"
-              value={motivo}
-              placeholder="Ej: Consulta, control, curación"
-              onChange={(e) => setMotivo(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") confirmar()
               }}
+              className="h-12 text-lg"
             />
           </div>
 

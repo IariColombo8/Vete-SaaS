@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Loader2, Minus, PawPrint, Plus, ScanBarcode, Search, Stethoscope } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Minus, PawPrint, Plus, ScanBarcode, HandCoins, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -201,7 +201,10 @@ export function BuscadorProductos({ tenantId, carrito, onElegir, onQuitarUno, on
           onClick={onAbrirAtencion}
           className="h-8 flex-1 px-2 text-xs sm:h-12 sm:px-3 sm:text-sm"
         >
-          <Stethoscope className="h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Atención</span>
+          {/* Con texto también en celular: es el botón para cobrar lo que no
+              está cargado (corte de uñas, presión) y solo con el icono no se
+              encontraba. */}
+          <HandCoins className="mr-1 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" /> Monto libre
         </Button>
       </div>
 
