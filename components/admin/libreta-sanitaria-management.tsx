@@ -1361,7 +1361,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
           }
           return { ...d, carrito };
         });
-        toast({ title: "Guardado", description: "Se agregó al carrito de Vender (sin cobrar todavía)." });
+        toast({ title: "Guardado", description: "Se agregó al carrito del Punto de venta (sin cobrar todavía)." });
       } else {
         toast({ title: "Guardado" });
       }
@@ -2635,7 +2635,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                 onChange={(e) => setFechaAplicacion(e.target.value)}
                 className="mt-1 h-9"
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">Vacuna/medicamento/desparasitación quedan como una sola nota en la historia clínica. Servicio solo se cobra (su historia la crea el cobro en Vender).</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Vacuna/medicamento/desparasitación quedan como una sola nota en la historia clínica. Servicio solo se cobra (su historia la crea el cobro en el Punto de venta).</p>
             </div>
             {itemsAplicacion.map((item, i) => (
               <div key={i} className="rounded-xl border border-border p-3 space-y-2.5 relative">
@@ -2698,7 +2698,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                       </div>
                     )}
                     {!item.productoId && item.busqueda.trim().length >= 2 && item.resultados.length === 0 && (
-                      <p className="mt-1 text-[11px] text-muted-foreground">Sin coincidencias en productos: se guarda como texto libre (no se puede cobrar en Vender sin un producto del catálogo).</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">Sin coincidencias en productos: se guarda como texto libre (no se puede cobrar en el Punto de venta sin un producto del catálogo).</p>
                     )}
                   </div>
                 )}

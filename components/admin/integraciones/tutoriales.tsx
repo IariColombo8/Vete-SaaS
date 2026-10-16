@@ -274,7 +274,7 @@ export function TutorialPoint({ abierto }: { abierto?: boolean }) {
         {
           donde: "VetPanel",
           titulo: "Cobrá desde el mostrador",
-          detalle: <>En <strong>Vender</strong>, al elegir débito o crédito aparece <strong>Cobrar con Point</strong>: el monto viaja a la terminal, el cliente paga y la venta se registra sola con el comprobante de Mercado Pago.</>,
+          detalle: <>En <strong>Punto de venta</strong> aparece <strong>Cobrar con Point</strong>: el monto viaja a la terminal, el cliente paga y la venta se registra sola con el comprobante de Mercado Pago.</>,
         },
       ]}
     />

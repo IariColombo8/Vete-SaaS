@@ -58,7 +58,7 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
       titulo: "Comercio",
       tour: "comercio",
       items: [
-        { href: `/${slug}/admin/Vender`,          label: "Vender",           icon: ShoppingCart, section: "pos",             feature: "ventas" },
+        { href: `/${slug}/admin/Vender`,          label: "Punto de venta",   icon: ShoppingCart, section: "pos",             feature: "ventas" },
         { href: `/${slug}/admin/Caja`,            label: "Caja",             icon: Wallet,       section: "caja",            feature: "ventas" },
         { href: `/${slug}/admin/Ventas`,          label: "Ventas",           icon: Receipt,      section: "ventas",          feature: "ventas" },
         { href: `/${slug}/admin/CuentaCorriente`, label: "Cuenta corriente", icon: Landmark,     section: "cuentaCorriente", feature: "ventas" },

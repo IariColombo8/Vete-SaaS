@@ -119,6 +119,15 @@ export function PosManagement({ tenantId }: Props) {
   const [productosEnOferta, setProductosEnOferta] = useState<Producto[]>([])
   const [ofertasPromosAbierto, setOfertasPromosAbierto] = useState(false)
   const [carritoAbierto, setCarritoAbierto] = useState(false)
+  // Desde 1024 px el carrito va como panel fijo al costado (ver el render).
+  const [carritoFijo, setCarritoFijo] = useState(false)
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)")
+    const actualizar = () => setCarritoFijo(mql.matches)
+    actualizar()
+    mql.addEventListener("change", actualizar)
+    return () => mql.removeEventListener("change", actualizar)
+  }, [])
 
   // Se cargan una sola vez acá y se pasan tanto al panel de ofertas/promos
   // como al carrito: si cada uno las pidiera por su cuenta, el total que ve
@@ -406,7 +415,8 @@ export function PosManagement({ tenantId }: Props) {
         />
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border bg-card p-3">
+      <div className="flex min-h-0 flex-1 gap-3">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-card p-3">
         <Button
           variant="outline"
           size="sm"
@@ -432,8 +442,20 @@ export function PosManagement({ tenantId }: Props) {
         </div>
       </div>
 
-      {/* Flotante en vez de panel fijo: el buscador ya necesita todo el ancho
-          para que la fila de resultados (descripción, stock, precio) respire. */}
+      {/* Como la caja de un súper: en pantallas grandes el carrito queda fijo a
+          la derecha, siempre a la vista con su total. En celular/tablet no
+          entra al costado y sigue siendo el botón flotante con el diálogo. */}
+      {carritoFijo && (
+        <aside
+          data-tour="pos-carrito"
+          className="flex w-[380px] shrink-0 flex-col overflow-hidden rounded-lg border bg-card xl:w-[420px]"
+        >
+          {carritoPanel}
+        </aside>
+      )}
+      </div>
+
+      {!carritoFijo && (
       <Button
         onClick={() => setCarritoAbierto(true)}
         data-tour="pos-carrito"
@@ -451,6 +473,7 @@ export function PosManagement({ tenantId }: Props) {
           "Carrito"
         )}
       </Button>
+      )}
 
       {/* `modal={false}`: el carrito trae adentro el Popover de ClienteSelector
           (cuenta corriente). Con el Dialog modal, el scroll-lock y el focus
@@ -460,7 +483,7 @@ export function PosManagement({ tenantId }: Props) {
           clientes aunque se vea. Sin `modal`, el Dialog sigue cerrando con
           Esc/click afuera pero deja de pelear por el foco y el scroll con el
           Popover anidado. */}
-      <Dialog open={carritoAbierto} onOpenChange={setCarritoAbierto} modal={false}>
+      <Dialog open={!carritoFijo && carritoAbierto} onOpenChange={setCarritoAbierto} modal={false}>
         <DialogContent className="flex h-[95dvh] max-w-md flex-col gap-0 p-0 sm:h-[80vh]">
           <DialogTitle className="sr-only">Carrito</DialogTitle>
           <DialogDescription className="sr-only">

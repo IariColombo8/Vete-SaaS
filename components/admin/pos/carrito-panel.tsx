@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { ChevronDown, CreditCard, Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Ayuda } from "@/components/ui/ayuda"
 import { Separator } from "@/components/ui/separator"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ClienteSelector } from "./cliente-selector"
 import { esConsumidorFinal } from "@/lib/clientes/consumidor-final"
 import { MixtoPagos, type LineaPagoMixto } from "./mixto-pagos"
@@ -127,79 +126,58 @@ export function CarritoPanel({
   const montoRecibido = Number(pagaCon) || 0
   const vuelto = montoRecibido - totalACobrar
 
-  // Desplegable en vez de un panel flex-1 fijo: dentro del modal, el bloque de
-  // pago (medios, cliente, descuento, cobrar) ya ocupa bastante alto, y forzar
-  // la lista a "el espacio que sobre" la dejaba en 0px con el carrito lleno.
-  // Acá se ve siempre que hay algo cargado, con su propio scroll acotado, y el
-  // resto del panel scrollea como una sola columna.
-  const [listaAbierta, setListaAbierta] = useState(true)
-
+  // Como la caja de un súper: la lista ocupa todo el alto libre y scrollea
+  // sola, y el bloque de pago queda abajo. `min-h` en la lista para que en
+  // pantallas bajas o con el pago desplegado (mixto, crédito) no quede en 0px:
+  // ahí scrollea el panel entero.
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <Collapsible open={listaAbierta} onOpenChange={setListaAbierta}>
-        <CollapsibleTrigger asChild>
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <ShoppingCart className="h-4 w-4" />
+          Carrito
+          {!vacio && (
+            <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">
+              {formatCantidad(totalUnidades)}
+            </span>
+          )}
+        </h2>
+        {!vacio && (
           <button
             type="button"
-            className="flex w-full items-center justify-between px-4 py-3 text-left"
-            disabled={vacio}
+            onClick={onVaciar}
+            className="rounded px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            <h2 className="flex items-center gap-2 font-semibold">
-              <ShoppingCart className="h-4 w-4" />
-              Carrito
-              {!vacio && (
-                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">
-                  {formatCantidad(totalUnidades)}
-                </span>
-              )}
-            </h2>
-            <div className="flex items-center gap-1">
-              {!vacio && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); onVaciar() }}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onVaciar() } }}
-                  className="rounded px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Vaciar
-                </span>
-              )}
-              {!vacio && (
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${listaAbierta ? "rotate-180" : ""}`}
-                />
-              )}
-            </div>
+            Vaciar
           </button>
-        </CollapsibleTrigger>
+        )}
+      </div>
 
-        <CollapsibleContent>
-          <div className="p-2">
-            {vacio ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm text-muted-foreground">
-                <ShoppingCart className="h-8 w-8 opacity-30" />
-                El carrito está vacío
-              </div>
-            ) : (
-              <ul className="space-y-1">
-                {carrito.map((linea) => (
-                  <LineaItem
-                    key={linea.id}
-                    linea={linea}
-                    onCantidad={(c) => onCantidad(linea.id, c)}
-                    onQuitar={() => onQuitar(linea.id)}
-                    onCorregirFormato={() => setCorrigiendo(linea)}
-                  />
-                ))}
-              </ul>
-            )}
+      <div className="min-h-40 flex-1 overflow-y-auto p-2">
+        {vacio ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 py-6 text-center text-sm text-muted-foreground">
+            <ShoppingCart className="h-10 w-10 opacity-30" />
+            El carrito está vacío
+            <span className="text-xs">Buscá o escaneá un producto para empezar</span>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        ) : (
+          <ul className="space-y-1">
+            {carrito.map((linea) => (
+              <LineaItem
+                key={linea.id}
+                linea={linea}
+                onCantidad={(c) => onCantidad(linea.id, c)}
+                onQuitar={() => onQuitar(linea.id)}
+                onCorregirFormato={() => setCorrigiendo(linea)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
 
       <Separator />
 
-      <div className="space-y-3 p-4">
+      <div className="shrink-0 space-y-3 p-4">
         <div>
           <Label className="mb-1.5 block text-xs text-muted-foreground">Medio de pago</Label>
           <div className="grid grid-cols-3 gap-1.5">

@@ -34,7 +34,7 @@ export const TOURS: Partial<Record<AdminSection, PasoTour[]>> = {
       element: '[data-tour="comercio"]',
       popover: {
         title: "Comercio",
-        description: "En el orden del día: Vender cobra en el mostrador y emite el remito, Caja abre y cierra el turno, Ventas muestra el historial, Cuenta corriente cobra lo que quedó debiendo y Productos maneja el catálogo y el stock.",
+        description: "En el orden del día: Punto de venta cobra en el mostrador y emite el remito, Caja abre y cierra el turno, Ventas muestra el historial, Cuenta corriente cobra lo que quedó debiendo y Productos maneja el catálogo y el stock.",
       },
     },
     {

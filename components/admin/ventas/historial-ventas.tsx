@@ -63,7 +63,7 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
       <EstadoVacio
         icono={<Receipt />}
         titulo="No hay ventas en este período"
-        descripcion="Probá con un rango de fechas más amplio. Las ventas se cargan desde Vender y aparecen acá con su remito."
+        descripcion="Probá con un rango de fechas más amplio. Las ventas se cargan desde el Punto de venta y aparecen acá con su remito."
       />
     )
   }
