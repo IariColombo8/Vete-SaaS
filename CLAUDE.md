@@ -464,9 +464,14 @@ intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
 - **Se crean solos desde la historia**: un trigger en `historias` arma el
   recordatorio con la "próxima dosis" de cada vacuna/desparasitación
   (`aplicaciones`, y las filas viejas tipo `vacuna`/`desparasitacion`).
-  Corregir la fecha lo re-arma; sacar el ítem borra el pendiente; aplicar la
-  misma vacuna marca `cumplido` el anterior (hasta 90 días antes del
-  vencimiento). Si el trigger falla, la historia se guarda igual (warning).
+  Corregir la fecha lo re-arma; sacar el ítem borra el pendiente. Si el
+  trigger falla, la historia se guarda igual (warning).
+- **Un solo recordatorio activo por mascota y vacuna** (`062`): una
+  aplicación cierra (`cumplido`) los automáticos de aplicaciones *anteriores*
+  —nunca los de una más nueva: en un plan de cachorro la dosis 1 no cierra el
+  recordatorio de la dosis 3— y los manuales que vencían ≤ 90 días después.
+  Un manual a ≤ 60 días de un automático de la misma vacuna se cancela (si ya
+  se había avisado, el automático queda como avisado).
 - `estado` (pendiente/enviado/fallido/cumplido/cancelado) reemplaza a
   `enviado`, que lo sigue manteniendo un trigger por compatibilidad.
 - **Cron** (`/api/cron/recordatorios`): toma un rango (vencidas hace ≤3 días
