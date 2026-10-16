@@ -504,9 +504,11 @@ export async function getMetricasVentas(
     porDia.set(dia, { total: acum.total + total, ventas: acum.ventas + 1 })
   }
 
-  const topProductos = await getTopProductos(
-    ventas.map((v) => v.id as string),
-  )
+  // El ranking es un extra: si falla, los totales del día y del mes se muestran igual.
+  const topProductos = await getTopProductos(ventas.map((v) => v.id as string)).catch((e) => {
+    console.error("Error calculando top de productos:", e)
+    return [] as MetricasVentas["topProductos"]
+  })
 
   return {
     facturacion,
@@ -528,15 +530,23 @@ async function getTopProductos(
 ): Promise<MetricasVentas["topProductos"]> {
   if (ventaIds.length === 0) return []
 
-  const { data, error } = await supabase
-    .from("venta_items")
-    .select("nombre, marca, cantidad, subtotal")
-    .in("venta_id", ventaIds)
-  throwIfSupabaseError(error, "Error al calcular top de productos")
+  // En tandas: los ids viajan en la URL, y con un mes de ventas (cientos de
+  // uuids) la consulta pasaba el largo máximo o el tope de 1000 filas de
+  // PostgREST. Al fallar, el Dashboard entero quedaba en 0.
+  const TANDA = 100
+  const filas: Fila[] = []
+  for (let i = 0; i < ventaIds.length; i += TANDA) {
+    const { data, error } = await supabase
+      .from("venta_items")
+      .select("nombre, marca, cantidad, subtotal")
+      .in("venta_id", ventaIds.slice(i, i + TANDA))
+    throwIfSupabaseError(error, "Error al calcular top de productos")
+    filas.push(...((data ?? []) as Fila[]))
+  }
 
   const acumulado = new Map<string, { cantidad: number; total: number }>()
 
-  for (const f of (data ?? []) as Fila[]) {
+  for (const f of filas) {
     // Se agrupa por el nombre congelado, no por producto_id: si el producto se
     // borró del catálogo igual queremos verlo en el ranking histórico.
     const nombre = [f.marca as string, f.nombre as string].filter(Boolean).join(" ")
