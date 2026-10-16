@@ -417,9 +417,15 @@ export function CarritoPanel({
           </div>
         )}
 
-        {pointDisponible && (esDebito || esCredito) && (
+        {/* Visible con cualquier medio salvo mixto y cuenta corriente: si
+            estaba solo en débito/crédito nadie lo encontraba. Desde efectivo o
+            transferencia pasa a débito, que es como queda registrada la venta. */}
+        {pointDisponible && !esMixto && !esCtaCte && (
           <Button
-            onClick={onCobrarPoint}
+            onClick={() => {
+              if (!esDebito && !esCredito) onMedioPago("debito")
+              onCobrarPoint()
+            }}
             disabled={vacio || cobrando || readOnly}
             title={readOnly ? "Reactivá tu cuenta para editar" : "Mandar el monto a la terminal Point"}
             className="h-12 w-full bg-sky-600 text-base hover:bg-sky-700"
