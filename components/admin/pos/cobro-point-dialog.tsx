@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { CheckCircle2, CreditCard, Loader2, XCircle } from "lucide-react"
+import QRCode from "qrcode"
+import { CheckCircle2, CreditCard, Loader2, QrCode, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { formatCurrency } from "@/lib/format"
@@ -9,18 +10,24 @@ import {
   cancelarCobroPoint,
   consultarCobroPoint,
   crearCobroPoint,
+  crearCobroQr,
   type ResultadoCobroPoint,
   type TipoTarjetaPoint,
 } from "./use-mp-point"
 
+/** Por dónde paga el cliente: tarjeta en la terminal o QR en la pantalla. */
+export type CanalCobro = "point" | "qr"
+
 interface Props {
   open: boolean
+  canal?: CanalCobro
   tenantId: string
   monto: number
   descripcion?: string
-  tipoTarjeta: TipoTarjetaPoint
+  /** Solo Point. */
+  tipoTarjeta?: TipoTarjetaPoint
   cuotas?: number
-  /** El pago quedó aprobado en la terminal: el padre registra la venta. */
+  /** El pago quedó aprobado: el padre registra la venta. */
   onAprobado: (cobroId: string, paymentId: string | null) => Promise<void>
   onCerrar: () => void
 }
@@ -34,26 +41,52 @@ type Fase =
 
 const INTERVALO_POLL_MS = 2000
 
-const TEXTO_ESTADO: Record<string, string> = {
-  created: "Enviando el cobro a la terminal…",
-  at_terminal: "Esperando la tarjeta en la terminal…",
-  processing: "Procesando el pago…",
-  cancelacion_pedida: "Cancelando en la terminal…",
+const TEXTO_ESTADO: Record<CanalCobro, Record<string, string>> = {
+  point: {
+    created: "Enviando el cobro a la terminal…",
+    at_terminal: "Esperando la tarjeta en la terminal…",
+    processing: "Procesando el pago…",
+    cancelacion_pedida: "Cancelando en la terminal…",
+  },
+  qr: {
+    created: "Esperando que el cliente escanee y pague…",
+    processing: "Procesando el pago…",
+    cancelacion_pedida: "Cancelando el QR…",
+  },
 }
 
-const TEXTO_RESULTADO: Record<Exclude<ResultadoCobroPoint, "en_curso" | "aprobada">, string> = {
-  rechazada: "La tarjeta fue rechazada. Probá con otra o cobrá de otra forma.",
-  cancelada: "El cobro se canceló en la terminal.",
-  expirada: "La terminal no recibió la tarjeta a tiempo y el cobro venció.",
+const TEXTO_RESULTADO: Record<CanalCobro, Record<Exclude<ResultadoCobroPoint, "en_curso" | "aprobada">, string>> = {
+  point: {
+    rechazada: "La tarjeta fue rechazada. Probá con otra o cobrá de otra forma.",
+    cancelada: "El cobro se canceló en la terminal.",
+    expirada: "La terminal no recibió la tarjeta a tiempo y el cobro venció.",
+  },
+  qr: {
+    rechazada: "El pago fue rechazado. Que pruebe con otro medio en su app o cobrá de otra forma.",
+    cancelada: "El QR se canceló.",
+    expirada: "El QR venció sin que se pagara. Generá uno nuevo.",
+  },
 }
 
 /**
- * Cobro con Mercado Pago Point. Crea la orden al abrirse, consulta el estado
- * cada 2 segundos y, cuando la terminal aprueba, le avisa al mostrador para
- * que registre la venta. Hasta que no está aprobado no se toca el stock.
+ * Cobro con Mercado Pago: Point (tarjeta en la terminal) o QR (el cliente lo
+ * escanea en la pantalla). Crea la orden al abrirse, consulta el estado cada
+ * 2 segundos y, cuando MP aprueba, le avisa al mostrador para que registre la
+ * venta. Hasta que no está aprobado no se toca el stock.
  */
-export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarjeta, cuotas, onAprobado, onCerrar }: Props) {
+export function CobroPointDialog({
+  open,
+  canal = "point",
+  tenantId,
+  monto,
+  descripcion,
+  tipoTarjeta,
+  cuotas,
+  onAprobado,
+  onCerrar,
+}: Props) {
   const [fase, setFase] = useState<Fase>({ tipo: "enviando" })
+  const [qrImagen, setQrImagen] = useState<string | null>(null)
   const [cancelando, setCancelando] = useState(false)
   const vigente = useRef(false)
 
@@ -62,6 +95,7 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
     vigente.current = true
     setFase({ tipo: "enviando" })
     setCancelando(false)
+    setQrImagen(null)
 
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -80,7 +114,7 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
               setFase({
                 tipo: "fallo",
                 cobroId,
-                motivo: `El pago se aprobó en la terminal pero la venta no se pudo registrar: ${
+                motivo: `El pago se aprobó en Mercado Pago pero la venta no se pudo registrar: ${
                   e instanceof Error ? e.message : "error desconocido"
                 }. Anotá el pago de Mercado Pago${r.paymentId ? ` #${r.paymentId}` : ""} y cargá la venta a mano.`,
               })
@@ -89,7 +123,7 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
           return
         }
         if (r.resultado !== "en_curso") {
-          setFase({ tipo: "fallo", cobroId, motivo: TEXTO_RESULTADO[r.resultado] })
+          setFase({ tipo: "fallo", cobroId, motivo: TEXTO_RESULTADO[canal][r.resultado] })
           return
         }
         setFase({ tipo: "esperando", cobroId, estado: r.estado })
@@ -100,7 +134,16 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
       timer = setTimeout(() => poll(cobroId), INTERVALO_POLL_MS)
     }
 
-    crearCobroPoint(tenantId, { monto, descripcion, tipoTarjeta, cuotas })
+    const crear =
+      canal === "qr"
+        ? crearCobroQr(tenantId, { monto, descripcion }).then(async ({ cobroId, qrData }) => {
+            const imagen = await QRCode.toDataURL(qrData, { width: 320, margin: 2 })
+            if (vigente.current) setQrImagen(imagen)
+            return { cobroId }
+          })
+        : crearCobroPoint(tenantId, { monto, descripcion, tipoTarjeta, cuotas })
+
+    crear
       .then(({ cobroId }) => {
         if (!vigente.current) return
         setFase({ tipo: "esperando", cobroId, estado: "created" })
@@ -127,7 +170,7 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
       await cancelarCobroPoint(tenantId, fase.cobroId)
       setFase({ tipo: "esperando", cobroId: fase.cobroId, estado: "cancelacion_pedida" })
     } catch (e) {
-      console.error("No se pudo cancelar el cobro Point:", e)
+      console.error("No se pudo cancelar el cobro de Mercado Pago:", e)
     } finally {
       setCancelando(false)
     }
@@ -140,11 +183,15 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => !puedeCerrar && e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-sky-600" />
-            Cobro con Mercado Pago Point
+            {canal === "qr" ? <QrCode className="h-5 w-5 text-sky-600" /> : <CreditCard className="h-5 w-5 text-sky-600" />}
+            {canal === "qr" ? "Cobro con QR de Mercado Pago" : "Cobro con Mercado Pago Point"}
           </DialogTitle>
           <DialogDescription>
-            {tipoTarjeta === "credit_card" ? `Crédito${cuotas && cuotas > 1 ? ` en ${cuotas} cuotas` : ""}` : "Débito"}
+            {canal === "qr"
+              ? "Se paga con Mercado Pago o con la app de cualquier banco"
+              : tipoTarjeta === "credit_card"
+                ? `Crédito${cuotas && cuotas > 1 ? ` en ${cuotas} cuotas` : ""}`
+                : "Débito"}
           </DialogDescription>
         </DialogHeader>
 
@@ -155,13 +202,28 @@ export function CobroPointDialog({ open, tenantId, monto, descripcion, tipoTarje
             {fase.tipo === "enviando" && (
               <>
                 <Loader2 className="h-8 w-8 animate-spin text-sky-600" />
-                <p>Enviando el cobro a la terminal…</p>
+                <p>{canal === "qr" ? "Generando el QR…" : "Enviando el cobro a la terminal…"}</p>
               </>
             )}
-            {fase.tipo === "esperando" && (
+            {fase.tipo === "esperando" && canal === "qr" && (
+              <>
+                {qrImagen ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={qrImagen} alt="QR para pagar con Mercado Pago" className="h-64 w-64 rounded-md border bg-white p-1" />
+                ) : (
+                  <Loader2 className="h-8 w-8 animate-spin text-sky-600" />
+                )}
+                <p className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
+                  {TEXTO_ESTADO.qr[fase.estado] ?? "Esperando el pago…"}
+                </p>
+                <p className="text-xs">Mostrale la pantalla al cliente. El QR vence en 10 minutos.</p>
+              </>
+            )}
+            {fase.tipo === "esperando" && canal === "point" && (
               <>
                 <Loader2 className="h-8 w-8 animate-spin text-sky-600" />
-                <p>{TEXTO_ESTADO[fase.estado] ?? "Esperando a la terminal…"}</p>
+                <p>{TEXTO_ESTADO.point[fase.estado] ?? "Esperando a la terminal…"}</p>
                 <p className="text-xs">El cliente pasa o acerca la tarjeta en la terminal.</p>
               </>
             )}

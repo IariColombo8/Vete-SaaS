@@ -435,6 +435,17 @@ API de **Orders** (`/v1/orders`, `type: point`) y `/terminals/v1/*`; la
   UI pide reiniciarla. Una sola terminal PDV por punto de venta (regla de MP).
 - Estados de orden interpretados en `interpretarOrden` (`lib/mp-point/api.ts`).
   Si en producción aparece un `status` no contemplado, ajustar ahí.
+- **Cobro con QR** (`app/api/mp-point/qr`): misma cuenta y mismo token, sin
+  terminal. Orden `type: qr` modo `dynamic`; el mostrador dibuja `qr_data`
+  en `CobroPointDialog` (`canal="qr"`) y el seguimiento, la cancelación y el
+  vínculo usan las rutas de `cobros/[id]` (fila en `mp_point_cobros` con
+  `terminal_id = "qr:<caja>"`). MP exige una caja con `external_id` y las que
+  crea la app de MP no lo tienen: VetPanel crea la suya (`VETPANEL<SLUG>`)
+  la primera vez que MP responde `pos_not_found`, dentro de la primera
+  sucursal de la cuenta. Sin sucursal no se inventa una (pide dirección y
+  coordenadas reales): se le pide a la veterinaria que la cree en MP.
+  La venta se registra como **transferencia** (la plata entra a MP, no al
+  cajón, y no lleva recargo de tarjeta).
 
 ### Factura electrónica (ARCA, directo por WSAA + WSFEv1)
 

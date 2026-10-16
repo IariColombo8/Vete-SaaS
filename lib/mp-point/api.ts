@@ -27,6 +27,16 @@ function headers(token: string, extra: Record<string, string> = {}) {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...extra }
 }
 
+/** Código de error de MP (p. ej. `minimum_amount_not_met`), para que el mostrador lo pueda reportar. */
+export function detalleMP(cuerpo: string): string {
+  try {
+    const json = JSON.parse(cuerpo) as { errors?: { code?: string }[]; error?: string; message?: string }
+    return json.errors?.[0]?.code ?? json.error ?? json.message ?? "sin detalle"
+  } catch {
+    return cuerpo.slice(0, 80) || "sin detalle"
+  }
+}
+
 async function leer<T>(res: Response): Promise<T> {
   if (!res.ok) throw new MercadoPagoError(res.status, await res.text())
   return (await res.json()) as T
@@ -187,6 +197,92 @@ export async function cancelarOrdenPoint(token: string, orderId: string): Promis
   })
   if (res.status === 202) return null
   return mapOrden(await leer<OrdenRaw>(res))
+}
+
+// ── QR ──────────────────────────────────────────────────────────────────────
+//
+// Misma API de Orders, `type: qr` en modo `dynamic`: MP devuelve la trama
+// EMVCo con el monto y el mostrador la dibuja en pantalla. El cliente la
+// escanea con cualquier billetera; el seguimiento, la cancelación y los
+// estados son los mismos que en Point.
+//
+// MP exige que la orden apunte a una caja (POS) con `external_id`. Las cajas
+// que crea la app de MP no lo tienen, así que VetPanel crea la suya dentro de
+// la sucursal que ya exista en la cuenta (`asegurarCajaQr`). Crear la
+// sucursal pide dirección y coordenadas reales: eso lo hace la veterinaria
+// desde Mercado Pago, no se inventa acá.
+
+/** `external_id` de la caja de VetPanel: alfanumérico, hasta 40 caracteres. */
+export function externalPosIdQr(tenantId: string): string {
+  return `VETPANEL${tenantId.replace(/[^a-z0-9]/gi, "").toUpperCase()}`.slice(0, 40)
+}
+
+export class SinSucursalError extends Error {
+  constructor() {
+    super("La cuenta de Mercado Pago no tiene ninguna sucursal")
+  }
+}
+
+/** Crea la caja de VetPanel si todavía no existe. Idempotente por `external_id`. */
+export async function asegurarCajaQr(token: string, externalPosId: string): Promise<void> {
+  const existentes = await leer<{ results?: unknown[] }>(
+    await fetch(`${MP_BASE}/pos?external_id=${encodeURIComponent(externalPosId)}`, { headers: headers(token) }),
+  )
+  if ((existentes.results ?? []).length > 0) return
+
+  const yo = await leer<{ id: number }>(await fetch(`${MP_BASE}/users/me`, { headers: headers(token) }))
+  const sucursales = await leer<{ results?: { id: string }[] }>(
+    await fetch(`${MP_BASE}/users/${yo.id}/stores/search`, { headers: headers(token) }),
+  )
+  const sucursal = sucursales.results?.[0]
+  if (!sucursal) throw new SinSucursalError()
+
+  const res = await fetch(`${MP_BASE}/pos`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({
+      name: "VetPanel QR",
+      fixed_amount: true,
+      store_id: Number(sucursal.id),
+      external_id: externalPosId,
+    }),
+  })
+  await leer<unknown>(res)
+}
+
+export interface CrearOrdenQrParams {
+  externalPosId: string
+  monto: number
+  externalReference: string
+  descripcion?: string
+  expiraEnMinutos?: number
+}
+
+export interface OrdenQr extends OrdenPoint {
+  /** Trama EMVCo a dibujar como QR. */
+  qrData: string
+}
+
+export async function crearOrdenQr(token: string, p: CrearOrdenQrParams): Promise<OrdenQr> {
+  const minutos = Math.min(Math.max(p.expiraEnMinutos ?? 10, 1), 180)
+  const monto = p.monto.toFixed(2)
+  const body: Record<string, unknown> = {
+    type: "qr",
+    total_amount: monto,
+    external_reference: p.externalReference,
+    expiration_time: `PT${minutos}M`,
+    config: { qr: { external_pos_id: p.externalPosId, mode: "dynamic" } },
+    transactions: { payments: [{ amount: monto }] },
+  }
+  if (p.descripcion) body.description = p.descripcion.slice(0, 250)
+
+  const res = await fetch(`${MP_BASE}/v1/orders`, {
+    method: "POST",
+    headers: headers(token, { "X-Idempotency-Key": randomUUID() }),
+    body: JSON.stringify(body),
+  })
+  const raw = await leer<OrdenRaw & { type_response?: { qr_data?: string } }>(res)
+  return { ...mapOrden(raw), qrData: raw.type_response?.qr_data ?? "" }
 }
 
 // ── Interpretación de estados ───────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CreditCard, Loader2, Minus, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, Minus, Plus, QrCode, Scale, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,6 +52,9 @@ interface Props {
   /** La veterinaria tiene una terminal Mercado Pago Point conectada. */
   pointDisponible: boolean
   onCobrarPoint: () => void
+  /** La veterinaria conectó su cuenta de Mercado Pago (con o sin terminal). */
+  qrDisponible: boolean
+  onCobrarQr: () => void
 }
 
 /** Panel derecho del mostrador: qué se lleva, a quién y cómo paga. */
@@ -83,6 +86,8 @@ export function CarritoPanel({
   onCobrar,
   pointDisponible,
   onCobrarPoint,
+  qrDisponible,
+  onCobrarQr,
 }: Props) {
   const esDebito = medioPago === "debito"
   const esCredito = medioPago === "credito"
@@ -398,19 +403,39 @@ export function CarritoPanel({
         {/* Visible con cualquier medio salvo mixto y cuenta corriente: si
             estaba solo en débito/crédito nadie lo encontraba. Desde efectivo o
             transferencia pasa a débito, que es como queda registrada la venta. */}
-        {pointDisponible && !esMixto && !esCtaCte && (
-          <Button
-            onClick={() => {
-              if (!esDebito && !esCredito) onMedioPago("debito")
-              onCobrarPoint()
-            }}
-            disabled={vacio || cobrando || readOnly}
-            title={readOnly ? "Reactivá tu cuenta para editar" : "Mandar el monto a la terminal Point"}
-            className="h-12 w-full bg-sky-600 text-base hover:bg-sky-700"
-          >
-            <CreditCard className="mr-2 h-4 w-4" />
-            Cobrar con Point
-          </Button>
+        {/* El QR queda como transferencia: la plata entra a la cuenta de MP,
+            no al cajón, y no lleva el recargo de tarjeta. */}
+        {(pointDisponible || qrDisponible) && !esMixto && !esCtaCte && (
+          <div className={pointDisponible && qrDisponible ? "grid grid-cols-2 gap-2" : ""}>
+            {pointDisponible && (
+              <Button
+                onClick={() => {
+                  if (!esDebito && !esCredito) onMedioPago("debito")
+                  onCobrarPoint()
+                }}
+                disabled={vacio || cobrando || readOnly}
+                title={readOnly ? "Reactivá tu cuenta para editar" : "Mandar el monto a la terminal Point"}
+                className="h-12 w-full bg-sky-600 text-base hover:bg-sky-700"
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Cobrar con Point
+              </Button>
+            )}
+            {qrDisponible && (
+              <Button
+                onClick={() => {
+                  if (medioPago !== "transferencia") onMedioPago("transferencia")
+                  onCobrarQr()
+                }}
+                disabled={vacio || cobrando || readOnly}
+                title={readOnly ? "Reactivá tu cuenta para editar" : "Mostrar un QR de Mercado Pago con el monto"}
+                className="h-12 w-full bg-sky-600 text-base hover:bg-sky-700"
+              >
+                <QrCode className="mr-2 h-4 w-4" />
+                Cobrar con QR
+              </Button>
+            )}
+          </div>
         )}
 
         <Button

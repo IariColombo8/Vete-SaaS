@@ -12,7 +12,10 @@ export type TipoTarjetaPoint = "credit_card" | "debit_card"
 export type ResultadoCobroPoint = "en_curso" | "aprobada" | "rechazada" | "cancelada" | "expirada"
 
 export interface EstadoPoint {
+  /** Cuenta de MP conectada y terminal elegida: se puede cobrar con Point. */
   configurado: boolean
+  /** Cuenta de MP conectada, con o sin terminal: alcanza para cobrar con QR. */
+  conectado: boolean
   terminalId: string | null
   terminalNombre: string | null
 }
@@ -38,6 +41,7 @@ export async function getEstadoPoint(tenantId: string): Promise<EstadoPoint> {
   const d = (data ?? {}) as { configurado?: boolean; terminal_id?: string | null; terminal_nombre?: string | null }
   return {
     configurado: Boolean(d.configurado) && Boolean(d.terminal_id),
+    conectado: Boolean(d.configurado),
     terminalId: d.terminal_id ?? null,
     terminalNombre: d.terminal_nombre ?? null,
   }
@@ -49,6 +53,19 @@ export async function crearCobroPoint(
 ): Promise<{ cobroId: string; orderId: string }> {
   const headers = await authHeaders()
   return pedir("/api/mp-point/cobros", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ tenantId, ...input }),
+  })
+}
+
+/** Genera un QR de Mercado Pago con el monto. Se sigue con las mismas funciones que Point. */
+export async function crearCobroQr(
+  tenantId: string,
+  input: { monto: number; descripcion?: string },
+): Promise<{ cobroId: string; orderId: string; qrData: string }> {
+  const headers = await authHeaders()
+  return pedir("/api/mp-point/qr", {
     method: "POST",
     headers,
     body: JSON.stringify({ tenantId, ...input }),

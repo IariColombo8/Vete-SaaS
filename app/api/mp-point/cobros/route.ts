@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { autorizarStaff, getConfigPoint } from "@/lib/mp-point/auth"
-import { crearOrdenPoint, MercadoPagoError, MONTO_MINIMO_POINT, type TipoTarjeta } from "@/lib/mp-point/api"
+import { crearOrdenPoint, detalleMP, MercadoPagoError, MONTO_MINIMO_POINT, type TipoTarjeta } from "@/lib/mp-point/api"
 import { formatCurrency } from "@/lib/format"
 
 /**
@@ -88,15 +88,5 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: msg }, { status: 502 })
     }
     return NextResponse.json({ ok: false, error: "No se pudo enviar el cobro a la terminal" }, { status: 500 })
-  }
-}
-
-/** Código de error de MP (p. ej. `minimum_amount_not_met`), para que el mostrador lo pueda reportar. */
-function detalleMP(cuerpo: string): string {
-  try {
-    const json = JSON.parse(cuerpo) as { errors?: { code?: string }[]; error?: string; message?: string }
-    return json.errors?.[0]?.code ?? json.error ?? json.message ?? "sin detalle"
-  } catch {
-    return cuerpo.slice(0, 80) || "sin detalle"
   }
 }

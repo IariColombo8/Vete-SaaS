@@ -14,7 +14,7 @@ import type { LineaPagoMixto } from "./pos/mixto-pagos"
 import { AlimentoSelector } from "./pos/alimento-selector"
 import { AtencionDialog } from "./pos/atencion-dialog"
 import { RemitoDialog } from "./pos/remito-dialog"
-import { CobroPointDialog } from "./pos/cobro-point-dialog"
+import { CobroPointDialog, type CanalCobro } from "./pos/cobro-point-dialog"
 import { getEstadoPoint, vincularCobroPoint } from "./pos/use-mp-point"
 import { getEstadoFacturacion, type EstadoFacturacion } from "@/lib/supabase/comprobantes"
 import {
@@ -86,14 +86,22 @@ export function PosManagement({ tenantId }: Props) {
   const [cobrando, setCobrando] = useState(false)
   const [ventaHecha, setVentaHecha] = useState<Venta | null>(null)
 
-  // Mercado Pago Point: si la veterinaria conectó su terminal, débito y
-  // crédito se pueden cobrar mandando el monto a la terminal.
+  // Mercado Pago: si la veterinaria conectó su terminal, débito y crédito se
+  // pueden cobrar mandando el monto a la terminal. Con la cuenta conectada,
+  // aunque no tenga terminal, se puede cobrar con un QR en la pantalla.
   const [pointDisponible, setPointDisponible] = useState(false)
-  const [cobroPointAbierto, setCobroPointAbierto] = useState(false)
+  const [qrDisponible, setQrDisponible] = useState(false)
+  const [cobroMpAbierto, setCobroMpAbierto] = useState<CanalCobro | null>(null)
   useEffect(() => {
     getEstadoPoint(tenantId)
-      .then((estado) => setPointDisponible(estado.configurado))
-      .catch(() => setPointDisponible(false))
+      .then((estado) => {
+        setPointDisponible(estado.configurado)
+        setQrDisponible(estado.conectado)
+      })
+      .catch(() => {
+        setPointDisponible(false)
+        setQrDisponible(false)
+      })
   }, [tenantId])
   const [saldoCliente, setSaldoCliente] = useState(0)
   const [saldarDeuda, setSaldarDeuda] = useState(false)
@@ -391,7 +399,9 @@ export function PosManagement({ tenantId }: Props) {
       onVaciar={limpiar}
       onCobrar={() => cobrar()}
       pointDisponible={pointDisponible}
-      onCobrarPoint={() => setCobroPointAbierto(true)}
+      onCobrarPoint={() => setCobroMpAbierto("point")}
+      qrDisponible={qrDisponible}
+      onCobrarQr={() => setCobroMpAbierto("qr")}
     />
   )
 
@@ -402,16 +412,17 @@ export function PosManagement({ tenantId }: Props) {
     <div className="flex h-[calc(100vh-6.5rem)] flex-col gap-3">
       <CajaBar tenantId={tenantId} caja={caja} onCambio={recargarCaja} />
 
-      {cobroPointAbierto && (
+      {cobroMpAbierto && (
         <CobroPointDialog
-          open={cobroPointAbierto}
+          open
+          canal={cobroMpAbierto}
           tenantId={tenantId}
           monto={totales.total + (saldarDeuda ? saldoCliente : 0)}
           descripcion={`${emisor.nombre || "VetPanel"} · ${carrito.length} ítem${carrito.length === 1 ? "" : "s"}`}
           tipoTarjeta={medioPago === "credito" ? "credit_card" : "debit_card"}
           cuotas={medioPago === "credito" ? cuotas : undefined}
           onAprobado={(cobroId) => cobrar(cobroId)}
-          onCerrar={() => setCobroPointAbierto(false)}
+          onCerrar={() => setCobroMpAbierto(null)}
         />
       )}
 
