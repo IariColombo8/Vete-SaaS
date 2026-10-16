@@ -27,6 +27,8 @@ import {
   type DuenoMascota,
 } from "@/lib/supabase/mascotas"
 import { getHistoriasPublico } from "@/lib/supabase/historias"
+import { getProximasVacunasPublico, type ProximaVacuna } from "@/lib/supabase/recordatorios-vacuna"
+import { diasHasta, fechaArgentina, textoVencimiento } from "@/lib/recordatorios/vacunas"
 import { getTurnosPorMascotaPublico } from "@/lib/supabase/turnos"
 import { getSorteoActivo } from "@/lib/supabase/sorteos"
 import { getTenantConfig } from "@/lib/supabase/tenants"
@@ -111,6 +113,7 @@ export default function PerfilMascotaPage() {
   const [archivosVer, setArchivosVer] = useState<string[] | null>(null)
   const [mostrarTurnos, setMostrarTurnos] = useState(false)
   const [duenos, setDuenos] = useState<DuenoMascota[]>([])
+  const [proximas, setProximas] = useState<ProximaVacuna[]>([])
   const [mostrarAgregarDueno, setMostrarAgregarDueno] = useState(false)
   const [dniNuevoDueno, setDniNuevoDueno] = useState("")
   const [nombreNuevoDueno, setNombreNuevoDueno] = useState("")
@@ -229,10 +232,12 @@ export default function PerfilMascotaPage() {
           return
         }
 
-        const [misHistorias, misTurnos, misDuenos] = await Promise.all([
+        const [misHistorias, misTurnos, misDuenos, misProximas] = await Promise.all([
           getHistoriasPublico(slug, encontrada.id),
           getTurnosPorMascotaPublico(slug, encontrada.id),
           getDuenosMascotaPublico(slug, encontrada.id),
+          // Accesorio: si falla, la ficha se muestra igual sin esta sección.
+          getProximasVacunasPublico(slug, encontrada.id).catch(() => [] as ProximaVacuna[]),
         ])
         if (!activo) return
         setMascota(encontrada)
@@ -240,6 +245,7 @@ export default function PerfilMascotaPage() {
         setHistorias(misHistorias.filter((h) => h.tipoVisita !== "turno_programado"))
         setTurnos(misTurnos)
         setDuenos(misDuenos)
+        setProximas(misProximas)
         setEstado("listo")
       } catch {
         if (activo) { setMensajeError("Ocurrió un error. Intentá de nuevo."); setEstado("error") }
@@ -440,6 +446,48 @@ export default function PerfilMascotaPage() {
             Agregar otro dueño
           </Button>
         </section>
+
+        {proximas.length > 0 && (() => {
+          const hoy = fechaArgentina(new Date())
+          return (
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Syringe className="h-4 w-4 text-emerald-600" />
+                <h2 className="font-semibold text-slate-900 dark:text-slate-100">Próximas vacunas</h2>
+              </div>
+              <Card className="border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <CardContent className="divide-y divide-slate-100 dark:divide-slate-800 p-0">
+                  {proximas.map((p) => {
+                    const dias = diasHasta(p.fecha, hoy)
+                    const color =
+                      dias < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : dias <= 7
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-slate-500 dark:text-slate-400"
+                    const { Icon, chip } = ESTILO_ENTRADA[p.tipo]
+                    return (
+                      <div key={`${p.vacuna}-${p.fecha}`} className="flex items-center gap-3 px-4 py-3">
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${chip}`}>
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{p.vacuna}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {TIPO_APLICACION_LABEL[p.tipo]} · {formatFecha(p.fecha)}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 text-xs font-medium ${color}`}>
+                          {textoVencimiento(p.fecha, hoy)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </CardContent>
+              </Card>
+            </section>
+          )
+        })()}
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">

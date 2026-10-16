@@ -477,6 +477,9 @@ intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
 - **Aviso manual con wa.me en cualquier plan** (tarjeta "Vacunas por vencer"
   del Dashboard): gratis, no usa la API de Meta. El envío automático sigue
   siendo Pro. Avisar a mano marca `canal = 'manual'` y el cron ya no lo manda.
+- **El cliente las ve en Mi historia** ("Próximas vacunas"), vía la RPC
+  `obtener_proximas_vacunas_publico` (061): solo vacuna/tipo/fecha, una por
+  vacuna, sin las de historias privadas. La tabla sigue siendo solo de staff.
 - Reglas puras y testeadas en `lib/recordatorios/vacunas.ts`.
 
 ### Perfil del cliente (panel)

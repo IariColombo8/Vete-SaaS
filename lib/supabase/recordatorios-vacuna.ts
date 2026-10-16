@@ -1,6 +1,6 @@
 import { supabase } from "./config"
 import { throwIfSupabaseError } from "./assert"
-import type { RecordatorioVacuna } from "./types"
+import type { RecordatorioVacuna, TipoRecordatorio } from "./types"
 
 /**
  * Recordatorios de vacunas y desparasitaciones. Los automáticos los crea un
@@ -67,6 +67,32 @@ export async function getRecordatoriosVacunaByMascota(
     .order("fecha")
   if (error) return []
   return (data ?? []).map(aRecordatorio)
+}
+
+export interface ProximaVacuna {
+  vacuna: string
+  tipo: TipoRecordatorio
+  /** YYYY-MM-DD */
+  fecha: string
+}
+
+/**
+ * Próximas vacunas/desparasitaciones de una mascota, para "Mi historia" (sin
+ * sesión, RPC 061). Una por vacuna, ordenadas por fecha.
+ */
+export async function getProximasVacunasPublico(tenantId: string, mascotaId: string): Promise<ProximaVacuna[]> {
+  const { data, error } = await supabase.rpc("obtener_proximas_vacunas_publico", {
+    p_tenant: tenantId,
+    p_mascota_id: mascotaId,
+  })
+  throwIfSupabaseError(error, "Error al cargar las próximas vacunas")
+  return ((data ?? []) as Fila[])
+    .map((f) => ({
+      vacuna: (f.vacuna as string) ?? "",
+      tipo: (f.tipo as TipoRecordatorio) ?? "vacuna",
+      fecha: (f.fecha as string) ?? "",
+    }))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
 }
 
 /**
