@@ -17,7 +17,7 @@ function descripcion(planes: PlanDefinition[]): string {
   if (planes.length === 0) return `Software de gestión para veterinarias. ${TRIAL_DIAS} días de prueba gratis, sin tarjeta.`
   const desde = Math.min(...planes.map((p) => p.precioMensual))
   const pro = planes.find((p) => p.id === PLAN_RECOMENDADO)
-  const textoPro = pro ? ` Plan ${pro.nombre} (${formatPesos(pro.precioMensual)}/mes) con turnos ilimitados, WhatsApp, mostrador, factura electrónica y Mercado Pago Point.` : ""
+  const textoPro = pro ? ` Plan ${pro.nombre} (${formatPesos(pro.precioMensual)}/mes) con turnos ilimitados, recordatorios de vacunas, mostrador, factura electrónica y Mercado Pago Point.` : ""
   return `Software de gestión para veterinarias desde ${formatPesos(desde)}/mes.${textoPro} ${TRIAL_DIAS} días de prueba gratis, sin tarjeta.`
 }
 
@@ -64,7 +64,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "¿Cuál es la diferencia entre Básico y Pro?",
-    a: "Básico es la clínica completa: turnos ilimitados, clientes, libreta sanitaria, historia clínica y tu página pública, para hasta 2 usuarios. Pro suma el comercio (productos, stock, mostrador, caja, factura electrónica y Mercado Pago Point), WhatsApp con recordatorios automáticos, métricas y usuarios ilimitados.",
+    a: "Básico es la clínica completa: turnos ilimitados, clientes, libreta sanitaria, historia clínica y tu página pública, para hasta 2 usuarios. Pro suma el comercio (productos, stock, mostrador, caja, factura electrónica y Mercado Pago Point), recordatorios de vacunas automáticos por email, métricas y usuarios ilimitados.",
   },
   {
     q: "¿Los precios incluyen impuestos?",

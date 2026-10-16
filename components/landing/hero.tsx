@@ -146,7 +146,7 @@ export function Hero() {
               </div>
               <div>
                 <p className="text-xs font-bold text-ink leading-none">Recordatorio enviado</p>
-                <p className="text-[11px] text-ink-muted mt-0.5">por WhatsApp, solo</p>
+                <p className="text-[11px] text-ink-muted mt-0.5">por email, solo</p>
               </div>
             </div>
           </div>

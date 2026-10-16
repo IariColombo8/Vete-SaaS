@@ -41,7 +41,7 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
   const [vacuna, setVacuna] = useState("")
   const [fecha, setFecha] = useState("")
 
-  // En cualquier plan: en Pro sale solo por WhatsApp; en los demás aparece en
+  // En cualquier plan: en Pro le llega un email al cliente; en todos aparece en
   // el Dashboard ("Vacunas por vencer") para avisar a mano con wa.me.
   const [envioAutomatico, setEnvioAutomatico] = useState(false)
 
@@ -54,10 +54,6 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
   const handleGuardar = async () => {
     if (!vacuna.trim() || !fecha) {
       toast({ title: "Completá vacuna y fecha", variant: "destructive" })
-      return
-    }
-    if (!telefono) {
-      toast({ title: "Falta el teléfono del cliente", description: "Cargá el teléfono para enviar el recordatorio.", variant: "destructive" })
       return
     }
     setSaving(true)
@@ -73,7 +69,7 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
       toast({
         title: "Recordatorio programado",
         description: envioAutomatico
-          ? `Se avisará por WhatsApp antes del ${fecha}.`
+          ? `Le llega un email al cliente antes del ${fecha} y te aparece en el Dashboard.`
           : "Te va a aparecer en el Dashboard para avisarle al dueño.",
       })
       setOpen(false)
@@ -109,7 +105,7 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
             <DialogTitle>Recordatorio de vacuna</DialogTitle>
             <DialogDescription>
               {envioAutomatico
-                ? "Se enviará un WhatsApp al cliente unos días antes de la fecha de la próxima dosis."
+                ? "Unos días antes de la próxima dosis le llega un email al cliente, y te aparece en el Dashboard para avisarle por WhatsApp."
                 : "Unos días antes te aparece en el Dashboard para avisarle al dueño por WhatsApp."}
               {" "}Si la cargás como próxima dosis en la historia, no hace falta: se crea sola.
             </DialogDescription>

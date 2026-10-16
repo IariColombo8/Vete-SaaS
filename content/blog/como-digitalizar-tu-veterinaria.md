@@ -17,7 +17,7 @@ Olvidate de buscar papeles. Con la historia clínica digital tenés el seguimien
 
 ## 3. Automatizá los recordatorios
 
-Los recordatorios de turno y de vacunas por WhatsApp reducen las ausencias y fidelizan a tus clientes. Se envían solos.
+Los recordatorios de vacunas reducen los atrasos y fidelizan a tus clientes. Que salgan solos por email, y que avisar por WhatsApp te lleve un click.
 
 ## 4. Medí para mejorar
 

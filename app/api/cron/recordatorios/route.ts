@@ -3,36 +3,36 @@ import { getAdminDb } from "@/lib/supabase/admin"
 import { planAllows } from "@/lib/plans"
 import { cargarPlanesServidor } from "@/lib/planes-servidor"
 import { sendWhatsAppTemplate } from "@/lib/notifications/whatsapp"
+import { enviarEmailCliente } from "@/lib/email/enviar-cliente"
+import { asuntoRecordatorio, htmlRecordatorio } from "@/lib/recordatorios/email"
 import {
   DIAS_AVISO_DEFAULT,
   MAX_INTENTOS,
   fechaArgentina,
-  fechaCorta,
   rangoCron,
   sumarDias,
 } from "@/lib/recordatorios/vacunas"
+import { imagenSupabase } from "@/lib/imagenes"
+import { APP_URL } from "@/lib/seo/sitio"
 
 /**
- * Cron diario: recordatorios por WhatsApp (service_role, bypassa RLS).
+ * Cron diario de recordatorios (service_role, bypassa RLS).
  *
- *  1. Turnos de mañana (estado pendiente/confirmado) → recordatorio de turno.
+ *  1. Turnos de mañana → WhatsApp (plantilla de Meta). Solo si hay
+ *     WHATSAPP_TOKEN/PHONE_NUMBER_ID; sin eso es un no-op. La API de Meta se
+ *     descartó por costo (cobra por mensaje): queda por si se retoma.
  *  2. Vacunas/desparasitaciones con próxima dosis dentro de
- *     `RECORDATORIO_VACUNA_DIAS` días (default 7) → recordatorio. Toma un
- *     RANGO (desde hace 3 días hasta dentro de N), no una fecha exacta: si el
- *     cron no corrió algún día, lo que quedó atrás sale igual. Los
- *     recordatorios los crea un trigger desde la historia (060).
+ *     `RECORDATORIO_VACUNA_DIAS` días (default 7) → **email** al dueño. Toma
+ *     un RANGO (desde hace 3 días hasta dentro de N), no una fecha exacta: si
+ *     el cron no corrió algún día, lo que quedó atrás sale igual. Los
+ *     recordatorios los crea un trigger desde la historia (060/062).
  *
- * Solo procesa tenants con el feature `whatsapp` (y `recordatoriosVacunas`
- * para el punto 2). Los demás avisan a mano desde el Dashboard con wa.me.
+ * El punto 2 es para tenants con el feature `recordatoriosVacunas` (Pro). Los
+ * demás, y los clientes sin email, avisan a mano desde el Dashboard (wa.me).
+ * El email sale por el Gmail de la veterinaria si lo conectó, si no por
+ * Resend con reply_to a su email (ver lib/email/enviar-cliente.ts).
+ *
  * Seguridad: header `Authorization: Bearer <CRON_SECRET>` (lo envía Vercel Cron).
- *
- * Plantillas (env), idioma `WHATSAPP_TEMPLATE_LANG`:
- *  - `WHATSAPP_REMINDER_TEMPLATE` (turno): {{1}} nombre, {{2}} hora.
- *  - `WHATSAPP_VACUNA_TEMPLATE_V2` (vacuna, recomendada): {{1}} dueño,
- *    {{2}} mascota, {{3}} vacuna, {{4}} fecha (dd/mm), {{5}} veterinaria, y un
- *    botón URL dinámico `https://www.vetpanel.com.ar/{{1}}` (Meta solo acepta la
- *    variable al final; el sufijo que se manda es `{slug}/turno`).
- *  - Sin la V2 se usa `WHATSAPP_VACUNA_TEMPLATE` (la vieja): {{1}} mascota, {{2}} vacuna.
  */
 
 function isAuthorized(request: Request): boolean {
@@ -44,38 +44,20 @@ function isAuthorized(request: Request): boolean {
 interface FilaRecordatorio {
   id: string
   tenant_id: string
-  telefono: string | null
   mascota_nombre: string | null
   vacuna: string
+  tipo: "vacuna" | "desparasitacion" | null
   fecha: string
   intentos: number
-  clientes: { nombre: string | null; telefono: string | null } | null
+  clientes: { nombre: string | null; email: string | null } | null
 }
 
-function componentesVacuna(r: FilaRecordatorio, veterinaria: string, slug: string, v2: boolean): unknown[] {
-  if (!v2) {
-    return [{
-      type: "body",
-      parameters: [
-        { type: "text", text: r.mascota_nombre || "tu mascota" },
-        { type: "text", text: r.vacuna },
-      ],
-    }]
-  }
-  const nombre = (r.clientes?.nombre ?? "").trim().split(/\s+/)[0] || "¡hola"
-  return [
-    {
-      type: "body",
-      parameters: [
-        { type: "text", text: nombre },
-        { type: "text", text: r.mascota_nombre || "tu mascota" },
-        { type: "text", text: r.vacuna },
-        { type: "text", text: fechaCorta(r.fecha) },
-        { type: "text", text: veterinaria },
-      ],
-    },
-    { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: `${slug}/turno` }] },
-  ]
+interface DatosVeterinaria {
+  nombre: string
+  email?: string
+  telefono?: string
+  direccion?: string
+  logo?: string
 }
 
 export async function GET(request: Request) {
@@ -90,11 +72,10 @@ export async function GET(request: Request) {
   }
 
   const ahora = new Date()
+  const hoy = fechaArgentina(ahora)
   const lang = process.env.WHATSAPP_TEMPLATE_LANG || "es_AR"
   const turnoTemplate = process.env.WHATSAPP_REMINDER_TEMPLATE || "recordatorio_turno"
-  const vacunaTemplateV2 = process.env.WHATSAPP_VACUNA_TEMPLATE_V2
-  const vacunaTemplate = vacunaTemplateV2 || process.env.WHATSAPP_VACUNA_TEMPLATE || "recordatorio_vacuna"
-  const fechaTurnos = sumarDias(fechaArgentina(ahora), 1)
+  const fechaTurnos = sumarDias(hoy, 1)
   const diasVacuna = Number(process.env.RECORDATORIO_VACUNA_DIAS ?? DIAS_AVISO_DEFAULT)
   const rango = rangoCron(ahora, diasVacuna)
 
@@ -105,50 +86,56 @@ export async function GET(request: Request) {
   try {
     const { data: tenants, error: errTenants } = await admin
       .from("tenants")
-      .select("slug, plan, nombre")
+      .select("slug, plan, nombre, email, telefono, direccion, logo")
     if (errTenants) throw errTenants
 
     const conWhatsapp = (tenants ?? []).filter((t) => planAllows(t.plan, "whatsapp"))
-    const conVacunas = conWhatsapp.filter((t) => planAllows(t.plan, "recordatoriosVacunas"))
+    const conVacunas = (tenants ?? []).filter((t) => planAllows(t.plan, "recordatoriosVacunas"))
 
-    if (conWhatsapp.length === 0) {
-      return NextResponse.json({
-        ok: true, tenantsProcesados: 0, turnosEnviados: 0, vacunasEnviadas: 0,
-        fechaTurnos, rangoVacunas: rango,
-      })
+    // 1. Turnos de mañana por WhatsApp (no-op sin configuración de Meta)
+    if (conWhatsapp.length > 0) {
+      const { data: turnos, error: errTurnos } = await admin
+        .from("turnos")
+        .select("cliente_nombre, cliente_telefono, hora")
+        .in("tenant_id", conWhatsapp.map((t) => t.slug))
+        .eq("fecha", fechaTurnos)
+        .in("estado", ["pendiente", "confirmado"])
+      if (errTurnos) throw errTurnos
+
+      for (const turno of turnos ?? []) {
+        if (!turno.cliente_telefono) continue
+        const components = [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: turno.cliente_nombre || "Cliente" },
+              { type: "text", text: turno.hora || "" },
+            ],
+          },
+        ]
+        const r = await sendWhatsAppTemplate(turno.cliente_telefono, turnoTemplate, lang, components)
+        if (r.ok) turnosEnviados++
+      }
     }
 
-    // 1. Turnos de mañana, de todos los tenants habilitados
-    const { data: turnos, error: errTurnos } = await admin
-      .from("turnos")
-      .select("cliente_nombre, cliente_telefono, hora")
-      .in("tenant_id", conWhatsapp.map((t) => t.slug))
-      .eq("fecha", fechaTurnos)
-      .in("estado", ["pendiente", "confirmado"])
-    if (errTurnos) throw errTurnos
-
-    for (const turno of turnos ?? []) {
-      if (!turno.cliente_telefono) continue
-      const components = [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: turno.cliente_nombre || "Cliente" },
-            { type: "text", text: turno.hora || "" },
-          ],
-        },
-      ]
-      const r = await sendWhatsAppTemplate(turno.cliente_telefono, turnoTemplate, lang, components)
-      if (r.ok) turnosEnviados++
-    }
-
-    // 2. Vacunas por vencer (y vencidas hace pocos días) de los tenants con ese feature
+    // 2. Vacunas por vencer (y vencidas hace pocos días) → email
     if (conVacunas.length > 0) {
-      const nombres = new Map(conVacunas.map((t) => [t.slug as string, (t.nombre as string) || (t.slug as string)]))
+      const veterinarias = new Map<string, DatosVeterinaria>(
+        conVacunas.map((t) => [
+          t.slug as string,
+          {
+            nombre: (t.nombre as string) || (t.slug as string),
+            email: (t.email as string) || undefined,
+            telefono: (t.telefono as string) || undefined,
+            direccion: (t.direccion as string) || undefined,
+            logo: (t.logo as string) || undefined,
+          },
+        ]),
+      )
 
       const { data: vacunas, error: errVacunas } = await admin
         .from("recordatorios_vacunas")
-        .select("id, tenant_id, telefono, mascota_nombre, vacuna, fecha, intentos, clientes(nombre, telefono)")
+        .select("id, tenant_id, mascota_nombre, vacuna, tipo, fecha, intentos, clientes(nombre, email)")
         .in("tenant_id", conVacunas.map((t) => t.slug))
         .in("estado", ["pendiente", "fallido"])
         .lt("intentos", MAX_INTENTOS)
@@ -158,39 +145,56 @@ export async function GET(request: Request) {
       if (errVacunas) throw errVacunas
 
       for (const v of vacunas ?? []) {
-        // El teléfono actual del cliente; la copia del recordatorio solo de respaldo.
-        const telefono = v.clientes?.telefono || v.telefono
-        const r = telefono
-          ? await sendWhatsAppTemplate(
-              telefono, vacunaTemplate, lang,
-              componentesVacuna(v, nombres.get(v.tenant_id) ?? v.tenant_id, v.tenant_id, Boolean(vacunaTemplateV2)),
-            )
-          : { ok: false, error: "Sin teléfono" }
+        const vet = veterinarias.get(v.tenant_id) ?? { nombre: v.tenant_id }
+        const destino = v.clientes?.email?.trim()
 
-        if (r.ok) vacunasEnviadas++
-        else vacunasFallidas++
+        if (!destino) {
+          // Sin email no tiene sentido reintentar: queda en el Dashboard para avisar por wa.me.
+          vacunasFallidas++
+          await actualizar(admin, v.id, { estado: "fallido", intentos: MAX_INTENTOS, ultimo_error: "Sin email" })
+          continue
+        }
 
-        // Sin configuración de WhatsApp (`skipped`) no se gasta un intento.
-        if (!r.ok && "skipped" in r && r.skipped) continue
+        const datos = {
+          clienteNombre: v.clientes?.nombre ?? undefined,
+          mascotaNombre: v.mascota_nombre || "tu mascota",
+          vacuna: v.vacuna,
+          tipo: v.tipo ?? "vacuna",
+          fecha: v.fecha,
+          veterinaria: vet.nombre,
+          urlTurno: `${APP_URL}/${v.tenant_id}/turno`,
+          logoUrl: vet.logo ? imagenSupabase(vet.logo, 144) : undefined,
+          telefonoVeterinaria: vet.telefono,
+          direccionVeterinaria: vet.direccion,
+        }
+        const r = await enviarEmailCliente(v.tenant_id, {
+          to: destino,
+          subject: asuntoRecordatorio(datos, hoy),
+          html: htmlRecordatorio(datos, hoy),
+          remitente: vet.nombre,
+          replyTo: vet.email,
+        })
 
-        const { error: errUpdate } = await admin
-          .from("recordatorios_vacunas")
-          .update(r.ok
-            ? { estado: "enviado", canal: "whatsapp", enviado_at: new Date().toISOString(), intentos: v.intentos + 1, ultimo_error: null }
-            : {
-                estado: "fallido",
-                // Sin teléfono no tiene sentido reintentar: queda en el panel para avisar a mano.
-                intentos: telefono ? v.intentos + 1 : MAX_INTENTOS,
-                ultimo_error: r.error ?? "Error desconocido",
-              })
-          .eq("id", v.id)
-        if (errUpdate) console.error("[cron/recordatorios] No se pudo actualizar el recordatorio", v.id, errUpdate.message)
+        // Sin ningún proveedor de email configurado no se gasta un intento.
+        if (r.skipped) continue
+
+        if (r.ok) {
+          vacunasEnviadas++
+          await actualizar(admin, v.id, {
+            estado: "enviado", canal: "email", enviado_at: new Date().toISOString(),
+            intentos: v.intentos + 1, ultimo_error: null,
+          })
+        } else {
+          vacunasFallidas++
+          await actualizar(admin, v.id, {
+            estado: "fallido", intentos: v.intentos + 1, ultimo_error: r.error ?? "Error desconocido",
+          })
+        }
       }
     }
 
     return NextResponse.json({
       ok: true,
-      tenantsProcesados: conWhatsapp.length,
       turnosEnviados,
       vacunasEnviadas,
       vacunasFallidas,
@@ -201,4 +205,13 @@ export async function GET(request: Request) {
     console.error("[cron/recordatorios] Error:", error)
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 })
   }
+}
+
+async function actualizar(
+  admin: NonNullable<ReturnType<typeof getAdminDb>>,
+  id: string,
+  cambios: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await admin.from("recordatorios_vacunas").update(cambios).eq("id", id)
+  if (error) console.error("[cron/recordatorios] No se pudo actualizar el recordatorio", id, error.message)
 }

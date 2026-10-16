@@ -64,7 +64,7 @@ export function FeaturesBento() {
             </div>
           </Reveal>
 
-          {/* WhatsApp */}
+          {/* Recordatorios */}
           <Reveal className="lg:col-span-2">
             <div className="group h-full rounded-3xl border border-warm-border bg-white p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
               <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-coral-soft text-coral transition-transform group-hover:scale-110">
@@ -72,7 +72,7 @@ export function FeaturesBento() {
               </div>
               <h3 className="font-display text-xl font-semibold text-ink mb-2">Recordatorios automáticos</h3>
               <p className="text-ink-muted text-sm leading-relaxed">
-                Confirmaciones y avisos de vacunas por WhatsApp y email. Sin que muevas un dedo.
+                Confirmación de turnos y avisos de vacunas por email, solos. Y por WhatsApp, con un click.
               </p>
             </div>
           </Reveal>

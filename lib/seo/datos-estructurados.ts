@@ -73,7 +73,7 @@ export function aplicacion(planes?: PlanDefinition[]): Record<string, unknown> {
       "Turnos online con página propia",
       "Historia clínica digital",
       "Libreta sanitaria con QR",
-      "Recordatorios de vacunas por WhatsApp",
+      "Recordatorios de vacunas por email",
       "Punto de venta, stock y caja",
       "Factura electrónica (ARCA)",
       "Cobro con Mercado Pago Point",

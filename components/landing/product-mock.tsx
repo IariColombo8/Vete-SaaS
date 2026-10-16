@@ -5,7 +5,6 @@ import {
   Clock,
   Mail,
   ChevronRight,
-  MessageCircle,
 } from "lucide-react"
 import { Paw, DogFace, Vaccine } from "@/components/landing/pet-art"
 
@@ -166,10 +165,10 @@ function RecordatorioScreen() {
     <div>
       <div className="mb-4 flex items-center gap-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal text-white">
-          <MessageCircle className="h-5 w-5" />
+          <Mail className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-ink leading-tight">WhatsApp</p>
+          <p className="text-sm font-semibold text-ink leading-tight">Email</p>
           <p className="text-[11px] text-ink-muted">Recordatorio automático</p>
         </div>
         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-teal-soft px-2.5 py-1 text-[11px] font-bold text-teal-ink">
@@ -177,17 +176,16 @@ function RecordatorioScreen() {
         </span>
       </div>
 
-      <div className="space-y-2">
-        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-cream px-4 py-3 text-sm text-ink">
-          🐾 ¡Hola Ana! Te recordamos que <b>Firulais</b> tiene turno mañana
-          <b> jueves 12/6 a las 10:30</b> en la clínica.
-        </div>
-        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-cream px-4 py-3 text-sm text-ink">
-          La antiparasitaria vence pronto 💉 ¿La sumamos a la visita?
-        </div>
-        <div className="ml-auto max-w-[70%] rounded-2xl rounded-tr-sm bg-teal-ink px-4 py-3 text-sm text-white">
-          ¡Dale, gracias! Ahí estamos 🐶
-        </div>
+      <div className="rounded-2xl border border-warm-border bg-white p-4 text-sm text-ink">
+        <p className="text-[11px] text-ink-muted">De: Veterinaria Patitas</p>
+        <p className="mt-0.5 font-semibold leading-snug">Recordatorio: vacuna antirrábica de Firulais</p>
+        <p className="mt-3 leading-relaxed">
+          🐾 ¡Hola Ana! Te recordamos que a <b>Firulais</b> le toca la vacuna antirrábica el
+          <b> jueves 12/6</b>.
+        </p>
+        <span className="mt-3 inline-flex items-center gap-1 rounded-lg bg-teal-ink px-3 py-1.5 text-xs font-semibold text-white">
+          Sacar turno <ChevronRight className="h-3 w-3" />
+        </span>
       </div>
     </div>
   )

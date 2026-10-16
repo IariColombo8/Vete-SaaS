@@ -409,11 +409,6 @@ export function GestionPlanes({ planes, tenantsPorPlan, cargando, onCambio, onPe
                     </label>
                   ))}
                 </div>
-                {form.features.recordatoriosVacunas && !form.features.whatsapp && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400">
-                    Los recordatorios de vacunas salen por WhatsApp: sin WhatsApp no se envía ninguno.
-                  </p>
-                )}
               </fieldset>
 
               <div className="space-y-1.5">

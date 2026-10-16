@@ -340,9 +340,9 @@ Diagnóstico, decisiones y roadmap completo en **`planautomatizacion.md`**.
 
 **Básico vs Pro (desde 2026-10-12).** La línea es el comercio y lo que tiene
 costo por uso: Pro suma productos, mostrador, caja, ARCA, Point, promos,
-WhatsApp, métricas y varios profesionales. Los **recordatorios de vacunas
-quedan en Pro** porque salen por WhatsApp (el cron filtra por `whatsapp`):
-habilitarlos sin WhatsApp prometería algo que nunca se envía.
+WhatsApp, métricas y varios profesionales. El **email automático de
+recordatorio de vacunas** es Pro (feature `recordatoriosVacunas`); el aviso
+manual por wa.me desde el Dashboard está en todos los planes.
 
 **Catálogo editable (`056_planes_editables.sql`).** Los planes viven en la
 tabla `planes` y se editan desde /superadmin → Planes: precio, límites,
@@ -474,14 +474,19 @@ intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
   se había avisado, el automático queda como avisado).
 - `estado` (pendiente/enviado/fallido/cumplido/cancelado) reemplaza a
   `enviado`, que lo sigue manteniendo un trigger por compatibilidad.
+- **El aviso automático es por email, no por WhatsApp** (decisión del
+  2026-10-16): la API de WhatsApp de Meta cobra por mensaje y no se usa para
+  recordatorios. No volver a proponerla salvo que se retome a propósito.
 - **Cron** (`/api/cron/recordatorios`): toma un rango (vencidas hace ≤3 días
   hasta +7), no una fecha exacta, así un día sin cron no pierde avisos.
-  Hasta 3 intentos; usa el teléfono actual del cliente. Plantilla
-  `WHATSAPP_VACUNA_TEMPLATE_V2` (dueño, mascota, vacuna, fecha, veterinaria +
-  botón URL); sin ella cae a la vieja de 2 parámetros.
+  Hasta 3 intentos; usa el email actual del cliente (sin email: `fallido`
+  con "Sin email", queda en el Dashboard). Envío en
+  `lib/email/enviar-cliente.ts`: Gmail propio de la veterinaria → Resend con
+  su nombre como remitente y `reply_to` a su email → Gmail compartido.
+  Contenido del email en `lib/recordatorios/email.ts` (testeado).
 - **Aviso manual con wa.me en cualquier plan** (tarjeta "Vacunas por vencer"
-  del Dashboard): gratis, no usa la API de Meta. El envío automático sigue
-  siendo Pro. Avisar a mano marca `canal = 'manual'` y el cron ya no lo manda.
+  del Dashboard): gratis, sale del WhatsApp de la veterinaria. Avisar a mano
+  marca `canal = 'manual'` y el cron ya no manda el email.
 - **El cliente las ve en Mi historia** ("Próximas vacunas"), vía la RPC
   `obtener_proximas_vacunas_publico` (061): solo vacuna/tipo/fecha, una por
   vacuna, sin las de historias privadas. La tabla sigue siendo solo de staff.

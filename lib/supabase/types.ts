@@ -341,14 +341,15 @@ export interface RecordatorioVacuna {
   /** auto = lo creó el trigger desde la historia; manual = botón de la Libreta. */
   origen?: "auto" | "manual"
   estado?: EstadoRecordatorio
-  /** whatsapp = cron por la API de Meta; manual = el veterinario con wa.me. */
-  canal?: "whatsapp" | "manual"
+  /** email = lo mandó el cron; manual = el veterinario con wa.me; whatsapp = histórico (API de Meta). */
+  canal?: "email" | "manual" | "whatsapp"
   enviadoAt?: string
   intentos?: number
   ultimoError?: string
   /** Datos actuales del dueño (no la copia del recordatorio). Solo en las consultas del panel. */
   clienteNombre?: string
   clienteTelefono?: string
+  clienteEmail?: string
   createdAt?: string
 }
 

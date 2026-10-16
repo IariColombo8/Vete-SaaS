@@ -11,7 +11,7 @@ const ANTES = [
 
 const DESPUES = [
   "Tus clientes reservan solos, online, 24/7",
-  "Recordatorios automáticos por WhatsApp y email",
+  "Le escribís al dueño por WhatsApp con un click",
   "Cada historia clínica ordenada y siempre a mano",
   "Avisos de vacunas que se disparan solos",
 ]

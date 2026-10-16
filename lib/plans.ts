@@ -128,7 +128,7 @@ export const PLANES_BASE: PlanDefinition[] = [
       "Turnos ilimitados",
       "Usuarios ilimitados",
       "Dashboard de métricas",
-      "Notificaciones por WhatsApp y recordatorios de vacunas",
+      "Recordatorios de vacunas automáticos por email",
       "Libreta sanitaria en PDF y QR por mascota",
       "Productos, stock, mostrador, caja y remitos",
       "Cuenta corriente, gastos y promos",

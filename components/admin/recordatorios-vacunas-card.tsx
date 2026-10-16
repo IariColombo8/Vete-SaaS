@@ -31,15 +31,15 @@ const VISIBLES = 6
 interface Props {
   tenantId: string
   veterinaria: string
-  /** Plan con envío automático (feature `recordatoriosVacunas`). */
+  /** Plan con email automático (feature `recordatoriosVacunas`). */
   envioAutomatico: boolean
 }
 
 /**
  * Vacunas y desparasitaciones por vencer (próximos 7 días) y vencidas sin
  * avisar. En cualquier plan se avisa a mano con wa.me (gratis); en Pro el cron
- * además las manda solas, y acá se marca cuáles van a salir solas para que no
- * se avise dos veces.
+ * además manda un email a los clientes que tienen email, y acá se marca cuáles
+ * van a salir solas para que no se avise dos veces.
  */
 export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatico }: Props) {
   const { toast } = useToast()
@@ -63,7 +63,7 @@ export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatic
     envioAutomatico &&
     r.estado === "pendiente" &&
     (r.intentos ?? 0) < MAX_INTENTOS &&
-    Boolean(r.clienteTelefono || r.telefono) &&
+    Boolean(r.clienteEmail) &&
     r.fecha >= rango.desde &&
     r.fecha <= rango.hasta
 
@@ -111,8 +111,8 @@ export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatic
         </CardTitle>
         <CardDescription>
           {envioAutomatico
-            ? "Se avisan solas por WhatsApp 7 días antes. Las vencidas o las que fallaron, avisalas desde acá."
-            : "Avisale al dueño por WhatsApp con un click. En el plan Pro salen solas."}
+            ? "Al que tiene email le llega un aviso solo, 7 días antes. A los demás, avisales por WhatsApp desde acá."
+            : "Avisale al dueño por WhatsApp con un click. En el plan Pro les llega además un email automático."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -141,12 +141,12 @@ export function RecordatoriosVacunasCard({ tenantId, veterinaria, envioAutomatic
                   </div>
                   {r.estado === "fallido" && (
                     <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400" title={r.ultimoError}>
-                      No salió{r.ultimoError === "Sin teléfono" ? ": sin teléfono" : ""}
+                      {r.ultimoError === "Sin email" ? "Sin email" : "No salió el email"}
                     </Badge>
                   )}
                   {automatico && (
                     <Badge variant="outline" className="border-emerald-300 text-emerald-700 dark:text-emerald-400">
-                      Sale solo
+                      Sale por email
                     </Badge>
                   )}
                   <div className="flex items-center gap-1">

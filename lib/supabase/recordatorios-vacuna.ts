@@ -10,7 +10,7 @@ import type { RecordatorioVacuna, TipoRecordatorio } from "./types"
 type Fila = Record<string, unknown>
 
 function aRecordatorio(f: Fila): RecordatorioVacuna {
-  const cliente = f.clientes as { nombre?: string; telefono?: string } | null | undefined
+  const cliente = f.clientes as { nombre?: string; telefono?: string; email?: string } | null | undefined
   return {
     id: f.id as string,
     clienteId: (f.cliente_id as string) ?? "",
@@ -30,6 +30,7 @@ function aRecordatorio(f: Fila): RecordatorioVacuna {
     ultimoError: (f.ultimo_error as string) ?? undefined,
     clienteNombre: cliente?.nombre ?? undefined,
     clienteTelefono: cliente?.telefono ?? undefined,
+    clienteEmail: cliente?.email ?? undefined,
     createdAt: (f.created_at as string) ?? undefined,
   }
 }
@@ -106,7 +107,7 @@ export async function getRecordatoriosPorAvisar(
 ): Promise<RecordatorioVacuna[]> {
   const { data, error } = await supabase
     .from("recordatorios_vacunas")
-    .select("*, clientes(nombre, telefono)")
+    .select("*, clientes(nombre, telefono, email)")
     .eq("tenant_id", tenantId)
     .in("estado", ["pendiente", "fallido"])
     .gte("fecha", desde)
@@ -116,7 +117,7 @@ export async function getRecordatoriosPorAvisar(
   return (data ?? []).map(aRecordatorio)
 }
 
-/** El veterinario avisó a mano por wa.me: el cron ya no lo manda. */
+/** El veterinario avisó a mano por wa.me: el cron ya no manda el email. */
 export async function marcarRecordatorioAvisadoManual(tenantId: string, id: string): Promise<void> {
   const { error } = await supabase
     .from("recordatorios_vacunas")

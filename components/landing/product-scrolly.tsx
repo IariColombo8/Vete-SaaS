@@ -39,7 +39,7 @@ const STEPS: Step[] = [
     screen: "recordatorio",
     kicker: "Vuelven solos",
     title: "Recordatorios que traen de vuelta a tus pacientes",
-    desc: "Avisos automáticos de turnos y de vacunas por vencer, por WhatsApp. Menos ausencias y más visitas, sin que hagas nada.",
+    desc: "Las vacunas por vencer se avisan solas por email, y desde el panel le escribís al dueño por WhatsApp con un click. Más visitas, sin acordarte de nada."
   },
 ]
 
