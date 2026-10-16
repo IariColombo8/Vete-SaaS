@@ -153,6 +153,14 @@ export function CajaManagement({ tenantId }: Props) {
         </div>
       ) : caja && resumen ? (
         <div data-tour="caja-resumen" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Lo vendido va aparte y primero: "Debería haber en caja" suma la
+              apertura, y sin esta tarjeta se leía como lo vendido en el día. */}
+          <Tarjeta
+            icono={<Receipt className="h-4 w-4" />}
+            titulo="Vendido en este turno"
+            valor={formatCurrency(resumen.totalVentas)}
+            nota={`${resumen.cantidadVentas} ${resumen.cantidadVentas === 1 ? "venta" : "ventas"} · sin contar la apertura`}
+          />
           {MEDIOS_PAGO.map(({ id, label }) => {
             const total = resumen.porMedioPago.find((m) => m.medio === id)?.total ?? 0
             const Icono = ICONO_MEDIO[id]
@@ -176,11 +184,9 @@ export function CajaManagement({ tenantId }: Props) {
             icono={<Wallet className="h-4 w-4" />}
             titulo="Debería haber en caja"
             valor={formatCurrency(resumen.saldoEsperado)}
-            nota={
-              resumen.totalGastos > 0
-                ? `Apertura + efectivo − ${formatCurrency(resumen.totalGastos)} de gastos`
-                : `${resumen.cantidadVentas} ventas · Apertura + efectivo`
-            }
+            nota={`Apertura ${formatCurrency(caja.saldoInicial)} + efectivo ${formatCurrency(resumen.totalEfectivo)}${
+              resumen.totalGastos > 0 ? ` − gastos ${formatCurrency(resumen.totalGastos)}` : ""
+            }`}
             ayuda="caja.esperado"
             destacada
           />
