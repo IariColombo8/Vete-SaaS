@@ -1,11 +1,16 @@
 import { supabase } from "./config"
+import { throwIfSupabaseError } from "./assert"
 import type { RecordatorioVacuna } from "./types"
 
-/** Recordatorios de vacunas. Mismas firmas que la versión Firestore. */
+/**
+ * Recordatorios de vacunas y desparasitaciones. Los automáticos los crea un
+ * trigger desde la historia (060); acá solo se crean los manuales.
+ */
 
 type Fila = Record<string, unknown>
 
 function aRecordatorio(f: Fila): RecordatorioVacuna {
+  const cliente = f.clientes as { nombre?: string; telefono?: string } | null | undefined
   return {
     id: f.id as string,
     clienteId: (f.cliente_id as string) ?? "",
@@ -15,6 +20,16 @@ function aRecordatorio(f: Fila): RecordatorioVacuna {
     vacuna: (f.vacuna as string) ?? "",
     fecha: (f.fecha as string) ?? "",
     enviado: (f.enviado as boolean) ?? false,
+    tipo: (f.tipo as RecordatorioVacuna["tipo"]) ?? "vacuna",
+    origen: (f.origen as RecordatorioVacuna["origen"]) ?? "manual",
+    // Sin la migración 060 no hay `estado`: se deduce del boolean viejo.
+    estado: (f.estado as RecordatorioVacuna["estado"]) ?? (f.enviado ? "enviado" : "pendiente"),
+    canal: (f.canal as RecordatorioVacuna["canal"]) ?? undefined,
+    enviadoAt: (f.enviado_at as string) ?? undefined,
+    intentos: (f.intentos as number) ?? 0,
+    ultimoError: (f.ultimo_error as string) ?? undefined,
+    clienteNombre: cliente?.nombre ?? undefined,
+    clienteTelefono: cliente?.telefono ?? undefined,
     createdAt: (f.created_at as string) ?? undefined,
   }
 }
@@ -54,6 +69,45 @@ export async function getRecordatoriosVacunaByMascota(
   return (data ?? []).map(aRecordatorio)
 }
 
+/**
+ * Lo que falta avisar con próxima dosis entre `desde` y `hasta` (inclusive),
+ * con nombre y teléfono actuales del dueño. Para la tarjeta del Dashboard.
+ */
+export async function getRecordatoriosPorAvisar(
+  tenantId: string,
+  desde: string,
+  hasta: string,
+): Promise<RecordatorioVacuna[]> {
+  const { data, error } = await supabase
+    .from("recordatorios_vacunas")
+    .select("*, clientes(nombre, telefono)")
+    .eq("tenant_id", tenantId)
+    .in("estado", ["pendiente", "fallido"])
+    .gte("fecha", desde)
+    .lte("fecha", hasta)
+    .order("fecha")
+  throwIfSupabaseError(error, "Error al cargar recordatorios de vacunas")
+  return (data ?? []).map(aRecordatorio)
+}
+
+/** El veterinario avisó a mano por wa.me: el cron ya no lo manda. */
+export async function marcarRecordatorioAvisadoManual(tenantId: string, id: string): Promise<void> {
+  const { error } = await supabase
+    .from("recordatorios_vacunas")
+    .update({ estado: "enviado", canal: "manual", enviado_at: new Date().toISOString() })
+    .eq("tenant_id", tenantId).eq("id", id)
+  throwIfSupabaseError(error, "No se pudo marcar el recordatorio como avisado")
+}
+
+/** No corresponde avisar (la mascota ya no viene, se vacunó en otro lado…). No se borra. */
+export async function descartarRecordatorioVacuna(tenantId: string, id: string): Promise<void> {
+  const { error } = await supabase
+    .from("recordatorios_vacunas")
+    .update({ estado: "cancelado" })
+    .eq("tenant_id", tenantId).eq("id", id)
+  throwIfSupabaseError(error, "No se pudo descartar el recordatorio")
+}
+
 export async function deleteRecordatorioVacuna(
   tenantId: string,
   id: string,
@@ -62,27 +116,4 @@ export async function deleteRecordatorioVacuna(
     .from("recordatorios_vacunas").delete()
     .eq("tenant_id", tenantId).eq("id", id)
   if (error) throw new Error(`No se pudo borrar el recordatorio: ${error.message}`)
-}
-
-/** Recordatorios pendientes para una fecha (usado por el cron). */
-export async function getRecordatoriosVacunaPendientes(
-  tenantId: string,
-  fecha: string,
-): Promise<RecordatorioVacuna[]> {
-  const { data, error } = await supabase
-    .from("recordatorios_vacunas").select("*")
-    .eq("tenant_id", tenantId).eq("fecha", fecha).eq("enviado", false)
-  if (error) return []
-  return (data ?? []).map(aRecordatorio)
-}
-
-export async function marcarRecordatorioVacunaEnviado(
-  tenantId: string,
-  id: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("recordatorios_vacunas")
-    .update({ enviado: true })
-    .eq("tenant_id", tenantId).eq("id", id)
-  if (error) throw new Error(`No se pudo marcar el recordatorio: ${error.message}`)
 }

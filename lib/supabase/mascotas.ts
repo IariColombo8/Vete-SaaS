@@ -35,6 +35,7 @@ export function aMascota(f: Fila): Mascota {
     chipNumero: (f.chip_numero as string) ?? undefined,
     sexo: (f.sexo as Mascota["sexo"]) ?? undefined,
     color: (f.color as string) ?? undefined,
+    castrado: (f.castrado as boolean | null) ?? undefined,
     libretaToken: (f.libreta_token as string) ?? undefined,
     fotoUrl: (f.foto_url as string) ?? undefined,
   }
@@ -68,6 +69,7 @@ export async function createMascota(
       chipNumero: data.chipNumero ?? null,
       sexo: data.sexo ?? null,
       color: data.color ?? null,
+      castrado: data.castrado ?? null,
     },
   })
 
@@ -153,6 +155,7 @@ export async function updateMascota(
   if (data.chipNumero !== undefined) datos.chipNumero = data.chipNumero
   if (data.sexo !== undefined) datos.sexo = data.sexo
   if (data.color !== undefined) datos.color = data.color
+  if (data.castrado !== undefined) datos.castrado = data.castrado
   if (data.libretaToken !== undefined) datos.libretaToken = data.libretaToken
 
   if (Object.keys(datos).length === 0) return { success: true, id: mascotaId }

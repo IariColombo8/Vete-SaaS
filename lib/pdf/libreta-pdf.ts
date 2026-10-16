@@ -110,7 +110,7 @@ async function obtenerFilasVacunacion(
   return todas.map(({ fecha, nombre, proximaInline }) => {
     if (proximaInline) return { fecha: formatFechaISO(fecha), nombre, proxima: formatFechaISO(proximaInline) }
     const proxima = pendientes.find(
-      (p) => !p.enviado && p.vacuna.trim().toLowerCase() === nombre.toLowerCase(),
+      (p) => p.estado !== "cumplido" && p.estado !== "cancelado" && p.vacuna.trim().toLowerCase() === nombre.toLowerCase(),
     )
     return { fecha: formatFechaISO(fecha), nombre, proxima: proxima ? formatFechaISO(proxima.fecha) : "—" }
   })
@@ -238,6 +238,7 @@ export async function generarLibretaPDF(params: GenerarLibretaPDFParams): Promis
     ["Fecha de nacimiento", "—"],
     ["Sexo", mascota.sexo === "macho" ? "Macho" : mascota.sexo === "hembra" ? "Hembra" : "—"],
     ["Color", mascota.color || "—"],
+    ["Castrado/a", mascota.castrado === undefined ? "—" : mascota.castrado ? "Sí" : "No"],
     ["N° de chip", mascota.tieneChip ? (mascota.chipNumero || "Sí, sin número") : "No tiene"],
     ["Peso", mascota.peso || "—"],
   ]

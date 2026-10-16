@@ -35,6 +35,7 @@ import { getVentas } from "@/lib/supabase/ventas"
 import { getMovimientosCliente, type MovimientoCtaCte } from "@/lib/supabase/cuentaCorriente"
 import { cuitValido } from "@/lib/facturacion/comprobante"
 import { EstadoBadge, EstadoTurnoBadge } from "@/components/admin/estado-badge"
+import { textoCastrado } from "@/lib/mascotas/castrado"
 
 export type ClientePerfil = Cliente & { mascotas?: Mascota[]; historialDatos?: HistorialDato[] }
 
@@ -355,7 +356,7 @@ export function ClientePerfilDialog({
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-semibold">{m.nombre}</p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {[m.tipo, m.raza, m.edad, m.sexo].filter(Boolean).join(" · ")}
+                            {[m.tipo, m.raza, m.edad, m.sexo, textoCastrado(m.castrado, m.sexo)].filter(Boolean).join(" · ")}
                           </p>
                         </div>
                         {m.libretaToken && (

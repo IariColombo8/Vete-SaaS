@@ -205,6 +205,8 @@ export interface Mascota {
   sexo?: SexoMascota
   /** Opcional: no toda mascota tiene un color fácil de describir en una palabra. */
   color?: string
+  /** ¿Castrado/a? undefined = sin dato (mascotas viejas o el dueño no sabe). */
+  castrado?: boolean
   /** Token aleatorio para la libreta pública por QR (no adivinable). */
   libretaToken?: string
   /** Foto opcional subida por el dueño; fondo del perfil público. */
@@ -333,9 +335,25 @@ export interface RecordatorioVacuna {
   vacuna: string
   /** Fecha de la próxima dosis (YYYY-MM-DD). */
   fecha: string
+  /** @deprecated usar `estado`. Lo mantiene un trigger (060) por compatibilidad. */
   enviado?: boolean
+  tipo?: TipoRecordatorio
+  /** auto = lo creó el trigger desde la historia; manual = botón de la Libreta. */
+  origen?: "auto" | "manual"
+  estado?: EstadoRecordatorio
+  /** whatsapp = cron por la API de Meta; manual = el veterinario con wa.me. */
+  canal?: "whatsapp" | "manual"
+  enviadoAt?: string
+  intentos?: number
+  ultimoError?: string
+  /** Datos actuales del dueño (no la copia del recordatorio). Solo en las consultas del panel. */
+  clienteNombre?: string
+  clienteTelefono?: string
   createdAt?: string
 }
+
+export type TipoRecordatorio = "vacuna" | "desparasitacion"
+export type EstadoRecordatorio = "pendiente" | "enviado" | "fallido" | "cumplido" | "cancelado"
 
 // ── Disponibilidad ──
 export interface DiaBloqueado {

@@ -26,6 +26,7 @@ import { createCliente, getClienteByDNI, getClienteGlobalPorDNI } from "@/lib/su
 import { createMascota, updateMascota, getMascotas } from "@/lib/supabase/mascotas"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
+import { castradoAOpcion, opcionACastrado, type OpcionCastrado } from "@/lib/mascotas/castrado"
 import { format } from "date-fns"
 import { UserPlus, PlusCircle, Trash2, Loader2, PartyPopper, Sparkles } from "lucide-react"
 import { guardarBorrador, leerBorrador, borrarBorrador } from "@/lib/forms/borrador"
@@ -65,6 +66,7 @@ interface MascotaBorrador {
   peso: string
   tieneChip: boolean
   chipNumero: string
+  castrado: OpcionCastrado
 }
 
 type Paso = "dni" | "formulario"
@@ -74,7 +76,7 @@ const CLIENTE_VACIO = { nombre: "", telefono: "", email: "", dni: "", domicilio:
 const MASCOTA_VACIA: MascotaBorrador = {
   nombre: "", tipo: "perro", raza: "",
   edadValor: "", edadUnidad: "meses", peso: "",
-  tieneChip: false, chipNumero: "",
+  tieneChip: false, chipNumero: "", castrado: "",
 }
 
 interface FormularioBorrador {
@@ -157,6 +159,7 @@ export function RegistroClienteDialog({
             peso: (m.peso ?? "").replace(/[^\d.,]/g, ""),
             tieneChip: m.tieneChip ?? false,
             chipNumero: m.chipNumero ?? "",
+            castrado: castradoAOpcion(m.castrado),
           })), ...filaExtra],
         }
         recon = "local"
@@ -172,7 +175,7 @@ export function RegistroClienteDialog({
             mascotas: global.mascotas.map((m) => ({
               nombre: m.nombre, tipo: m.tipo, raza: m.raza ?? "",
               edadValor: "", edadUnidad: "meses" as UnidadEdad, peso: "",
-              tieneChip: false, chipNumero: "",
+              tieneChip: false, chipNumero: "", castrado: "" as OpcionCastrado,
             })),
           }
           recon = "global"
@@ -289,6 +292,8 @@ export function RegistroClienteDialog({
           peso: m.peso.trim() ? `${m.peso.trim()} kg` : undefined,
           tieneChip: m.tieneChip,
           chipNumero: m.tieneChip ? m.chipNumero.trim() || undefined : undefined,
+          // Borradores guardados antes de existir el campo no lo traen.
+          castrado: opcionACastrado(m.castrado ?? ""),
           ...datosEdad,
         }
         try {
@@ -563,6 +568,18 @@ export function RegistroClienteDialog({
                         placeholder="Peso (kg)"
                       />
                     </div>
+                    <Select
+                      value={m.castrado || undefined}
+                      onValueChange={(v) => actualizarMascota(i, "castrado", v)}
+                    >
+                      <SelectTrigger aria-label="¿Está castrado/a?">
+                        <SelectValue placeholder="¿Está castrado/a?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="si">Castrado/a: sí</SelectItem>
+                        <SelectItem value="no">Castrado/a: no</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Checkbox

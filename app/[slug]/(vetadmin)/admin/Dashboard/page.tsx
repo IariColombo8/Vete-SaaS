@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useSlug } from "@/context/slug-context"
 import { DashboardCharts } from "@/components/admin/dashboard-charts"
 import { DashboardVentas } from "@/components/admin/dashboard-ventas"
+import { RecordatoriosVacunasCard } from "@/components/admin/recordatorios-vacunas-card"
 import { getTenantConfig, getTurnosDelMes } from "@/lib/supabase/queries"
 import type { TenantConfig } from "@/lib/supabase/queries"
 import { getPlanLimits, planAllows } from "@/lib/plans"
@@ -134,6 +135,15 @@ export default function DashboardPage() {
             tenantId={slug}
             onNavigateToVentas={() => router.push(`/${slug}/admin/Ventas`)}
             onNavigateToPos={() => router.push(`/${slug}/admin/Vender`)}
+          />
+        )}
+
+        {/* Vacunas por vencer: en cualquier plan se avisa a mano con wa.me */}
+        {config !== null && (
+          <RecordatoriosVacunasCard
+            tenantId={slug}
+            veterinaria={config.nombre || slug}
+            envioAutomatico={planAllows(plan, "recordatoriosVacunas")}
           />
         )}
 

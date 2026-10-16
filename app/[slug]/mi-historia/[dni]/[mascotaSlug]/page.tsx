@@ -34,6 +34,7 @@ import { resolverFirmaComprobante } from "@/lib/supabase/usuarios"
 import { SorteoTeaser } from "@/components/public/sorteo-banner"
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad"
+import { castradoAOpcion, opcionACastrado, type OpcionCastrado } from "@/lib/mascotas/castrado"
 import { slugificarMascota } from "@/lib/mascotas/slug"
 import { generarLibretaPDF, type VeterinariaLibreta } from "@/lib/pdf/libreta-pdf"
 import { generarComprobanteVeterinario } from "@/lib/pdf/comprobante-veterinario"
@@ -119,6 +120,7 @@ export default function PerfilMascotaPage() {
   const [editData, setEditData] = useState({
     tipo: "", raza: "", edadValor: "", edadUnidad: "meses" as UnidadEdad,
     peso: "", tieneChip: false, chipNumero: "", sexo: "" as SexoMascota | "", color: "",
+    castrado: "" as OpcionCastrado,
   })
   const [guardandoEdicion, setGuardandoEdicion] = useState(false)
   const { toast } = useToast()
@@ -137,6 +139,7 @@ export default function PerfilMascotaPage() {
       chipNumero: mascota.chipNumero || "",
       sexo: mascota.sexo || "",
       color: mascota.color || "",
+      castrado: castradoAOpcion(mascota.castrado),
     })
     setMostrarEditar(true)
   }
@@ -167,6 +170,7 @@ export default function PerfilMascotaPage() {
         chipNumero: editData.tieneChip ? editData.chipNumero.trim() : "",
         sexo: editData.sexo,
         color: editData.color.trim(),
+        castrado: opcionACastrado(editData.castrado),
         ...datosEdad,
       })
 
@@ -692,6 +696,18 @@ export default function PerfilMascotaPage() {
                   placeholder="Negro y blanco"
                 />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="editar-castrado">¿Castrado/a?</Label>
+              <Select value={editData.castrado || undefined} onValueChange={(v) => setEditData((d) => ({ ...d, castrado: v as OpcionCastrado }))}>
+                <SelectTrigger id="editar-castrado">
+                  <SelectValue placeholder="Sin dato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="si">Sí</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2 space-y-1.5">

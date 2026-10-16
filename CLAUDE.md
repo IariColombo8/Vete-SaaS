@@ -459,6 +459,26 @@ intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
 - Arranca en **homologación**; nada emitido ahí tiene valor fiscal y el PDF
   sale sellado "SIN VALOR FISCAL". Falta probar con un CUIT real.
 
+### Recordatorios de vacunas (`060_recordatorios_automaticos.sql`)
+
+- **Se crean solos desde la historia**: un trigger en `historias` arma el
+  recordatorio con la "próxima dosis" de cada vacuna/desparasitación
+  (`aplicaciones`, y las filas viejas tipo `vacuna`/`desparasitacion`).
+  Corregir la fecha lo re-arma; sacar el ítem borra el pendiente; aplicar la
+  misma vacuna marca `cumplido` el anterior (hasta 90 días antes del
+  vencimiento). Si el trigger falla, la historia se guarda igual (warning).
+- `estado` (pendiente/enviado/fallido/cumplido/cancelado) reemplaza a
+  `enviado`, que lo sigue manteniendo un trigger por compatibilidad.
+- **Cron** (`/api/cron/recordatorios`): toma un rango (vencidas hace ≤3 días
+  hasta +7), no una fecha exacta, así un día sin cron no pierde avisos.
+  Hasta 3 intentos; usa el teléfono actual del cliente. Plantilla
+  `WHATSAPP_VACUNA_TEMPLATE_V2` (dueño, mascota, vacuna, fecha, veterinaria +
+  botón URL); sin ella cae a la vieja de 2 parámetros.
+- **Aviso manual con wa.me en cualquier plan** (tarjeta "Vacunas por vencer"
+  del Dashboard): gratis, no usa la API de Meta. El envío automático sigue
+  siendo Pro. Avisar a mano marca `canal = 'manual'` y el cron ya no lo manda.
+- Reglas puras y testeadas en `lib/recordatorios/vacunas.ts`.
+
 ### Perfil del cliente (panel)
 
 `components/admin/clientes/cliente-perfil-dialog.tsx` reemplaza al modal de

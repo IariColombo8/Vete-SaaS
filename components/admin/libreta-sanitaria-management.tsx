@@ -55,6 +55,7 @@ import { getSaldoCliente } from "@/lib/supabase/cuentaCorriente";
 import { uploadArchivoHistoria, uploadFotoTenant } from "@/lib/supabase/storage";
 import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults";
 import { formatearEdad, type UnidadEdad } from "@/lib/mascotas/edad";
+import { castradoAOpcion, opcionACastrado, textoCastrado, type OpcionCastrado } from "@/lib/mascotas/castrado";
 import { format } from "date-fns";
 import { generarLibretaPDF, type VeterinariaLibreta } from "@/lib/pdf/libreta-pdf";
 import { generarComprobanteVeterinario, previsualizarComprobante } from "@/lib/pdf/comprobante-veterinario";
@@ -226,6 +227,7 @@ const emptyHistoriaForm = {
 const emptyMascotaDataForm = {
   tipo: "", raza: "", edadValor: "", edadUnidad: "meses" as UnidadEdad,
   peso: "", tieneChip: false, chipNumero: "", sexo: "" as SexoMascota | "", color: "",
+  castrado: "" as OpcionCastrado,
 };
 
 type TipoAplicacion = "vacuna" | "medicamento" | "desparasitacion" | "servicio";
@@ -694,6 +696,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
       chipNumero: mascota.chipNumero || "",
       sexo: mascota.sexo || "",
       color: mascota.color || "",
+      castrado: castradoAOpcion(mascota.castrado),
     });
     setEditMascotaDataOpen(true);
   };
@@ -744,6 +747,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
         chipNumero: formMascotaData.tieneChip ? formMascotaData.chipNumero.trim() : "",
         sexo: formMascotaData.sexo,
         color: formMascotaData.color.trim(),
+        castrado: opcionACastrado(formMascotaData.castrado),
         ...datosEdad,
       });
 
@@ -1725,7 +1729,7 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
                             title="Cargar o corregir datos de la mascota"
                           >
-                            {[m.raza, m.edad, m.peso, m.sexo === "macho" ? "Macho" : m.sexo === "hembra" ? "Hembra" : null, m.color, m.tieneChip ? "Chip" : null].filter(Boolean).join(" · ") || "Sin datos"}
+                            {[m.raza, m.edad, m.peso, m.sexo === "macho" ? "Macho" : m.sexo === "hembra" ? "Hembra" : null, textoCastrado(m.castrado, m.sexo), m.color, m.tieneChip ? "Chip" : null].filter(Boolean).join(" · ") || "Sin datos"}
                             <Edit3 className="h-3 w-3 shrink-0" />
                           </button>
                         </div>
@@ -2511,6 +2515,18 @@ export function LibretaSanitariaManagement({ tenantId }: { tenantId: string }) {
                   placeholder="Negro y blanco"
                 />
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">¿Castrado/a?</Label>
+              <Select value={formMascotaData.castrado || undefined} onValueChange={(v) => setFormMascotaData((d) => ({ ...d, castrado: v as OpcionCastrado }))}>
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue placeholder="Sin dato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="si">Sí</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">

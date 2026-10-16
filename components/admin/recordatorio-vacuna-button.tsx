@@ -41,17 +41,14 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
   const [vacuna, setVacuna] = useState("")
   const [fecha, setFecha] = useState("")
 
+  // En cualquier plan: en Pro sale solo por WhatsApp; en los demás aparece en
+  // el Dashboard ("Vacunas por vencer") para avisar a mano con wa.me.
+  const [envioAutomatico, setEnvioAutomatico] = useState(false)
+
   const handleAbrir = async () => {
-    const config = await getTenantConfig(tenantId)
-    if (!planAllows(config?.plan, "recordatoriosVacunas")) {
-      toast({
-        title: "Función del plan Pro",
-        description: "Los recordatorios automáticos de vacunas están en el plan Pro.",
-        variant: "destructive",
-      })
-      return
-    }
     setOpen(true)
+    const config = await getTenantConfig(tenantId).catch(() => null)
+    setEnvioAutomatico(planAllows(config?.plan, "recordatoriosVacunas"))
   }
 
   const handleGuardar = async () => {
@@ -73,7 +70,12 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
         vacuna: vacuna.trim(),
         fecha,
       })
-      toast({ title: "Recordatorio programado", description: `Se avisará por WhatsApp antes del ${fecha}.` })
+      toast({
+        title: "Recordatorio programado",
+        description: envioAutomatico
+          ? `Se avisará por WhatsApp antes del ${fecha}.`
+          : "Te va a aparecer en el Dashboard para avisarle al dueño.",
+      })
       setOpen(false)
       setVacuna("")
       setFecha("")
@@ -106,7 +108,10 @@ export const RecordatorioVacunaButton = forwardRef<RecordatorioVacunaButtonRef, 
           <DialogHeader>
             <DialogTitle>Recordatorio de vacuna</DialogTitle>
             <DialogDescription>
-              Se enviará un WhatsApp al cliente unos días antes de la fecha de la próxima dosis.
+              {envioAutomatico
+                ? "Se enviará un WhatsApp al cliente unos días antes de la fecha de la próxima dosis."
+                : "Unos días antes te aparece en el Dashboard para avisarle al dueño por WhatsApp."}
+              {" "}Si la cargás como próxima dosis en la historia, no hace falta: se crea sola.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
