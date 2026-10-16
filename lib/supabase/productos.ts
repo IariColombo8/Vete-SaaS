@@ -252,9 +252,15 @@ export async function getProductos(
   // Se filtra sobre `busqueda_normalizada` (columna generada sin acentos, ver
   // 006_busqueda_sin_acentos.sql): así "arnes" encuentra "Arnés" sin importar
   // mayúsculas ni tildes de ningún lado.
-  const busqueda = limpiarBusqueda(filtro.busqueda ?? "")
-  if (busqueda) {
-    q = q.ilike("busqueda_normalizada", `%${busqueda}%`)
+  // Cada palabra se busca por separado y tienen que estar todas, en cualquier
+  // orden: con la frase entera, "agua simba" no encontraba "Aguas Simba" y
+  // "jugo baggio" no encontraba "Jugo de naranja" de marca Baggio.
+  const palabras = limpiarBusqueda(filtro.busqueda ?? "")
+    .replace(/[%_\\]/g, " ")
+    .split(" ")
+    .filter(Boolean)
+  for (const palabra of palabras) {
+    q = q.ilike("busqueda_normalizada", `%${palabra.toLowerCase()}%`)
   }
 
   const desde = pagina * porPagina
