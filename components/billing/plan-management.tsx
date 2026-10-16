@@ -20,8 +20,10 @@ import { PLAN_RECOMENDADO, formatPesos, formatPrecioPlan, getPlan, getPlanList, 
 import { cargarPlanes } from "@/lib/supabase/planes"
 import { getPagosManuales } from "@/lib/supabase/pagos-manuales"
 import {
-  DIA_VENCIMIENTO, MEDIOS_PAGO_MANUAL, estadoCobroManual, nombreMes, sumarMeses, ultimoPago, type PagoManual,
+  DIA_VENCIMIENTO, MEDIOS_PAGO_MANUAL, estadoCobroManual, nombreMes, proximoPeriodoImpago, sumarMeses, ultimoPago,
+  type PagoManual,
 } from "@/lib/billing/cobro-manual"
+import { inicioDebito } from "@/lib/billing/dia-debito"
 import {
   cancelarSuscripcion,
   getEstadoBilling,
@@ -147,7 +149,13 @@ export function PlanManagement({ tenantId }: Props) {
     <div className="space-y-6">
       {/* Las que pagan en efectivo no usan Mercado Pago: sin botones de contratar ni cancelar. */}
       {estado.cobroManual ? (
-        <TarjetaCobroManual planNombre={plan.nombre} pagos={pagosManuales} />
+        <TarjetaCobroManual
+          planNombre={plan.nombre}
+          pagos={pagosManuales}
+          checkoutPendiente={susPendiente}
+          puedeDebitar={estado.mercadoPagoConfigurado && plan.visible}
+          onDebito={() => contratar(estado.plan)}
+        />
       ) : (
       <>
       {/* ── Plan actual ── */}
@@ -166,7 +174,8 @@ export function PlanManagement({ tenantId }: Props) {
                 {estadoSus && !bloqueado && <Badge className={estadoSus.className}>{estadoSus.label}</Badge>}
               </CardTitle>
               <CardDescription>
-                {formatPrecioPlan(estado.plan)} por mes, se cobra con Mercado Pago. Cancelás cuando quieras.
+                {formatPrecioPlan(estado.plan)} por mes, se debita con Mercado Pago del 1 al 10 de cada mes. Cancelás
+                cuando quieras.
               </CardDescription>
             </div>
             <Button
@@ -339,11 +348,26 @@ export function PlanManagement({ tenantId }: Props) {
 }
 
 /** Plan actual de una veterinaria que paga en efectivo/transferencia directo a VetPanel. */
-function TarjetaCobroManual({ planNombre, pagos }: { planNombre: string; pagos: PagoManual[] }) {
+function TarjetaCobroManual({
+  planNombre,
+  pagos,
+  checkoutPendiente,
+  puedeDebitar,
+  onDebito,
+}: {
+  planNombre: string
+  pagos: PagoManual[]
+  checkoutPendiente: boolean
+  puedeDebitar: boolean
+  /** Abre el checkout de Mercado Pago para pasar al débito automático. */
+  onDebito: () => void
+}) {
   const ahora = new Date()
   const estado = estadoCobroManual(pagos, ahora)
   const ultimo = ultimoPago(pagos)
   const proximo = estado.fase === "pagado" ? sumarMeses(estado.periodo, 1) : estado.periodo
+  // Misma regla que usa el checkout para fijar el primer débito.
+  const primerDebito = inicioDebito(ahora, proximoPeriodoImpago(pagos, ahora))
   const badge =
     estado.fase === "pagado"
       ? { label: "Al día", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" }
@@ -376,6 +400,33 @@ function TarjetaCobroManual({ planNombre, pagos }: { planNombre: string; pagos: 
             <dd className="font-medium">{DIA_VENCIMIENTO} de {nombreMes(proximo)}</dd>
           </div>
         </dl>
+
+        <div className="mt-4 space-y-3 rounded-lg border bg-muted/30 p-4">
+          <div>
+            <p className="text-sm font-semibold">Débito automático con Mercado Pago</p>
+            <p className="text-sm text-muted-foreground">
+              Te olvidás de pagar a mano: se debita solo del 1 al {DIA_VENCIMIENTO} de cada mes. Los meses que ya
+              pagaste no se cobran de nuevo:{" "}
+              {primerDebito
+                ? `el primer débito es el 1 de ${nombreMes(primerDebito.slice(0, 10))}`
+                : "el primer débito (el de este mes) se hace al confirmar"}
+              . Cancelás cuando quieras.
+            </p>
+          </div>
+          {checkoutPendiente && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              Hay una suscripción iniciada que Mercado Pago todavía no confirmó. Si ya la confirmaste, tocá
+              actualizar en un rato; si no, podés volver a intentarlo.
+            </p>
+          )}
+          <Button onClick={onDebito} disabled={!puedeDebitar} className="bg-emerald-600 hover:bg-emerald-700">
+            <CreditCard className="mr-2 h-4 w-4" />
+            Suscribirme con Mercado Pago
+          </Button>
+          {!puedeDebitar && (
+            <p className="text-xs text-muted-foreground">El débito automático todavía no está habilitado para tu plan.</p>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

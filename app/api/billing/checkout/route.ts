@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { autorizarDueno } from "@/lib/billing/dueno"
+import { periodoActual, sumarMeses } from "@/lib/billing/cobro-manual"
+import { inicioDebito } from "@/lib/billing/dia-debito"
 import { crearSuscripcion, isMercadoPagoConfigured } from "@/lib/billing/mercadopago"
 import { buscarPlan, normalizePlan } from "@/lib/plans"
 import { cargarPlanesServidor } from "@/lib/planes-servidor"
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
 
   const { data: tenant, error: errTenant } = await auth.admin
     .from("tenants")
-    .select("plan, mp_preapproval_id, mp_preapproval_status, email")
+    .select("plan, mp_preapproval_id, mp_preapproval_status, email, trial_expires_at, cobro_manual")
     .eq("slug", tenantId)
     .maybeSingle()
   if (errTenant || !tenant) {
@@ -92,6 +94,30 @@ export async function POST(request: Request) {
 
   const monto = precioDePrueba(auth.email) ?? plan.precioMensual
 
+  // El débito cae del 1 al 10 de cada mes (`inicioDebito`). Mes cubierto:
+  // las de efectivo, por lo que ya pagaron (pueden ir adelantadas); el resto,
+  // por la prueba vigente o por la suscripción que ya cobró este mes.
+  const ahora = new Date()
+  let primerMesImpago = periodoActual(ahora)
+  if (tenant.cobro_manual) {
+    const { data: pagos, error: errPagos } = await auth.admin
+      .from("pagos_manuales")
+      .select("periodo")
+      .eq("tenant_id", tenantId)
+      .is("anulado_at", null)
+      .gte("periodo", primerMesImpago)
+    if (errPagos) {
+      console.error("[billing/checkout] Error al leer pagos manuales:", errPagos)
+      return NextResponse.json({ ok: false, error: "No se pudieron leer los pagos" }, { status: 500 })
+    }
+    const pagados = new Set((pagos ?? []).map((p) => p.periodo as string))
+    for (let i = 0; i < 24 && pagados.has(primerMesImpago); i++) primerMesImpago = sumarMeses(primerMesImpago, 1)
+  } else {
+    const trialVigente = tenant.trial_expires_at && new Date(tenant.trial_expires_at as string) > ahora
+    if (trialVigente || suscripcionActiva) primerMesImpago = sumarMeses(primerMesImpago, 1)
+  }
+  const startDate = inicioDebito(ahora, primerMesImpago)
+
   try {
     const suscripcion = await crearSuscripcion({
       tenantId,
@@ -100,6 +126,7 @@ export async function POST(request: Request) {
       montoMensual: monto,
       payerEmail,
       backUrl: `${appUrl}/${tenantId}/admin/Dashboard?billing=ok`,
+      startDate,
     })
 
     const { error } = await auth.admin
@@ -117,7 +144,10 @@ export async function POST(request: Request) {
       origen: "checkout",
       tipo: "pending",
       preapproval_id: suscripcion.id,
-      detalle: { usuario: auth.userId, plan: planId, monto, cambioDePlan: suscripcionActiva },
+      detalle: {
+        usuario: auth.userId, plan: planId, monto, cambioDePlan: suscripcionActiva,
+        primerDebito: startDate ?? "inmediato", desdeEfectivo: Boolean(tenant.cobro_manual),
+      },
     })
 
     return NextResponse.json({ ok: true, initPoint: suscripcion.initPoint, id: suscripcion.id })

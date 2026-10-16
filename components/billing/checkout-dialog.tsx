@@ -73,7 +73,9 @@ export function CheckoutDialog({ tenantId, plan, onClose }: Props) {
           <DialogHeader>
             <DialogTitle>Contratar {plan ? getPlan(plan).nombre : ""}</DialogTitle>
             <DialogDescription>
-              {plan ? `${formatPrecioPlan(plan)} por mes, con Mercado Pago. Cancelás cuando quieras.` : null}
+              {plan
+                ? `${formatPrecioPlan(plan)} por mes, debitado con Mercado Pago del 1 al 10 de cada mes. Cancelás cuando quieras.`
+                : null}
             </DialogDescription>
           </DialogHeader>
 

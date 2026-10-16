@@ -36,6 +36,8 @@ export interface CrearSuscripcionParams {
   montoMensual: number
   payerEmail: string
   backUrl: string
+  /** Primer débito (ISO). Sin fecha, MP cobra al confirmar. Ver `inicioDebito`. */
+  startDate?: string | null
 }
 
 export interface SuscripcionCreada {
@@ -55,6 +57,7 @@ export async function crearSuscripcion(params: CrearSuscripcionParams): Promise<
       frequency_type: "months",
       transaction_amount: params.montoMensual,
       currency_id: "ARS",
+      ...(params.startDate ? { start_date: params.startDate } : {}),
     },
   }
 

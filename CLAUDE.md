@@ -381,6 +381,15 @@ nunca se borra). Se registra desde /superadmin → Pagos.
   queda "atrasado"; **el panel nunca se bloquea por esto**.
 - En ingresos y métricas cuentan como pagando si tienen pago del mes en curso o
   del anterior, con el monto del último pago.
+- **Pasar del efectivo al débito:** en Configuración → Plan las de efectivo
+  tienen "Suscribirme con Mercado Pago" (mismo checkout). Al autorizarse,
+  `aplicarEstadoPreapproval` pone `cobro_manual = false`.
+
+**El débito de MP cae del 1 al 10** (`lib/billing/dia-debito.ts`, testeado):
+el checkout manda `start_date` = el 1 del primer mes no cubierto (pagado en
+efectivo, en prueba o ya cobrado por otra suscripción). Si el mes en curso no
+está cubierto, del 1 al 10 se cobra en el momento; pasado el 10 arranca el 1
+del mes siguiente (el resto del mes no se cobra).
 
 - **El plan no se toca desde el cliente.** Trigger `tenants_proteger_billing`
   (`049_billing_autoservicio.sql`): con sesión de usuario, cambiar `plan`,

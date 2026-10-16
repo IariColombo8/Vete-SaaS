@@ -12,7 +12,8 @@ import { cancelarPreapproval, parseExternalReference, type PreapprovalInfo } fro
  *
  *  - authorized          → el plan que dice el `external_reference`
  *                          ("tenant:<id del plan>"), status activo,
- *                          se apaga el trial. Si había OTRA suscripción
+ *                          se apaga el trial y deja de ser `cobro_manual`
+ *                          (pasó del efectivo al débito). Si había OTRA suscripción
  *                          autorizada (cambio de plan), se cancela en MP para
  *                          no cobrar dos veces.
  *  - cancelled / paused  → sin suscripción activa: el panel queda en solo
@@ -91,6 +92,8 @@ export async function aplicarEstadoPreapproval(
         mp_next_payment_date: info.nextPaymentDate,
         mp_payer_email: info.payerEmail,
         mp_preapproval_pendiente: tenant.mp_preapproval_pendiente === info.id ? null : tenant.mp_preapproval_pendiente,
+        // Si pagaba en efectivo, desde ahora paga con el débito: sin avisos ni registro a mano.
+        cobro_manual: false,
       })
       .eq("slug", tenantId)
     if (error) throw error
