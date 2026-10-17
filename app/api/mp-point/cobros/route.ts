@@ -6,7 +6,8 @@ import { formatCurrency } from "@/lib/format"
 /**
  * Manda un cobro a la terminal Point de la veterinaria.
  *
- * POST { tenantId, monto, descripcion?, tipoTarjeta?: "credit_card"|"debit_card", cuotas? }
+ * POST { tenantId, monto, descripcion?, tipoTarjeta?: "credit_card"|"debit_card"|"qr", cuotas? }
+ * Con `qr` la terminal muestra el QR en su pantalla en vez de pedir la tarjeta.
  * Auth: staff del tenant.
  *
  * Crea la orden en Mercado Pago con el token del tenant, guarda la fila en

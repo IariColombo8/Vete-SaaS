@@ -90,7 +90,8 @@ export async function configurarTerminalPDV(token: string, terminalId: string): 
 
 // ── Órdenes ─────────────────────────────────────────────────────────────────
 
-export type TipoTarjeta = "credit_card" | "debit_card"
+/** Medio con el que arranca la terminal. `qr` (solo MLA) muestra el QR en la pantalla del Point. */
+export type TipoTarjeta = "credit_card" | "debit_card" | "qr"
 
 /** MP rechaza órdenes Point por debajo de esto (`amount must be >= 15.00`). */
 export const MONTO_MINIMO_POINT = 15

@@ -428,7 +428,7 @@ export function CarritoPanel({
                   onCobrarQr()
                 }}
                 disabled={vacio || cobrando || readOnly}
-                title={readOnly ? "Reactivá tu cuenta para editar" : "Mostrar un QR de Mercado Pago con el monto"}
+                title={readOnly ? "Reactivá tu cuenta para editar" : pointDisponible ? "Mostrar el QR con el monto en la terminal Point" : "Mostrar un QR de Mercado Pago con el monto"}
                 className="h-12 w-full bg-sky-600 text-base hover:bg-sky-700"
               >
                 <QrCode className="mr-2 h-4 w-4" />

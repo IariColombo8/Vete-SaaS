@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase/config"
  * con service_role después de verificar que quien llama es staff del tenant.
  */
 
-export type TipoTarjetaPoint = "credit_card" | "debit_card"
+export type TipoTarjetaPoint = "credit_card" | "debit_card" | "qr"
 export type ResultadoCobroPoint = "en_curso" | "aprobada" | "rechazada" | "cancelada" | "expirada"
 
 export interface EstadoPoint {

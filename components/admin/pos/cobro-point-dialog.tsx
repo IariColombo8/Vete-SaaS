@@ -26,6 +26,11 @@ interface Props {
   descripcion?: string
   /** Solo Point. */
   tipoTarjeta?: TipoTarjetaPoint
+  /**
+   * Solo QR: con terminal configurada el QR sale en la pantalla del Point
+   * (orden Point con `default_type: "qr"`); sin terminal, en esta pantalla.
+   */
+  qrEnTerminal?: boolean
   cuotas?: number
   /** El pago quedó aprobado: el padre registra la venta. */
   onAprobado: (cobroId: string, paymentId: string | null) => Promise<void>
@@ -50,6 +55,7 @@ const TEXTO_ESTADO: Record<CanalCobro, Record<string, string>> = {
   },
   qr: {
     created: "Esperando que el cliente escanee y pague…",
+    at_terminal: "Esperando que el cliente escanee el QR de la terminal…",
     processing: "Procesando el pago…",
     cancelacion_pedida: "Cancelando el QR…",
   },
@@ -82,6 +88,7 @@ export function CobroPointDialog({
   descripcion,
   tipoTarjeta,
   cuotas,
+  qrEnTerminal = false,
   onAprobado,
   onCerrar,
 }: Props) {
@@ -135,7 +142,9 @@ export function CobroPointDialog({
     }
 
     const crear =
-      canal === "qr"
+      canal === "qr" && qrEnTerminal
+        ? crearCobroPoint(tenantId, { monto, descripcion, tipoTarjeta: "qr" })
+        : canal === "qr"
         ? crearCobroQr(tenantId, { monto, descripcion }).then(async ({ cobroId, qrData }) => {
             const imagen = await QRCode.toDataURL(qrData, { width: 320, margin: 2 })
             if (vigente.current) setQrImagen(imagen)
@@ -202,12 +211,14 @@ export function CobroPointDialog({
             {fase.tipo === "enviando" && (
               <>
                 <Loader2 className="h-8 w-8 animate-spin text-sky-600" />
-                <p>{canal === "qr" ? "Generando el QR…" : "Enviando el cobro a la terminal…"}</p>
+                <p>{canal === "qr" && !qrEnTerminal ? "Generando el QR…" : "Enviando el cobro a la terminal…"}</p>
               </>
             )}
             {fase.tipo === "esperando" && canal === "qr" && (
               <>
-                {qrImagen ? (
+                {qrEnTerminal ? (
+                  <QrCode className="h-10 w-10 text-sky-600" />
+                ) : qrImagen ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={qrImagen} alt="QR para pagar con Mercado Pago" className="h-64 w-64 rounded-md border bg-white p-1" />
                 ) : (
@@ -217,7 +228,11 @@ export function CobroPointDialog({
                   <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
                   {TEXTO_ESTADO.qr[fase.estado] ?? "Esperando el pago…"}
                 </p>
-                <p className="text-xs">Mostrale la pantalla al cliente. El QR vence en 10 minutos.</p>
+                <p className="text-xs">
+                  {qrEnTerminal
+                    ? "El cliente escanea el QR que aparece en la terminal. Vence en 10 minutos."
+                    : "Mostrale la pantalla al cliente. El QR vence en 10 minutos."}
+                </p>
               </>
             )}
             {fase.tipo === "esperando" && canal === "point" && (

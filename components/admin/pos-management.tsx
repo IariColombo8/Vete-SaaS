@@ -88,7 +88,8 @@ export function PosManagement({ tenantId }: Props) {
 
   // Mercado Pago: si la veterinaria conectó su terminal, débito y crédito se
   // pueden cobrar mandando el monto a la terminal. Con la cuenta conectada,
-  // aunque no tenga terminal, se puede cobrar con un QR en la pantalla.
+  // aunque no tenga terminal, se puede cobrar con un QR en la pantalla. Si
+  // tiene terminal, el QR sale en la pantalla del Point.
   const [pointDisponible, setPointDisponible] = useState(false)
   const [qrDisponible, setQrDisponible] = useState(false)
   const [cobroMpAbierto, setCobroMpAbierto] = useState<CanalCobro | null>(null)
@@ -421,6 +422,7 @@ export function PosManagement({ tenantId }: Props) {
           descripcion={`${emisor.nombre || "VetPanel"} · ${carrito.length} ítem${carrito.length === 1 ? "" : "s"}`}
           tipoTarjeta={medioPago === "credito" ? "credit_card" : "debit_card"}
           cuotas={medioPago === "credito" ? cuotas : undefined}
+          qrEnTerminal={pointDisponible}
           onAprobado={(cobroId) => cobrar(cobroId)}
           onCerrar={() => setCobroMpAbierto(null)}
         />
