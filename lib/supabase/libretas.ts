@@ -39,6 +39,11 @@ export async function generarLibretaPublica(
       tipo: mascota.tipo,
       raza: mascota.raza,
       edad: mascota.edad,
+      sexo: mascota.sexo,
+      color: mascota.color,
+      castrado: mascota.castrado,
+      tieneChip: mascota.tieneChip,
+      fotoUrl: mascota.fotoUrl,
     },
     vetNombre,
     historias: historiasResumen,
@@ -79,6 +84,7 @@ export async function getLibretaPublica(
   if (!data) return null
   return {
     token: data.token,
+    mascotaId: data.mascota_id ?? undefined,
     mascota: data.mascota ?? { nombre: "", tipo: "" },
     vetNombre: data.vet_nombre ?? undefined,
     historias: data.historias ?? [],

@@ -319,7 +319,19 @@ export interface ClientesPage {
 // ── Libreta pública (QR) ──
 export interface LibretaPublica {
   token: string
-  mascota: { nombre: string; tipo: string; raza?: string; edad?: string }
+  /** Mascota viva detrás del snapshot: de ahí salen la foto y los datos actuales. */
+  mascotaId?: string
+  mascota: {
+    nombre: string
+    tipo: string
+    raza?: string
+    edad?: string
+    sexo?: SexoMascota
+    color?: string
+    castrado?: boolean
+    tieneChip?: boolean
+    fotoUrl?: string
+  }
   vetNombre?: string
   historias: { fecha: string; motivo: string; diagnostico?: string; tratamiento?: string }[]
   generadoEl: string
