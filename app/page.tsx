@@ -4,6 +4,7 @@ import { Hero } from "@/components/landing/hero"
 import { TrustMarquee } from "@/components/landing/trust-marquee"
 import { ProblemSolution } from "@/components/landing/problem-solution"
 import { FeaturesBento } from "@/components/landing/features-bento"
+import { Comercio } from "@/components/landing/comercio"
 import { Testimonials } from "@/components/landing/testimonials"
 import { SaasFooter } from "@/components/landing/footer"
 import { SITIO } from "@/lib/seo/sitio"
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
     "turnos online veterinaria",
     "historia clínica veterinaria digital",
     "libreta sanitaria digital",
+    "factura electrónica ARCA veterinaria",
+    "sistema de stock y caja para veterinaria",
     "programa para veterinaria Argentina",
   ],
   alternates: { canonical: "/" },
@@ -76,6 +79,7 @@ export default async function SaasLandingPage() {
       <ProductScrolly />
       <Stats />
       <FeaturesBento />
+      <Comercio />
       <Testimonials />
       <PricingSection planes={planes} />
       <Faq />

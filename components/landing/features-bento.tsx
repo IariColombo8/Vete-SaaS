@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardList, MessageCircle, Users, Globe, QrCode } from "lucide-react"
+import { CalendarDays, ClipboardList, MessageCircle, Users, Globe, QrCode, Camera, Signature, Gift } from "lucide-react"
 import { Reveal } from "@/components/landing/reveal"
 import { Paw } from "@/components/landing/pet-art"
 
@@ -52,8 +52,8 @@ export function FeaturesBento() {
               </div>
               <h3 className="font-display text-2xl font-semibold text-ink mb-2">Libreta sanitaria digital</h3>
               <p className="text-ink-muted text-sm leading-relaxed mb-5">
-                Historial clínico completo de cada mascota: vacunas, diagnósticos y
-                tratamientos. Exportable a PDF y con QR público para el dueño.
+                Historial clínico completo de cada mascota, con su foto: vacunas,
+                diagnósticos y tratamientos. En PDF con tu logo y con un QR para el collar.
               </p>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-soft px-3 py-1.5 text-xs font-semibold text-teal-ink">
@@ -99,6 +99,45 @@ export function FeaturesBento() {
               <h3 className="font-display text-xl font-semibold text-ink mb-2">Tu página, tu link</h3>
               <p className="text-ink-muted text-sm leading-relaxed">
                 Una web pública con la identidad de tu clínica para compartir y recibir reservas.
+              </p>
+            </div>
+          </Reveal>
+
+          {/* Portal del dueño */}
+          <Reveal className="lg:col-span-2">
+            <div className="group h-full rounded-3xl border border-warm-border bg-white p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
+              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-soft text-teal transition-transform group-hover:scale-110">
+                <Camera className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-ink mb-2">El dueño ve su mascota</h3>
+              <p className="text-ink-muted text-sm leading-relaxed">
+                Con su DNI entra a la ficha: foto, historia clínica, próximas vacunas y la libreta en PDF para descargar.
+              </p>
+            </div>
+          </Reveal>
+
+          {/* Firma digital */}
+          <Reveal delay={0.08} className="lg:col-span-2">
+            <div className="group h-full rounded-3xl border border-warm-border bg-white p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
+              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber/15 text-amber transition-transform group-hover:scale-110">
+                <Signature className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-ink mb-2">Órdenes con firma y sello</h3>
+              <p className="text-ink-muted text-sm leading-relaxed">
+                Órdenes médicas y comprobantes de vacunación en PDF con tu logo, tu matrícula, tu firma y tu sello.
+              </p>
+            </div>
+          </Reveal>
+
+          {/* Integraciones Google + promos */}
+          <Reveal delay={0.16} className="lg:col-span-2">
+            <div className="group h-full rounded-3xl border border-warm-border bg-white p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
+              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-coral-soft text-coral transition-transform group-hover:scale-110">
+                <Gift className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-ink mb-2">Promos, sorteos y Google</h3>
+              <p className="text-ink-muted text-sm leading-relaxed">
+                Ofertas y sorteos en tu página para fidelizar. Los turnos van a tu Google Calendar y los avisos salen desde tu Gmail.
               </p>
             </div>
           </Reveal>

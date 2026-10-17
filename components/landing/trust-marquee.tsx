@@ -1,10 +1,12 @@
-import { ShieldCheck, Smartphone, HeartHandshake, Cloud, MapPin, Clock } from "lucide-react"
+import { ShieldCheck, Smartphone, HeartHandshake, Cloud, MapPin, Clock, FileCheck2, QrCode } from "lucide-react"
 import { Paw } from "@/components/landing/pet-art"
 
 // Server component: el marquee es CSS puro (.marquee-track en globals.css),
 // no necesita JS de cliente. Un island menos hidratando = mejor LCP.
 
 const ITEMS = [
+  { icon: FileCheck2, text: "Factura electrónica ARCA" },
+  { icon: QrCode, text: "Cobro con Mercado Pago" },
   { icon: ShieldCheck, text: "Datos cifrados" },
   { icon: Smartphone, text: "Funciona en cualquier celular" },
   { icon: HeartHandshake, text: "Soporte humano" },

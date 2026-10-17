@@ -7,6 +7,7 @@ const ANTES = [
   "Llamados para confirmar y recordar cada visita",
   "Historias clínicas en cuadernos que se pierden",
   "Vacunas vencidas que nadie avisó a tiempo",
+  "Facturas a mano y el stock en una planilla",
 ]
 
 const DESPUES = [
@@ -14,6 +15,7 @@ const DESPUES = [
   "Le escribís al dueño por WhatsApp con un click",
   "Cada historia clínica ordenada y siempre a mano",
   "Avisos de vacunas que se disparan solos",
+  "Factura de ARCA con tu logo y stock al día, solos",
 ]
 
 export function ProblemSolution() {

@@ -87,9 +87,9 @@ export function Hero() {
             </h1>
 
             <p className="text-lg sm:text-xl text-ink-muted leading-relaxed mb-9 max-w-xl">
-              Turnos online, historias clínicas y recordatorios automáticos.
-              Tu veterinaria con su propio link, lista en minutos — y vos
-              volvés a casa a horario.
+              Turnos online, historia clínica, mostrador con stock y factura
+              electrónica de ARCA con tu logo. Toda tu veterinaria en un solo
+              sistema — y vos volvés a casa a horario.
             </p>
 
             <HeroCta />
