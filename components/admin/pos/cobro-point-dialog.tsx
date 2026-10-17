@@ -233,6 +233,11 @@ export function CobroPointDialog({
                     ? "El cliente escanea el QR que aparece en la terminal. Vence en 10 minutos."
                     : "Mostrale la pantalla al cliente. El QR vence en 10 minutos."}
                 </p>
+                {!qrEnTerminal && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Para que el QR salga en el posnet, elegí la terminal en Configuración → Integraciones → Mercado Pago Point.
+                  </p>
+                )}
               </>
             )}
             {fase.tipo === "esperando" && canal === "point" && (
