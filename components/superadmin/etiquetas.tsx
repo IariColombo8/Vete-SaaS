@@ -50,6 +50,15 @@ export function EtiquetaTrial({ estado }: { estado: EstadoTrial }) {
   )
 }
 
+/**
+ * Estado y prueba en una sola pastilla, para la tabla: pausada manda sobre
+ * todo; si no, la prueba (en curso o vencida); si no, activa.
+ */
+export function EstadoCuenta({ status, trial }: { status: TenantFull["status"]; trial: EstadoTrial }) {
+  if (status === "pausado" || trial.tipo === "sin-trial") return <EstadoTenant status={status} />
+  return <EtiquetaTrial estado={trial} />
+}
+
 const ROLES: Record<UserRole, { label: string; className: string }> = {
   superadmin:  { label: "Superadmin",  className: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" },
   veterinario: { label: "Veterinario", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },

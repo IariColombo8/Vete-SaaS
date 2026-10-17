@@ -66,61 +66,67 @@ export function TablaUsuarios({
       ) : usuarios.length === 0 ? (
         <EstadoVacio icono={<Search />} titulo="Ningún resultado" descripcion="Ningún usuario coincide con la búsqueda o el rol elegido." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[880px] text-sm">
-            <thead className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold">Usuario</th>
-                <th className="px-4 py-3 text-left font-semibold">Email</th>
-                <th className="px-4 py-3 text-left font-semibold">Veterinaria</th>
-                <th className="px-4 py-3 text-left font-semibold">Rol</th>
-                <th className="w-64 px-4 py-3 text-left font-semibold">Uso del panel (30 días)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {usuarios.map((u) => (
-                <tr key={u.uid} className="transition-colors hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {u.photoURL ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- foto de Google, URL externa
-                        <img src={u.photoURL} alt="" className="h-7 w-7 rounded-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold" aria-hidden>
-                          {(u.displayName ?? u.email ?? "?").charAt(0).toUpperCase()}
+        // Entra en el ancho de la pantalla, sin scroll horizontal: el email va
+        // debajo del nombre y las columnas secundarias se esconden en pantallas angostas.
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/40 text-xs text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2.5 text-left font-medium">Usuario</th>
+              <th className="hidden px-4 py-2.5 text-left font-medium md:table-cell">Veterinaria</th>
+              <th className="px-4 py-2.5 text-left font-medium">Rol</th>
+              <th className="hidden w-56 px-4 py-2.5 text-left font-medium lg:table-cell">Uso del panel (30 días)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {usuarios.map((u) => (
+              <tr key={u.uid} className="transition-colors hover:bg-muted/30">
+                <td className="max-w-0 px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    {u.photoURL ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- foto de Google, URL externa
+                      <img src={u.photoURL} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold" aria-hidden>
+                        {(u.displayName ?? u.email ?? "?").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{u.displayName ?? "Sin nombre"}</div>
+                      <div className="truncate text-xs text-muted-foreground">{u.email}</div>
+                      {u.tenantId && (
+                        <div className="truncate text-xs text-muted-foreground md:hidden">
+                          {nombreTenant.get(u.tenantId) ?? u.tenantId}
                         </div>
                       )}
-                      <span className="font-medium">{u.displayName ?? "Sin nombre"}</span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-3">
-                    {u.tenantId ? (
-                      <Link
-                        href={`/${u.tenantId}/admin`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
-                      >
-                        {nombreTenant.get(u.tenantId) ?? u.tenantId}
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3"><EtiquetaRol rol={rolDeUsuario(u)} /></td>
-                  <td className="px-4 py-3">
-                    {u.role === "veterinario" || u.role === "empleado" ? (
-                      <UsoPanel uso={uso[u.uid]} ahora={ahora} />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </td>
+                <td className="hidden px-4 py-2.5 md:table-cell">
+                  {u.tenantId ? (
+                    <Link
+                      href={`/${u.tenantId}/admin`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                    >
+                      {nombreTenant.get(u.tenantId) ?? u.tenantId}
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5"><EtiquetaRol rol={rolDeUsuario(u)} /></td>
+                <td className="hidden px-4 py-2.5 lg:table-cell">
+                  {u.role === "veterinario" || u.role === "empleado" ? (
+                    <UsoPanel uso={uso[u.uid]} ahora={ahora} compacto />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   )

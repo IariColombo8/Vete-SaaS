@@ -20,10 +20,10 @@ function Indicador({
   cargando: boolean
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm">
+    <div className="relative overflow-hidden rounded-xl border bg-card p-4 shadow-xs">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-muted-foreground">{titulo}</p>
-        <span className={`flex size-9 items-center justify-center rounded-xl ${tono}`}>
+        <p className="text-xs font-medium text-muted-foreground sm:text-sm">{titulo}</p>
+        <span className={`hidden size-8 shrink-0 items-center justify-center rounded-lg sm:flex ${tono}`}>
           <Icono className="size-4" aria-hidden />
         </span>
       </div>
@@ -34,7 +34,7 @@ function Indicador({
         </>
       ) : (
         <>
-          <p className="mt-2 text-4xl font-extrabold tabular-nums tracking-tight">{valor}</p>
+          <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">{valor}</p>
           <p className="mt-1 text-xs text-muted-foreground">{detalle}</p>
         </>
       )}
@@ -45,7 +45,7 @@ function Indicador({
 /** Fila de números de la plataforma. Cada uno trae su desglose, no un total suelto. */
 export function Indicadores({ resumen, totalTurnos, cargando }: Props) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <Indicador
         icono={Stethoscope}
         titulo="Veterinarias"

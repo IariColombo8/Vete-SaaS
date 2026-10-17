@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { AlertTriangle, Banknote, BarChart3, Layers, RefreshCw, Search, Shield, Stethoscope, Users } from "lucide-react"
+import { AlertTriangle, Search } from "lucide-react"
 import { getUsuarios, getTenantsFull, updateTenantConfig, deleteTenant, getTurnosCount, getProductos, getMovimientosCount } from "@/lib/supabase/queries"
 import { getVentas } from "@/lib/supabase/ventas"
 import type { Usuario, TenantFull } from "@/lib/supabase/queries"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TRIAL_DIAS, formatPesos, getPlan, getPlanList, type PlanDefinition, type PlanId } from "@/lib/plans"
 import { cargarPlanes } from "@/lib/supabase/planes"
 import { getFacturacionPlataforma } from "@/lib/supabase/superadmin"
@@ -23,6 +22,8 @@ import {
 } from "@/lib/superadmin/resumen"
 import { Indicadores } from "@/components/superadmin/indicadores"
 import { TablaVeterinarias } from "@/components/superadmin/tabla-veterinarias"
+import { SuperadminShell, type SeccionSuperadmin } from "@/components/superadmin/superadmin-shell"
+import { DetalleVeterinaria } from "@/components/superadmin/detalle-veterinaria"
 import { TablaUsuarios } from "@/components/superadmin/tabla-usuarios"
 import { ConfirmarAccionDialog, type AccionPendiente } from "@/components/superadmin/confirmar-accion-dialog"
 import { GestionPlanes } from "@/components/superadmin/gestion-planes"
@@ -61,6 +62,9 @@ export default function SuperAdminPage() {
 
   // slug con una operación en curso: bloquea los botones de esa fila.
   const [ocupado, setOcupado] = useState<string | null>(null)
+  // Se guarda el slug y no la fila: tras recargar, el detalle muestra los datos nuevos.
+  const [seccion, setSeccion] = useState<SeccionSuperadmin>("veterinarias")
+  const [seleccionado, setSeleccionado] = useState<string | null>(null)
   const [accion, setAccion] = useState<AccionPendiente | null>(null)
   const [ejecutandoAccion, setEjecutandoAccion] = useState(false)
 
@@ -165,6 +169,8 @@ export default function SuperAdminPage() {
     () => filtrarTenants(tenants, { busqueda, estado: filtroEstado, plan: filtroPlan }),
     [tenants, busqueda, filtroEstado, filtroPlan],
   )
+  // Si la veterinaria se elimina, deja de estar en `tenants` y el detalle se cierra solo.
+  const tenantSeleccionado = tenants.find((t) => t.slug === seleccionado) ?? null
   const usuariosVisibles = useMemo(
     () => filtrarUsuarios(usuarios, busquedaUsuario, filtroRol),
     [usuarios, busquedaUsuario, filtroRol],
@@ -348,62 +354,28 @@ export default function SuperAdminPage() {
   const hayFiltros = busqueda !== "" || filtroEstado !== "todas" || filtroPlan !== "todos"
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-md shadow-violet-500/20">
-              <Shield className="size-6 text-white" />
-            </div>
+    <SuperadminShell
+      seccion={seccion}
+      onSeccion={setSeccion}
+      cargando={loading}
+      onActualizar={load}
+      onSalir={() => import("@/lib/supabase/auth").then((m) => m.signOut())}
+    >
+      {errorCarga && (
+        <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Panel Super Admin</h1>
-              <p className="text-sm text-muted-foreground">
-                Todas las veterinarias y usuarios de la plataforma, en un solo lugar.
-              </p>
+              <p className="font-semibold">No se pudieron cargar los datos</p>
+              <p className="text-xs opacity-80">{errorCarga}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="self-start sm:self-auto">
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Actualizar
-          </Button>
+          <Button variant="outline" size="sm" onClick={load}>Reintentar</Button>
         </div>
-      </header>
+      )}
 
-      <main className="container mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        {errorCarga && (
-          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <div>
-                <p className="font-semibold">No se pudieron cargar los datos</p>
-                <p className="text-xs opacity-80">{errorCarga}</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={load}>Reintentar</Button>
-          </div>
-        )}
 
-        <Tabs defaultValue="clientes" className="gap-6">
-          <TabsList className="h-10 w-full justify-start overflow-x-auto sm:w-auto">
-            <TabsTrigger value="clientes" className="gap-1.5 px-4">
-              <Stethoscope className="h-4 w-4" /> Clientes
-            </TabsTrigger>
-            <TabsTrigger value="pagos" className="gap-1.5 px-4">
-              <Banknote className="h-4 w-4" /> Pagos
-            </TabsTrigger>
-            <TabsTrigger value="usuarios" className="gap-1.5 px-4">
-              <Users className="h-4 w-4" /> Usuarios
-            </TabsTrigger>
-            <TabsTrigger value="planes" className="gap-1.5 px-4">
-              <Layers className="h-4 w-4" /> Planes
-            </TabsTrigger>
-            <TabsTrigger value="metricas" className="gap-1.5 px-4">
-              <BarChart3 className="h-4 w-4" /> Métricas
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="clientes" className="space-y-10">
+          {seccion === "veterinarias" && (<div className="space-y-6">
             <Indicadores resumen={resumen} totalTurnos={totalTurnos} cargando={loading} />
 
             {errorFacturacion && (
@@ -413,14 +385,13 @@ export default function SuperAdminPage() {
             )}
 
             {/* Veterinarias */}
-            <section aria-labelledby="titulo-veterinarias" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <section aria-labelledby="titulo-veterinarias" className="overflow-hidden rounded-xl border bg-card shadow-xs">
               <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 id="titulo-veterinarias" className="text-lg font-bold">Veterinarias</h2>
+                  <h2 id="titulo-veterinarias" className="text-base font-semibold">Veterinarias</h2>
                   <p className="text-xs text-muted-foreground">
-                    Activas primero. Ingreso/mes es lo que cobra hoy su suscripción de Mercado Pago
-                    {loading ? "" : ` (total: ${formatPesos(resumenIngresos.mensual)} por mes)`}. Cambiar el plan,
-                    pausar o quitar la prueba pide confirmación.
+                    Activas primero{loading ? "" : ` · ingreso total ${formatPesos(resumenIngresos.mensual)} por mes`}.
+                    Hacé clic en una para ver el detalle y las acciones.
                   </p>
                 </div>
                 <span className="text-xs tabular-nums text-muted-foreground">
@@ -483,6 +454,19 @@ export default function SuperAdminPage() {
                 usoPorSlug={uso.porTenant}
                 ahora={ahora}
                 ocupado={ocupado}
+                seleccionado={seleccionado}
+                onAbrir={(t) => setSeleccionado(t.slug)}
+              />
+              <DetalleVeterinaria
+                tenant={tenantSeleccionado}
+                onCerrar={() => setSeleccionado(null)}
+                turnos={seleccionado ? turnosPorSlug[seleccionado] ?? 0 : 0}
+                usuarios={seleccionado ? usuariosPorSlug[seleccionado] ?? 0 : 0}
+                ingreso={seleccionado ? ingresos[seleccionado] : undefined}
+                uso={seleccionado ? uso.porTenant[seleccionado] : undefined}
+                planes={planes}
+                ahora={ahora}
+                ocupado={seleccionado !== null && ocupado === seleccionado}
                 onCambiarPlan={pedirCambioPlan}
                 onPausar={pedirPausa}
                 onExtenderTrial={extenderTrial}
@@ -492,9 +476,9 @@ export default function SuperAdminPage() {
                 onEliminar={(t) => { setDeleteTarget(t); setDeleteConfirm("") }}
               />
             </section>
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="pagos">
+          {seccion === "pagos" && (<div className="space-y-4">
             <GestionPagos
               tenants={tenants}
               pagos={pagosManuales}
@@ -504,9 +488,9 @@ export default function SuperAdminPage() {
               onCambio={load}
               onPedirAccion={setAccion}
             />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="usuarios" className="space-y-4">
+          {seccion === "usuarios" && (<div className="space-y-4">
             {errorActividad && (
               <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                 No se pudo leer el uso del panel: {errorActividad}
@@ -514,10 +498,10 @@ export default function SuperAdminPage() {
             )}
 
             {/* Usuarios */}
-            <section aria-labelledby="titulo-usuarios" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <section aria-labelledby="titulo-usuarios" className="overflow-hidden rounded-xl border bg-card shadow-xs">
               <div className="flex flex-col gap-1 border-b px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 id="titulo-usuarios" className="text-lg font-bold">Usuarios</h2>
+                  <h2 id="titulo-usuarios" className="text-base font-semibold">Usuarios</h2>
                   <p className="text-xs text-muted-foreground">
                     Uso del panel: cada vez que alguien del equipo abre el panel de su veterinaria
                     (se cuenta desde el 15/10/2026). Para dar acceso a alguien, invitalo desde
@@ -543,9 +527,9 @@ export default function SuperAdminPage() {
                 ahora={ahora}
               />
             </section>
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="planes">
+          {seccion === "planes" && (<div className="space-y-4">
             {sinTablaPlanes && !loading && (
               <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                 No se pudo leer la tabla de planes: se muestran los valores de respaldo y no se pueden guardar
@@ -559,9 +543,9 @@ export default function SuperAdminPage() {
               onCambio={load}
               onPedirAccion={setAccion}
             />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="metricas">
+          {seccion === "metricas" && (<div className="space-y-4">
             <MetricasPlataforma
               serie={serie}
               supuestosBase={supuestos}
@@ -569,9 +553,7 @@ export default function SuperAdminPage() {
               totalVeterinarias={tenants.length}
               cargando={loading}
             />
-          </TabsContent>
-        </Tabs>
-      </main>
+          </div>)}
 
       <ConfirmarAccionDialog
         accion={accion}
@@ -604,6 +586,6 @@ export default function SuperAdminPage() {
         onCerrar={() => { setDeleteTarget(null); setDeleteConfirm("") }}
         onEliminar={confirmarEliminar}
       />
-    </div>
+    </SuperadminShell>
   )
 }

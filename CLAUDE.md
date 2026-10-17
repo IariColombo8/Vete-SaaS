@@ -618,11 +618,11 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/registro` | Registro | Público |
 | `/pricing` | Planes y precios | Público |
 | `/blog`, `/blog/[slug]` | Blog SEO (file-based, `content/blog/*.md`) | Público |
-| `/superadmin` | Panel global. Solapas: Clientes (veterinarias con plan, usuarios, uso e ingreso/mes), Pagos (quién pagó el mes, registrar pagos en efectivo), Usuarios (con uso del panel), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
+| `/superadmin` | Panel global, con sidebar. Secciones: Veterinarias (tabla sin scroll horizontal; clic en la fila abre el detalle con plan, prueba, pausa y eliminar), Pagos (quién pagó el mes, registrar pagos en efectivo), Usuarios (con uso del panel), Planes (catálogo editable), Métricas (ingreso y proyección al ritmo actual, `lib/superadmin/metricas.ts`) | solo `superadmin` |
 
 **Navbar:** componente inteligente en `components/navbar.tsx`:
 - `/` → `SaasNavbar` (dark, logo VetPanel, CTA Contratar)
-- `/superadmin/*` → `SuperAdminNavbar`
+- `/superadmin/*` → ninguno: el superadmin tiene su propio sidebar (`components/superadmin/superadmin-shell.tsx`)
 - Resto → `VetNavbar` (logo de la veterinaria actual)
 
 ---

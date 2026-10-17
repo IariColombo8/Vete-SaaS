@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter, usePathname } from "next/navigation"
-import { Menu, X, Stethoscope, LayoutDashboard, Shield } from "lucide-react"
+import { Menu, X, Stethoscope, LayoutDashboard } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Paw } from "@/components/landing/pet-art"
 import { imagenSupabase } from "@/lib/imagenes"
@@ -191,43 +191,6 @@ function SaasNavbar() {
   )
 }
 
-// ─── Superadmin Navbar ───────────────────────────────────────────────────────
-function SuperAdminNavbar() {
-  const router = useRouter()
-  const handleSignOut = async () => {
-    await signOut()
-    router.push("/")
-  }
-
-  return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl shadow-sm">
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <Link href="/superadmin" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 shadow-md">
-              <Shield className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <span className="text-sm font-bold">VetPanel</span>
-              <span className="ml-1.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
-                SUPER ADMIN
-              </span>
-            </div>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link href="/superadmin">
-              <Button variant="ghost" size="sm">Panel</Button>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground">
-              Cerrar Sesión
-            </Button>
-          </div>
-        </div>
-      </div>
-    </nav>
-  )
-}
-
 // ─── Navbar para páginas públicas de veterinaria (/[slug]/turno, etc.) ──────
 function VetPublicNavbar() {
   const pathname = usePathname()
@@ -280,7 +243,8 @@ export function Navbar() {
   const pathname = usePathname()
 
   if (pathname === "/" || pathname === "/pricing" || pathname.startsWith("/blog")) return <SaasNavbar />
-  if (pathname.startsWith("/superadmin")) return <SuperAdminNavbar />
+  // El superadmin tiene su propio sidebar (components/superadmin/superadmin-shell.tsx).
+  if (pathname.startsWith("/superadmin")) return null
 
   // Vet admin pages have their own nav via VetAdminLayout.
   // Todas las rutas del panel viven bajo /[slug]/admin/ — si se agrega una
