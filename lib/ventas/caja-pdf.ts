@@ -207,8 +207,12 @@ function dibujarResultado(
 
   const dif = caja.diferencia ?? 0
   const filas: [string, string, boolean?][] = [
+    // Guion común, no el signo menos "−" (U+2212): no está en la fuente
+    // estándar de jsPDF, y un carácter fuera de ella hace que escriba todo el
+    // texto con espacios entre letras — más ancho que lo medido, y alineado a
+    // la derecha se sale del margen.
     ...(caja.totalGastos > 0
-      ? [["Gastos pagados con la caja", `− ${formatCurrency(caja.totalGastos)}`] as [string, string]]
+      ? [["Gastos pagados con la caja", `- ${formatCurrency(caja.totalGastos)}`] as [string, string]]
       : []),
     ["Esperado en caja", formatCurrency(caja.saldoEsperado ?? 0)],
     ["Contado en caja", formatCurrency(caja.saldoDeclarado ?? 0)],
