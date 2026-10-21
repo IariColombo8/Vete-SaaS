@@ -475,9 +475,29 @@ intermediario fiscal. Estado, pendientes y diseño en `planautomatizacion.md`
   producto al facturar (`venta_items` no la guarda).
 - **El PDF de la factura lo dibuja el mismo generador del remito**
   (`lib/ventas/remito.ts`, parámetro `ComprobanteFiscal`): letra, CAE, QR e
-  IVA discriminado. No duplicar el layout.
+  IVA discriminado (con centavos; el remito sigue en pesos). No duplicar el layout.
+- **El PDF de la factura se guarda una vez y no se regenera**
+  (`065_comprobantes_pdf.sql`, `lib/facturacion/factura-guardada.ts`): bucket
+  privado `comprobantes/{tenant}/{comprobante}.pdf`, policies de select e
+  insert para staff y **sin update ni delete**. Se dibuja al emitir (o en la
+  primera descarga, para las viejas) y de ahí en más se entrega ese archivo.
+  El remito, en cambio, se sigue generando al vuelo desde la venta.
+- **Flujo del mostrador** (`remito-dialog.tsx` + `facturar-button.tsx`): si
+  el medio de pago no es efectivo, la factura se emite sola al registrar la
+  venta (candado `useRef` contra la doble emisión); en efectivo se pregunta.
+  Remito y factura se mandan por WhatsApp por separado (wa.me + descarga del
+  PDF para adjuntar). Sin ARCA configurado o sin certificado, la factura se
+  muestra **bloqueada** con el aviso de dónde se configura, no se oculta.
+- **WSFE de producción requiere `SECLEVEL=1`**: `servicios1.afip.gov.ar`
+  negocia DH de 1024 bits y Node ≥ 17 corta con "dh key too small". Por eso
+  `wsfe.ts` usa `https.request` en vez de `fetch`. WSAA no tiene el problema.
 - Arranca en **homologación**; nada emitido ahí tiene valor fiscal y el PDF
-  sale sellado "SIN VALOR FISCAL". Falta probar con un CUIT real.
+  sale sellado "SIN VALOR FISCAL". **Probado en producción el 2026-10-21**
+  con VipVet (monotributo, PV 5, Factura C 0005-00000001 aprobada).
+- **El punto de venta tiene que ser del sistema "Factura Electrónica -
+  Monotributo - Web Services"** (o "RECE para aplicativo y web services" si
+  es RI). Uno de "Comprobantes de Exportación" o "Factura en Línea" da error
+  11002 ("no se encuentra habilitado a usar en el presente WS").
 
 ### Recordatorios de vacunas (`060_recordatorios_automaticos.sql`)
 

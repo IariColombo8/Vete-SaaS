@@ -113,12 +113,12 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        title="Descargar PDF"
+        title="Descargar remito"
         onClick={() => void descargar(venta)}
       >
         <Download className="h-3.5 w-3.5" />
       </Button>
-      {tenantId && facturacion?.configurado && (
+      {tenantId && facturacion && (
         <FacturarButton
           tenantId={tenantId}
           venta={venta}
@@ -133,7 +133,7 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        title="Enviar por WhatsApp"
+        title="Enviar remito por WhatsApp"
         onClick={() => {
           // La ventana se abre antes de generar el PDF: después
           // del await el navegador la bloquea como popup.

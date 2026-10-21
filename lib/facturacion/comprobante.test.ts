@@ -98,6 +98,13 @@ describe("calcularImportes", () => {
     expect(r.items.reduce((acc, i) => acc + i.subtotal, 0)).toBeCloseTo(13000, 1)
   })
 
+  it("un recargo también escala el precio unitario: cantidad × unitario = importe", () => {
+    // 5% de recargo por pago con débito.
+    const r = calcularImportes(items, 15025.5, false)
+    for (const i of r.items) expect(i.cantidad * i.precioUnitario).toBeCloseTo(i.subtotal, 1)
+    expect(r.items[0].precioUnitario).toBe(12705)
+  })
+
   it("los exentos van a ImpOpEx", () => {
     const r = calcularImportes(
       [{ descripcion: "Libro", cantidad: 1, precioUnitario: 500, subtotal: 500, alicuotaIva: null }, ...items],

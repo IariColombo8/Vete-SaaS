@@ -208,6 +208,9 @@ export function calcularImportes(
   const total = r2(totalVenta)
   const sumaItems = items.reduce((acc, i) => acc + i.subtotal, 0)
   const factor = sumaItems > 0 ? total / sumaItems : 1
+  // El precio unitario se escala junto con el importe: si no, en la factura
+  // "1 × $11.111 = $11.666" no cierra (el recargo quedaba solo en el importe).
+  const unitario = (i: ItemFacturable) => r2(i.precioUnitario * factor)
 
   if (!discriminaIva) {
     return {
@@ -218,7 +221,13 @@ export function calcularImportes(
       impTotConc: 0,
       impTrib: 0,
       alicuotas: [],
-      items: items.map((i) => ({ ...i, subtotal: r2(i.subtotal * factor), neto: r2(i.subtotal * factor), iva: 0 })),
+      items: items.map((i) => ({
+        ...i,
+        precioUnitario: unitario(i),
+        subtotal: r2(i.subtotal * factor),
+        neto: r2(i.subtotal * factor),
+        iva: 0,
+      })),
     }
   }
 
@@ -230,7 +239,7 @@ export function calcularImportes(
     g.bruto += bruto
     grupos.set(clave, g)
     const neto = i.alicuotaIva === null ? bruto : bruto / (1 + i.alicuotaIva / 100)
-    return { ...i, subtotal: r2(bruto), neto: r2(neto), iva: r2(bruto - neto) }
+    return { ...i, precioUnitario: unitario(i), subtotal: r2(bruto), neto: r2(neto), iva: r2(bruto - neto) }
   })
 
   let impOpEx = 0

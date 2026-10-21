@@ -162,6 +162,10 @@ export interface EstadoFacturacion {
   razonSocial?: string
   condicionIva?: "RI" | "MONOTRIBUTO" | "EXENTO"
   puntoVenta?: number
+  domicilioFiscal?: string
+  ingresosBrutos?: string
+  /** `YYYY-MM-DD`. */
+  inicioActividades?: string
 }
 
 /** ¿El tenant tiene factura electrónica lista? RPC sin secretos. */
@@ -177,5 +181,8 @@ export async function getEstadoFacturacion(tenantId: string): Promise<EstadoFact
     razonSocial: d.razon_social as string | undefined,
     condicionIva: d.condicion_iva as EstadoFacturacion["condicionIva"],
     puntoVenta: d.punto_venta == null ? undefined : num(d.punto_venta),
+    domicilioFiscal: (d.domicilio_fiscal as string | null) ?? undefined,
+    ingresosBrutos: (d.ingresos_brutos as string | null) ?? undefined,
+    inicioActividades: (d.inicio_actividades as string | null) ?? undefined,
   }
 }

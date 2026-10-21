@@ -1,7 +1,8 @@
 import QRCode from "qrcode"
 import type { Venta } from "@/lib/supabase/types"
 import type { Comprobante, EstadoFacturacion } from "@/lib/supabase/comprobantes"
-import { cargarLogo, generarRemitoPDF, type EmisorRemito, type ComprobanteFiscal } from "@/lib/ventas/remito"
+import { cargarLogo, generarRemitoPDF, telefonoWhatsApp, type EmisorRemito, type ComprobanteFiscal } from "@/lib/ventas/remito"
+import { formatCurrencyDecimals } from "@/lib/format"
 import {
   CONDICION_IVA_LABEL,
   esNotaCredito,
@@ -46,7 +47,14 @@ export interface EmisorFiscal {
 
 export function emisorFiscalDesdeEstado(e: EstadoFacturacion): EmisorFiscal | null {
   if (!e.configurado || !e.cuit || !e.razonSocial || !e.condicionIva) return null
-  return { cuit: e.cuit, razonSocial: e.razonSocial, condicionIva: e.condicionIva }
+  return {
+    cuit: e.cuit,
+    razonSocial: e.razonSocial,
+    condicionIva: e.condicionIva,
+    domicilioFiscal: e.domicilioFiscal,
+    ingresosBrutos: e.ingresosBrutos,
+    inicioActividades: e.inicioActividades ? fechaLarga(e.inicioActividades) : undefined,
+  }
 }
 
 function formatCuit(cuit: string): string {
@@ -108,7 +116,12 @@ export async function datosParaPdf(c: Comprobante, emisor: EmisorFiscal): Promis
     ivaLineas: c.alicuotas.map((a) => ({ alicuota: a.alicuota, importe: a.importe })),
     opEx: c.impOpEx,
     total: c.impTotal,
-    items: c.items.length ? c.items : undefined,
+    // El unitario se deriva del importe: las facturas emitidas antes de que
+    // `calcularImportes` escalara el unitario guardaron el precio sin el
+    // recargo, y "cantidad × unitario" no daba el importe.
+    items: c.items.length
+      ? c.items.map((i) => (i.cantidad > 0 ? { ...i, precioUnitario: i.subtotal / i.cantidad } : i))
+      : undefined,
     esPrueba: c.ambiente === "homologacion",
   }
 }
@@ -118,13 +131,40 @@ export function nombreArchivoFactura(c: Comprobante): string {
   return `${tipo}-${letraDeTipo(c.tipoCbte)}-${numeroComprobante(c.puntoVenta, c.numero ?? 0)}.pdf`
 }
 
-/** Resuelve logo y QR, genera el PDF y dispara la descarga. */
-export async function descargarFacturaPDF(
+/**
+ * Resuelve logo y QR y dibuja el PDF. Solo se llama una vez por comprobante:
+ * el resultado se guarda (`factura-guardada.ts`) y de ahí en más se descarga
+ * ese archivo, no se vuelve a dibujar.
+ */
+export async function generarFacturaPDF(
   venta: Venta,
   emisor: EmisorRemito,
   comprobante: Comprobante,
   fiscal: EmisorFiscal,
-): Promise<void> {
+): Promise<Blob> {
   const [logo, datos] = await Promise.all([cargarLogo(emisor.logoUrl), datosParaPdf(comprobante, fiscal)])
-  generarRemitoPDF(venta, emisor, logo, datos).save(nombreArchivoFactura(comprobante))
+  return generarRemitoPDF(venta, emisor, logo, datos).output("blob")
+}
+
+/** Texto para mandar la factura por WhatsApp (el PDF se adjunta a mano). */
+export function mensajeWhatsAppFactura(venta: Venta, emisor: EmisorRemito, c: Comprobante): string {
+  const saludo = venta.clienteNombre ? `Hola ${venta.clienteNombre}!` : "¡Hola!"
+  const nombre = esNotaCredito(c.tipoCbte) ? "la nota de crédito" : "la factura"
+  return [
+    saludo,
+    "",
+    `Te paso ${nombre} de tu compra en ${emisor.nombre}:`,
+    "",
+    `*${nombreComprobante(c.tipoCbte)} N° ${numeroComprobante(c.puntoVenta, c.numero ?? 0)}*`,
+    `Total: ${formatCurrencyDecimals(c.impTotal)}`,
+    `CAE: ${c.cae ?? "—"}`,
+    "",
+    "¡Gracias por tu compra!",
+  ].join("\n")
+}
+
+export function linkWhatsAppFactura(venta: Venta, emisor: EmisorRemito, c: Comprobante): string {
+  const telefono = telefonoWhatsApp(venta.clienteTelefono)
+  const texto = encodeURIComponent(mensajeWhatsAppFactura(venta, emisor, c))
+  return telefono ? `https://wa.me/${telefono}?text=${texto}` : `https://wa.me/?text=${texto}`
 }

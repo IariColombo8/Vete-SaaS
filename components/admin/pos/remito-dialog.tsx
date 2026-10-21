@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, Download, Loader2, MessageCircle } from "lucide-react"
+import { CheckCircle2, Download, Loader2, MessageCircle, Receipt } from "lucide-react"
 import { toast } from "sonner"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -17,13 +17,18 @@ interface Props {
   venta: Venta | null
   emisor: EmisorRemito
   onCerrar: () => void
-  /** Para ofrecer "Facturar" junto con el remito. */
+  /** Para facturar junto con el remito. `null` = la veterinaria no factura (o todavía no se sabe). */
   tenantId?: string
   facturacion?: EstadoFacturacion | null
 }
 
 /**
- * Confirmación de la venta y salida del remito.
+ * Confirmación de la venta: remito y, si la veterinaria factura con ARCA,
+ * factura electrónica. Cada uno se descarga o se manda por WhatsApp aparte.
+ *
+ * - Pago que no es en efectivo → la factura se emite sola al abrir.
+ * - Efectivo → la factura es opcional: se pregunta.
+ * - Sin ARCA configurado → la factura aparece bloqueada, con el aviso.
  *
  * WhatsApp no recibe archivos por URL, así que el flujo es en dos pasos:
  * primero se descarga el PDF y después se abre el chat con el mensaje ya
@@ -35,6 +40,10 @@ export function RemitoDialog({ venta, emisor, onCerrar, tenantId, facturacion }:
   const [generando, setGenerando] = useState(false)
 
   if (!venta) return null
+
+  // Solo efectivo deja la factura a elección; cualquier otro medio (débito,
+  // crédito, transferencia, mixto, cuenta corriente) sale facturado.
+  const facturaAutomatica = venta.medioPago !== "efectivo"
 
   const descargar = async () => {
     setGenerando(true)
@@ -103,25 +112,51 @@ export function RemitoDialog({ venta, emisor, onCerrar, tenantId, facturacion }:
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button
-            onClick={enviarPorWhatsApp}
-            disabled={generando}
-            className="w-full bg-emerald-600 hover:bg-emerald-700"
-          >
-            {generando ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <MessageCircle className="mr-2 h-4 w-4" />
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Receipt className="h-3.5 w-3.5" /> Remito
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={enviarPorWhatsApp}
+              disabled={generando}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {generando ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <MessageCircle className="mr-2 h-4 w-4" />
+              )}
+              WhatsApp
+            </Button>
+            <Button variant="outline" onClick={descargar} disabled={generando}>
+              <Download className="mr-2 h-4 w-4" /> Descargar
+            </Button>
+          </div>
+        </div>
+
+        {tenantId && facturacion && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Factura electrónica
+            </p>
+            {!facturaAutomatica && facturacion.listo && (
+              <p className="text-xs text-muted-foreground">
+                Pago en efectivo: la factura es opcional. ¿Querés hacerla?
+              </p>
             )}
-            Enviar por WhatsApp
-          </Button>
-          <Button variant="outline" className="w-full" onClick={descargar} disabled={generando}>
-            <Download className="mr-2 h-4 w-4" /> Descargar PDF
-          </Button>
-          {tenantId && facturacion?.configurado && (
-            <FacturarButton tenantId={tenantId} venta={venta} emisor={emisor} facturacion={facturacion} />
-          )}
+            <FacturarButton
+              tenantId={tenantId}
+              venta={venta}
+              emisor={emisor}
+              facturacion={facturacion}
+              autoEmitir={facturaAutomatica}
+              key={venta.id}
+            />
+          </div>
+        )}
+
+        <DialogFooter>
           <Button variant="ghost" className="w-full" onClick={onCerrar}>
             Nueva venta
           </Button>

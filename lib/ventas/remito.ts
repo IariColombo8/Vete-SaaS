@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf"
 import type { Venta, VentaItem } from "@/lib/supabase/types"
 import { MEDIOS_PAGO } from "@/lib/supabase/types"
-import { formatCantidad, formatCurrency, formatDateTime } from "@/lib/format"
+import { formatCantidad, formatCurrency, formatCurrencyDecimals, formatDateTime } from "@/lib/format"
 import { COLOR, Lienzo, type RGB } from "./remito-layout"
 import { telefonoWhatsApp } from "@/lib/telefono"
 
@@ -238,6 +238,7 @@ export function generarRemitoPDF(
       // la hoja entera en vez de dejar medio A4 en blanco.
       esUltima ? l.alto - MARGEN - reserva : l.alto - MARGEN - 30,
       factura?.discriminaIva ?? false,
+      dineroDe(factura),
     )
 
     // Los totales van solo en la última hoja: repetirlos en cada una haría
@@ -253,6 +254,14 @@ export function generarRemitoPDF(
   numerarPaginas(l, doc)
 
   return doc
+}
+
+/**
+ * La factura muestra centavos: es el importe que autorizó ARCA y tiene que
+ * leerse exacto. El remito sigue redondeado a pesos, como en el mostrador.
+ */
+function dineroDe(factura?: ComprobanteFiscal): (monto: number) => string {
+  return factura ? formatCurrencyDecimals : formatCurrency
 }
 
 /** Una fila mide más cuando el producto tiene presentación ("15 kg"). */
@@ -330,7 +339,10 @@ function dibujarEncabezado(
     x += CAJA + 12
   }
 
-  const anchoEmisor = centro - x - 12
+  // El texto del emisor termina antes del recuadro de la letra, no en la
+  // línea del centro: si no, la condición IVA quedaba tapada por la "C".
+  const LADO = 44
+  const anchoEmisor = centro - LADO / 2 - x - 8
   const nombreEmisor = factura?.emisor.razonSocial || emisor.nombre || "VetPanel"
   l.texto(l.recortar(nombreEmisor, anchoEmisor, { size: 14, bold: true }), x, y + 30, {
     size: 14,
@@ -347,7 +359,8 @@ function dibujarEncabezado(
     // Nombre de fantasía debajo de la razón social, si difieren.
     if (emisor.nombre && emisor.nombre !== factura.emisor.razonSocial) lineaEmisor(emisor.nombre)
     lineaEmisor(factura.emisor.domicilioFiscal || emisor.direccion)
-    lineaEmisor(`CUIT ${factura.emisor.cuit}  ·  ${factura.emisor.condicionIva}`)
+    lineaEmisor(`CUIT ${factura.emisor.cuit}`)
+    lineaEmisor(factura.emisor.condicionIva)
     lineaEmisor(
       [
         factura.emisor.ingresosBrutos ? `IIBB ${factura.emisor.ingresosBrutos}` : null,
@@ -365,7 +378,6 @@ function dibujarEncabezado(
   // ── Recuadro de la letra ──
   // Es la marca visual del comprobante argentino: un cuadrado con la letra,
   // montado sobre la división entre los dos bloques.
-  const LADO = 44
   const xLetra = centro - LADO / 2
   const yLetra = y + (ALTO_ENCABEZADO - LADO) / 2
 
@@ -457,6 +469,7 @@ function dibujarDetalle(
   yInicial: number,
   yTope: number,
   discriminaIva: boolean,
+  dinero: (monto: number) => string,
 ): number {
   let y = yInicial
 
@@ -507,12 +520,12 @@ function dibujarDetalle(
     const anchoTitulo = m.finDescripcion - m.xDescripcion
     l.texto(l.recortar(titulo, anchoTitulo, { size: 9 }), m.xDescripcion, yTexto, { size: 9 })
 
-    l.texto(formatCurrency(item.precioUnitario), m.xPrecio, yTexto, {
+    l.texto(dinero(item.precioUnitario), m.xPrecio, yTexto, {
       size: 9,
       color: COLOR.gris,
       align: "right",
     })
-    l.texto(formatCurrency(item.subtotal), m.xImporte, yTexto, {
+    l.texto(dinero(item.subtotal), m.xImporte, yTexto, {
       size: 9,
       bold: true,
       align: "right",
@@ -548,6 +561,7 @@ function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number, fac
   const ANCHO = 220
   const x = m.der - ANCHO
   let y = yInicial + 14
+  const dinero = dineroDe(factura)
 
   const fila = (rotulo: string, valor: string) => {
     l.texto(rotulo, x + 12, y, { size: 8.5, color: COLOR.gris })
@@ -556,9 +570,9 @@ function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number, fac
   }
 
   if (factura?.discriminaIva) {
-    fila("Neto gravado", formatCurrency(factura.neto))
-    factura.ivaLineas.forEach((iva) => fila(`IVA ${iva.alicuota}%`, formatCurrency(iva.importe)))
-    if (factura.opEx > 0) fila("Exento", formatCurrency(factura.opEx))
+    fila("Neto gravado", dinero(factura.neto))
+    factura.ivaLineas.forEach((iva) => fila(`IVA ${iva.alicuota}%`, dinero(iva.importe)))
+    if (factura.opEx > 0) fila("Exento", dinero(factura.opEx))
     y += 2
   } else if (!factura && venta.descuento > 0) {
     fila("Subtotal", formatCurrency(venta.subtotal))
@@ -573,7 +587,7 @@ function dibujarTotales(l: Lienzo, m: Marco, venta: Venta, yInicial: number, fac
   const total = factura ? factura.total : venta.total
   l.rect(x, y - 10, ANCHO, ALTO, { relleno: fondo, radio: 4 })
   l.texto("TOTAL", x + 12, y + 9, { size: 10, bold: true, color: COLOR.papel, charSpace: 1 })
-  l.texto(formatCurrency(total), m.xImporte - 2, y + 10, {
+  l.texto(dinero(total), m.xImporte - 2, y + 10, {
     size: 14,
     bold: true,
     color: COLOR.papel,
