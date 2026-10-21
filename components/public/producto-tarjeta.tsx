@@ -1,4 +1,4 @@
-import { Sparkles, Clock } from "lucide-react"
+import { Sparkles, Clock, ShoppingCart, Check } from "lucide-react"
 import { precioFinal, tieneOferta, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
 import { imagenSupabase } from "@/lib/imagenes"
@@ -8,14 +8,18 @@ interface Props {
   producto: Producto
   logo?: string
   onClick?: () => void
+  /** Con la tienda abierta: suma una unidad (o medio kilo) al carrito. */
+  onAgregar?: () => void
+  /** Cuánto de este producto ya hay en el carrito. */
+  enCarrito?: number
 }
 
 /**
  * Tarjeta de producto para vistas públicas (landing y /[slug]/productos).
- * Sin acciones de compra: es catálogo informativo, el cliente consulta por
- * WhatsApp/teléfono igual que con los servicios.
+ * Si la veterinaria toma pedidos online (`tienda_config`) lleva el botón
+ * para sumar al carrito; si no, es catálogo informativo.
  */
-export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
+export function ProductoTarjeta({ producto: p, logo, onClick, onAgregar, enCarrito = 0 }: Props) {
   const enOferta = tieneOferta(p)
   // Producto sin foto propia -> logo del tenant -> logo de VetPanel, en ese orden.
   // Escalada por Supabase a 480 px: la tarjeta mide ~300 px; el logo de respaldo es la versión chica.
@@ -104,6 +108,29 @@ export function ProductoTarjeta({ producto: p, logo, onClick }: Props) {
             </div>
           )}
         </div>
+
+        {onAgregar && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAgregar() }}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-coral px-2 text-xs font-bold text-white
+                       transition-colors hover:bg-coral-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/50"
+          >
+            {enCarrito > 0 ? (
+              <>
+                <Check className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  En el carrito: {enCarrito.toLocaleString("es-AR")}{p.unidad === "kg" ? " kg" : ""} · Sumar
+                </span>
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-3.5 w-3.5" /> Agregar al carrito
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Línea de acento inferior que aparece en hover */}

@@ -3,7 +3,7 @@ import type { UserRole } from "@/lib/supabase/queries"
 /** Secciones del panel admin sujetas a control de acceso por rol. */
 export type AdminSection =
   | "dashboard" | "turnos" | "libreta" | "clientes" | "productos"
-  | "pos" | "ventas" | "caja" | "cuentaCorriente" | "gastos" | "promosSorteos" | "tiendaVirtual"
+  | "pos" | "pedidos" | "ventas" | "caja" | "cuentaCorriente" | "gastos" | "promosSorteos" | "tiendaVirtual"
   | "configuracion"
 
 /**
@@ -20,6 +20,8 @@ const SECTION_ACCESS: Record<AdminSection, UserRole[]> = {
   productos: ["superadmin", "veterinario", "empleado"],
   // El mostrador lo atiende el empleado: vender y cobrar es su trabajo.
   pos: ["superadmin", "veterinario", "empleado"],
+  // Preparar y despachar los pedidos de la tienda web es trabajo de mostrador.
+  pedidos: ["superadmin", "veterinario", "empleado"],
   ventas: ["superadmin", "veterinario", "empleado"],
   // Abrir y cerrar caja es parte del turno del empleado.
   caja: ["superadmin", "veterinario", "empleado"],

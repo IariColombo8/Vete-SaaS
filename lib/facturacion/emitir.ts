@@ -158,7 +158,8 @@ export async function emitirFacturaDeVenta(
   admin: SupabaseClient,
   cfg: ConfigFiscal,
   ventaId: string,
-  usuarioId: string,
+  /** null = lo emitió el servidor solo (pedido web pagado online). */
+  usuarioId: string | null,
 ): Promise<ResultadoEmision> {
   const { data: existente } = await admin
     .from("comprobantes")
@@ -308,7 +309,7 @@ interface PedidoInterno {
   receptor: ReturnType<typeof resolverReceptor>
   importes: ReturnType<typeof calcularImportes>
   items: ItemFacturable[]
-  usuarioId: string
+  usuarioId: string | null
   asociado?: { id: string; tipo: number; puntoVenta: number; numero: number; fecha: string }
 }
 

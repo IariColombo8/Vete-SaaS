@@ -42,6 +42,7 @@ function sectionFromPath(pathname: string, slug: string): AdminSection | null {
   if (resto.startsWith("Clientes")) return "clientes"
   if (resto.startsWith("Productos")) return "productos"
   if (resto.startsWith("Vender")) return "pos"
+  if (resto.startsWith("Pedidos")) return "pedidos"
   if (resto.startsWith("Ventas")) return "ventas"
   if (resto.startsWith("Caja")) return "caja"
   if (resto.startsWith("CuentaCorriente")) return "cuentaCorriente"
@@ -59,6 +60,7 @@ const TITULOS: Record<AdminSection, string> = {
   clientes: "Clientes",
   productos: "Productos y stock",
   pos: "Punto de venta",
+  pedidos: "Pedidos de la tienda",
   ventas: "Ventas",
   caja: "Caja",
   cuentaCorriente: "Cuenta corriente",

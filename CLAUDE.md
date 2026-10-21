@@ -301,6 +301,41 @@ Feature `ventas` en `lib/plans.ts`: **solo plan Pro**.
 Secciones `pos`, `ventas` y `caja` en `lib/auth/permissions.ts`: las ve también
 el `empleado`.
 
+### Pedidos de la tienda web (vidriera → carrito → Pedidos)
+
+`supabase/066_pedidos_web.sql`. El cliente arma el carrito en la vidriera
+(`/[slug]` y `/[slug]/productos`, localStorage por veterinaria), entra con
+**Google (obligatorio, lo verifica también `/api/tienda/pedidos`)**, elige retiro
+o envío (el envío no suma: lo cobra el cadete) y medio de pago. El staff lo
+maneja en `/[slug]/admin/Pedidos`: Pendiente → Preparación → Reparto →
+Completados (un retiro saltea Reparto), y Cancelados.
+
+- `tienda_config` (lectura pública, edita el staff en Tienda virtual → Pedidos
+  online): habilitada, entregas, medios, alias. `tienda_publica(p_tenant)` suma
+  `mp_conectado` sin exponer el token.
+- **Los precios los calcula el servidor** (`precioLineaWeb`: el de la vidriera,
+  sin el costo) y valida stock. El cliente se busca por el email de Google y se
+  da de alta si no existe.
+- **Tarjeta = Checkout Pro y QR = orden `type: qr`, con el token de Point de la
+  veterinaria** (`lib/pedidos/mercadopago.ts`, `lib/pedidos/servidor.ts`). La
+  tarjeta se carga en la página de MP, nunca en VetPanel. El pago se confirma
+  **preguntándole a MP** (`verificarPago`), nunca por el navegador ni por el
+  cuerpo del webhook (`/api/tienda/webhook?pedido=`, solo con https).
+- **Pedido → venta** con `_venta_de_pedido` (interna, solo service_role; el staff
+  usa `registrar_venta_pedido`): descuenta stock, mismo correlativo de remito,
+  `ventas.origen = 'web'` + `pedido_numero`. Pasa con el pago aprobado (online) o
+  cuando el staff registra el cobro. Si la caja estaba cerrada, se imputa a la
+  caja abierta al completar. Si falla (sin stock) con el pago hecho, queda en
+  `pedidos.venta_error` para resolver a mano.
+- **Factura automática salvo transferencia** (`facturaAutomatica`): online la
+  emite el servidor (`emitirFacturaDeVenta` con usuario null); cobrado en el
+  panel, el `FacturarButton` con `autoEmitir`. El comprador baja remito y
+  factura desde `/[slug]/pedido/[id]` (`/api/tienda/pedidos/[id]/documentos`) y
+  recibe el aviso por el Gmail de la veterinaria si está conectado.
+- Un pedido cobrado **no se edita** (`editar_pedido` lo rechaza): se cancela, lo
+  que anula la venta. La devolución de un pago de MP se hace desde MP.
+- Sección `pedidos` en permisos (también empleado), feature `ventas` (Pro).
+
 ### Gastos
 
 `supabase/047_gastos.sql`. Tres tablas: `gastos_fijos` (plantilla mensual con
@@ -616,7 +651,9 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/` | SaaS landing — VetPanel | Público |
 | `/[slug]` | Página pública de cada veterinaria | Público |
 | `/[slug]/turno` | Reserva de turno para ese tenant | Público |
-| `/[slug]/productos` | Catálogo público de productos | Público |
+| `/[slug]/productos` | Catálogo público de productos (con carrito si la tienda toma pedidos) | Público |
+| `/[slug]/carrito` | Checkout: datos, retiro/envío, medio de pago | Comprar exige Google |
+| `/[slug]/pedido/[id]` | Seguimiento, pago (QR / Mercado Pago) y remito/factura del pedido | El comprador o staff |
 | `/[slug]/libreta/[token]` | Libreta sanitaria pública (QR de la mascota) | Público (el token es el secreto) |
 | `/[slug]/cliente` | Área del cliente (sus turnos, sus mascotas) | Autenticado, dueño del email |
 | `/[slug]/mi-historia`, `/[slug]/mi-historia/[mascotaId]` | Historia clínica vista por el cliente | ídem |
@@ -627,6 +664,7 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/[slug]/admin/Clientes` | Listado de clientes | ídem |
 | `/[slug]/admin/Productos` | Productos y stock | ídem + plan Pro |
 | `/[slug]/admin/Vender` | Punto de venta (mostrador/POS) | ídem + plan Pro |
+| `/[slug]/admin/Pedidos` | Pedidos de la tienda web | ídem + plan Pro |
 | `/[slug]/admin/Ventas` | Dashboard de ventas y remitos | ídem + plan Pro |
 | `/[slug]/admin/Caja` | Apertura, arqueo y cierre de caja | ídem + plan Pro |
 | `/[slug]/admin/CuentaCorriente` | Cuentas corrientes de clientes | ídem + plan Pro |

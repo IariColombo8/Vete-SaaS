@@ -22,6 +22,9 @@ import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
 import { PromocionTarjeta } from "@/components/public/promocion-tarjeta"
 import { FiltrosSidebar, type FiltrosState } from "@/components/public/filtros-sidebar"
 import { DetalleDialog } from "@/components/public/detalle-dialog"
+import { CarritoFlotante } from "@/components/public/carrito-flotante"
+import { getTiendaPublica } from "@/lib/supabase/pedidos"
+import { useCarritoTienda } from "@/hooks/use-carrito-tienda"
 
 const FILTROS_VACIOS: FiltrosState = {
   categorias: [], marcas: [], soloOfertas: false, orden: "relevancia", precioDesde: "", precioHasta: "",
@@ -46,12 +49,16 @@ export default function ProductosPublicosPage() {
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null)
   const [promocionSeleccionada, setPromocionSeleccionada] = useState<Promocion | null>(null)
+  // La veterinaria toma pedidos online: las tarjetas suman al carrito.
+  const [tiendaAbierta, setTiendaAbierta] = useState(false)
+  const carrito = useCarritoTienda(slug)
 
   useEffect(() => {
     Promise.all([
       getTenant(slug), getTenantConfig(slug), getProductosPublicados(slug), getPromocionesPublicadas(slug), getSorteoActivo(slug),
+      getTiendaPublica(slug),
     ]).then(
-      async ([t, cfg, prods, promos, sorteo]) => {
+      async ([t, cfg, prods, promos, sorteo, tienda]) => {
         const tieneProductos = planAllows(cfg?.plan, "productos") && prods.length > 0
         const tienePromos = planAllows(cfg?.plan, "promosSorteos") && promos.length > 0
         if (!t || (!tieneProductos && !tienePromos)) {
@@ -62,6 +69,7 @@ export default function ProductosPublicosPage() {
         setProductos(prods)
         setPromociones(promos)
         setSorteoActivo(sorteo)
+        setTiendaAbierta(tieneProductos && tienda.pedidosHabilitados)
         setLoading(false)
 
         const ids = Array.from(new Set(promos.flatMap((p) => p.items.map((i) => i.productoId))))
@@ -241,6 +249,8 @@ export default function ProductosPublicosPage() {
                         <ProductoTarjeta
                           key={p.id} producto={p} logo={config?.logo}
                           onClick={() => setProductoSeleccionado(p)}
+                          onAgregar={tiendaAbierta ? () => carrito.agregar(p) : undefined}
+                          enCarrito={carrito.lineas.find((l) => l.producto.id === p.id)?.cantidad}
                         />
                       ))}
                     </div>
@@ -307,9 +317,11 @@ export default function ProductosPublicosPage() {
         onOpenChange={(open) => {
           if (!open) { setProductoSeleccionado(null); setPromocionSeleccionada(null) }
         }}
+        onAgregar={tiendaAbierta ? (p, cantidad) => carrito.agregar(p, cantidad) : undefined}
       />
 
       {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
+      {tiendaAbierta && <CarritoFlotante slug={slug} logo={config?.logo} />}
     </main>
   )
 }

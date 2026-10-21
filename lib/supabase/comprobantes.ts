@@ -42,7 +42,7 @@ export interface Comprobante {
 type Fila = Record<string, unknown>
 const num = (v: unknown) => Number(v ?? 0)
 
-function aComprobante(f: Fila): Comprobante {
+export function aComprobante(f: Fila): Comprobante {
   const items = (f.items as Fila[]) ?? []
   return {
     id: f.id as string,

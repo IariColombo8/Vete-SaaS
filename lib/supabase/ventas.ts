@@ -45,7 +45,8 @@ function aVentaItem(f: Fila): VentaItem {
   }
 }
 
-function aVenta(f: Fila): Venta {
+/** Fila de `ventas` (con `venta_items` / `venta_pagos` embebidos) → Venta. */
+export function aVenta(f: Fila): Venta {
   const items = f.venta_items as Fila[] | undefined
   const pagos = f.venta_pagos as Fila[] | undefined
 
@@ -71,6 +72,8 @@ function aVenta(f: Fila): Venta {
     observaciones: (f.observaciones as string) ?? "",
     createdAt: (f.created_at as string) ?? "",
     esPagoCtaCte: Boolean(f.es_pago_cta_cte),
+    origen: f.origen === "web" ? "web" : "mostrador",
+    pedidoNumero: f.pedido_numero != null ? num(f.pedido_numero) : undefined,
     items: items ? items.map(aVentaItem) : undefined,
     pagos: pagos
       ? pagos.map((p) => ({ medioPago: p.medio_pago as MedioPago, monto: num(p.monto) }))

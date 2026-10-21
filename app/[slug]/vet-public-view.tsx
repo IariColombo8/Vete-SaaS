@@ -20,6 +20,7 @@ import {
   ANCHOS_HERO, ANCHOS_HERO_MOBILE, ANCHOS_LOGO, SIZES_LOGO_HERO, imagenSupabase, srcSetSupabase,
 } from "@/lib/imagenes"
 import { Paw, DogFace, CatFace, Bone, HeartPulse } from "@/components/landing/pet-art"
+import { useCarritoTienda } from "@/hooks/use-carrito-tienda"
 
 // Todo lo que no está en el hero se carga en chunks aparte y sin SSR: la
 // vidriera, promos y sorteos recién existen cuando llega la consulta a
@@ -33,6 +34,7 @@ const DetalleDialog = dynamic(() => import("@/components/public/detalle-dialog")
 const SorteoBanner = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoBanner), { ssr: false })
 const SorteoTeaser = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoTeaser), { ssr: false })
 const SorteosHistorial = dynamic(() => import("@/components/public/sorteos-historial").then((m) => m.SorteosHistorial), { ssr: false })
+const CarritoFlotante = dynamic(() => import("@/components/public/carrito-flotante").then((m) => m.CarritoFlotante), { ssr: false })
 const RegistroClienteDialog = dynamic(() => import("@/components/turnos/RegistroClienteDialog").then((m) => m.RegistroClienteDialog), { ssr: false })
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
@@ -441,6 +443,9 @@ export default function VetPublicPage({
   // El botón "Registrarme como cliente" sale en el HTML; el diálogo (formulario,
   // Supabase, Radix) se descarga recién al primer click.
   const [registroAbierto, setRegistroAbierto] = useState(false)
+  // La veterinaria toma pedidos online: la vidriera suma al carrito.
+  const [tiendaAbierta, setTiendaAbierta] = useState(false)
+  const carrito = useCarritoTienda(slug)
 
   // Vidriera, promos y sorteos van debajo del pliegue: se cargan en el cliente
   // sin frenar el hero. Si la veterinaria no existe, no hay nada que pedir.
@@ -452,17 +457,20 @@ export default function VetPublicPage({
       import("@/lib/supabase/productos"),
       import("@/lib/supabase/promociones"),
       import("@/lib/supabase/sorteos"),
+      import("@/lib/supabase/pedidos"),
     ])
-      .then(async ([productos, promociones, sorteos]) => {
-        const [prods, promos, sorteo, historial] = await Promise.all([
+      .then(async ([productos, promociones, sorteos, pedidos]) => {
+        const [prods, promos, sorteo, historial, tienda] = await Promise.all([
           productos.getProductosPublicados(slug), promociones.getPromocionesPublicadas(slug),
           sorteos.getSorteoActivo(slug), sorteos.getSorteosFinalizadosPublicados(slug),
+          pedidos.getTiendaPublica(slug),
         ])
         if (!vigente) return
         setProductos(prods)
         setPromociones(promos)
         setSorteoActivo(sorteo)
         setSorteosFinalizados(historial)
+        setTiendaAbierta(tienda.pedidosHabilitados)
 
         const ids = Array.from(new Set(promos.flatMap((p) => p.items.map((i) => i.productoId))))
         const productosPromo = await productos.getProductosPublicadosPorIds(slug, ids)
@@ -511,6 +519,7 @@ export default function VetPublicPage({
   const muestraMapa = (modalidad === "local" || modalidad === "ambos") && !!srcMapa
   const tieneFeatureProductos = vidriera.productos
   const muestraProductos = tieneFeatureProductos && productos.length > 0
+  const puedeComprar = muestraProductos && tiendaAbierta
   const tieneFeaturePromos = vidriera.promos
   const muestraPromociones = tieneFeaturePromos && promociones.length > 0
   // Prioridad en la vidriera: ofertas primero, después los que tienen foto,
@@ -755,7 +764,11 @@ export default function VetPublicPage({
                 />
               )}
               {muestraProductos && productosOrdenados.slice(0, 11).map((p) => (
-                <ProductoTarjeta key={p.id} producto={p} logo={logo} onClick={() => setProductoSeleccionado(p)} />
+                <ProductoTarjeta
+                  key={p.id} producto={p} logo={logo} onClick={() => setProductoSeleccionado(p)}
+                  onAgregar={puedeComprar ? () => carrito.agregar(p) : undefined}
+                  enCarrito={carrito.lineas.find((l) => l.producto.id === p.id)?.cantidad}
+                />
               ))}
             </VidrieraCarrusel>
 
@@ -1095,7 +1108,9 @@ export default function VetPublicPage({
         onOpenChange={(open) => {
           if (!open) { setProductoSeleccionado(null); setPromocionSeleccionada(null) }
         }}
+        onAgregar={puedeComprar ? (p, cantidad) => carrito.agregar(p, cantidad) : undefined}
       />
+      {puedeComprar && <CarritoFlotante slug={slug} logo={logo} />}
     </main>
   )
 }

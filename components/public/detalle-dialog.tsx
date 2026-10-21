@@ -1,12 +1,14 @@
 "use client"
 
-import { Sparkles, Tag, Clock } from "lucide-react"
+import { useState } from "react"
+import { Sparkles, Tag, Clock, Minus, Plus, ShoppingCart } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
 import { precioFinal, tieneOferta, textoContadorDias } from "@/lib/productos/precios"
 import { formatCurrency } from "@/lib/format"
 import { imagenSupabase } from "@/lib/imagenes"
+import { pasoCantidad, precioLineaWeb } from "@/lib/pedidos/reglas"
 import type { Producto, Promocion } from "@/lib/supabase/types"
 
 interface Props {
@@ -15,6 +17,8 @@ interface Props {
   productosDePromos: Record<string, Producto>
   logo?: string
   onOpenChange: (open: boolean) => void
+  /** Con la tienda abierta: el detalle de un producto suma al carrito. */
+  onAgregar?: (producto: Producto, cantidad: number) => void
 }
 
 /**
@@ -23,7 +27,7 @@ interface Props {
  * detalle completo de una promo con muchos productos, ya que la tarjeta
  * trunca la lista.
  */
-export function DetalleDialog({ producto, promocion, productosDePromos, logo, onOpenChange }: Props) {
+export function DetalleDialog({ producto, promocion, productosDePromos, logo, onOpenChange, onAgregar }: Props) {
   const open = producto !== null || promocion !== null
 
   return (
@@ -35,7 +39,12 @@ export function DetalleDialog({ producto, promocion, productosDePromos, logo, on
         <DialogTitle className="sr-only">
           {producto?.nombre || promocion?.nombre || "Detalle"}
         </DialogTitle>
-        {producto && <DetalleProducto producto={producto} logo={logo} onClose={() => onOpenChange(false)} />}
+        {producto && (
+          <DetalleProducto
+            key={producto.id} producto={producto} logo={logo} onClose={() => onOpenChange(false)}
+            onAgregar={onAgregar ? (cantidad) => { onAgregar(producto, cantidad); onOpenChange(false) } : undefined}
+          />
+        )}
         {promocion && (
           <DetallePromocion
             promocion={promocion} productosDePromos={productosDePromos} logo={logo}
@@ -64,7 +73,11 @@ function BotonCerrar({ onClose }: { onClose: () => void }) {
   )
 }
 
-function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; logo?: string; onClose: () => void }) {
+function DetalleProducto({
+  producto: p, logo, onClose, onAgregar,
+}: { producto: Producto; logo?: string; onClose: () => void; onAgregar?: (cantidad: number) => void }) {
+  const paso = pasoCantidad(p.unidad)
+  const [cantidad, setCantidad] = useState(paso)
   const enOferta = tieneOferta(p)
   const imagen = imagenSupabase(p.imagenUrl || logo || "/logo-512.png", 800)
   const final = precioFinal(p)
@@ -134,6 +147,42 @@ function DetalleProducto({ producto: p, logo, onClose }: { producto: Producto; l
               {formatCurrency(p.precio)}
             </span>
             {sufijoUnidad && <span className="pb-1.5 text-sm font-medium text-slate-400">{sufijoUnidad.trim()}</span>}
+          </div>
+        )}
+
+        {onAgregar && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button" aria-label="Menos"
+                  onClick={() => setCantidad((c) => Math.max(paso, Math.round((c - paso) * 10) / 10))}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="min-w-14 text-center text-sm font-bold tabular-nums">
+                  {cantidad.toLocaleString("es-AR")}{p.unidad === "kg" ? " kg" : ""}
+                </span>
+                <button
+                  type="button" aria-label="Más"
+                  onClick={() => setCantidad((c) => Math.min(100, Math.round((c + paso) * 10) / 10))}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                {formatCurrency(precioLineaWeb(p, cantidad).subtotal)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => onAgregar(cantidad)}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-coral text-sm font-bold text-white shadow-lg shadow-coral/25 transition-colors hover:bg-coral-ink"
+            >
+              <ShoppingCart className="h-4 w-4" /> Agregar al carrito
+            </button>
           </div>
         )}
       </div>

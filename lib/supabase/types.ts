@@ -625,6 +625,10 @@ export interface Venta {
   createdAt: string
   /** Un cobro de cuenta corriente, no una venta de productos (sin items). */
   esPagoCtaCte: boolean
+  /** "web" = salió de un pedido de la vidriera (066_pedidos_web.sql). Sin dato = mostrador. */
+  origen?: "mostrador" | "web"
+  /** Número del pedido web, si la venta salió de uno. */
+  pedidoNumero?: number
   /** Solo viene cuando se pide el detalle completo. */
   items?: VentaItem[]
   /** Desglose de "mixto". Solo viene cuando se pide el detalle completo. */
