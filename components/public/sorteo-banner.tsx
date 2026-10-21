@@ -275,22 +275,33 @@ function GaleriaSorteo({ imagenes }: { imagenes: ImagenSorteo[] }) {
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      <div className="relative aspect-square w-full max-w-[34rem] overflow-hidden rounded-[2rem] shadow-2xl shadow-emerald-950/40 ring-8 ring-white/20 rotate-[-1.5deg]">
+      <div className="relative aspect-[4/5] w-full max-w-[34rem] overflow-hidden rounded-[2rem] bg-emerald-950/40 shadow-2xl shadow-emerald-950/40 ring-8 ring-white/20 sm:aspect-square">
+        {/* La foto se muestra entera (un flyer o una foto apaisada no se
+            recortan) y la misma, desenfocada, llena el espacio que sobra. */}
         {imagenes.map((img, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <div
             key={img.url + i}
-            src={img.url}
-            alt={img.alt}
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{
-              opacity: i === idx ? 1 : 0,
-              transform: i === idx ? "scale(1.04)" : "scale(1)",
-              transition: "opacity 1s ease-in-out, transform 5s ease-out",
-            }}
-          />
+            className="absolute inset-0"
+            style={{ opacity: i === idx ? 1 : 0, transition: "opacity 1s ease-in-out" }}
+            aria-hidden={i !== idx}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={img.url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={img.url}
+              alt={img.alt}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          </div>
         ))}
         {imagenes.length > 1 && (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-5 pb-4 pt-10 text-left">
