@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Loader2, Search } from "lucide-react"
+import { Plus } from "lucide-react"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { BarcodeScannerDialog } from "@/components/shared/barcode-scanner-dialog"
+import { ListaParaAsignarCodigo } from "@/components/admin/productos/codigo-no-encontrado-dialog"
 import {
-  asignarCodigoBarras, ajustarStock, getProductoPorCodigo, getProductos,
+  ajustarStock, getProductoPorCodigo,
 } from "@/lib/supabase/productos"
 import { TIPOS_AJUSTE } from "@/lib/productos/ajuste-stock"
 import { formatCantidad } from "@/lib/format"
@@ -31,8 +32,6 @@ type Fase =
   | { tipo: "escaneando" }
   | { tipo: "sumando"; producto: Producto }
   | { tipo: "sinMatch"; codigo: string }
-
-const DEBOUNCE_MS = 250
 
 /**
  * Escanear desde Productos sirve para dos cosas: sumar stock de un producto
@@ -171,97 +170,24 @@ function SinMatchPanel({
   onCrearNuevo: () => void
   onVolverAEscanear: () => void
 }) {
-  const [busqueda, setBusqueda] = useState("")
-  const [resultados, setResultados] = useState<Producto[]>([])
-  const [cargando, setCargando] = useState(false)
-  const [asignandoId, setAsignandoId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const termino = busqueda.trim()
-    if (termino.length < 2) { setResultados([]); return }
-
-    let vigente = true
-    setCargando(true)
-    const timer = setTimeout(() => {
-      getProductos(tenantId, { busqueda: termino, porPagina: 10 })
-        .then(({ productos }) => { if (vigente) setResultados(productos) })
-        .finally(() => { if (vigente) setCargando(false) })
-    }, DEBOUNCE_MS)
-
-    return () => { vigente = false; clearTimeout(timer) }
-  }, [busqueda, tenantId])
-
-  const asignar = async (producto: Producto) => {
-    setAsignandoId(producto.id)
-    try {
-      await asignarCodigoBarras(tenantId, producto.id, codigo)
-      toast.success(`Código asignado a "${producto.nombre}"`)
-      onAsignado({ ...producto, codigoBarras: codigo })
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo asignar el código")
-    } finally {
-      setAsignandoId(null)
-    }
-  }
-
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Código sin asignar</DialogTitle>
-        <DialogDescription>&ldquo;{codigo}&rdquo; no está en ningún producto.</DialogDescription>
+        <DialogTitle>No se encuentra el producto</DialogTitle>
+        <DialogDescription>
+          El código &ldquo;{codigo}&rdquo; no está en ningún producto. Agregá uno nuevo o elegí
+          de la lista a cuál pertenece: el código queda guardado para la próxima.
+        </DialogDescription>
       </DialogHeader>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          autoFocus
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre, marca…"
-          className="pl-9"
-        />
-      </div>
+      <Button onClick={onCrearNuevo} className="w-full bg-emerald-600 hover:bg-emerald-700">
+        <Plus className="mr-2 h-4 w-4" /> Agregar
+      </Button>
 
-      <div className="max-h-64 overflow-y-auto">
-        {cargando ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : resultados.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {busqueda.trim().length >= 2 ? "Sin resultados" : "Escribí al menos 2 letras"}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {resultados.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  disabled={asignandoId !== null}
-                  onClick={() => asignar(p)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg border p-2.5 text-left text-sm transition-colors hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-60 dark:hover:bg-emerald-950/40"
-                >
-                  <span className="min-w-0 truncate">
-                    {p.nombre}
-                    {p.marca && <span className="text-muted-foreground"> · {p.marca}</span>}
-                  </span>
-                  {asignandoId === p.id ? (
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                  ) : p.codigoBarras ? (
-                    <span className="shrink-0 text-xs text-amber-600">ya tiene código</span>
-                  ) : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <ListaParaAsignarCodigo tenantId={tenantId} codigo={codigo} onAsignado={onAsignado} />
 
-      <DialogFooter className="sm:justify-between">
+      <DialogFooter>
         <Button variant="outline" onClick={onVolverAEscanear}>Volver a escanear</Button>
-        <Button onClick={onCrearNuevo} className="bg-emerald-600 hover:bg-emerald-700">
-          Crear producto nuevo
-        </Button>
       </DialogFooter>
     </DialogContent>
   )

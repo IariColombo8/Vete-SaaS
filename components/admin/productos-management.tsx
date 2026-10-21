@@ -32,11 +32,13 @@ import { FormatoVentaDialog } from "@/components/admin/productos/formato-venta-d
 import { CategoriaMasivaDialog } from "@/components/admin/productos/categoria-masiva-dialog"
 import { StockMasivoDialog } from "@/components/admin/productos/stock-masivo-dialog"
 import { EscanearDialog } from "@/components/admin/productos/escanear-dialog"
+import { CodigoNoEncontradoDialog } from "@/components/admin/productos/codigo-no-encontrado-dialog"
+import { pareceCodigoDeBarras, useLectorCodigoBarras } from "@/hooks/useLectorCodigoBarras"
 import { AgregarImagenDialog } from "@/components/admin/productos/agregar-imagen-dialog"
 import { RubroCelda } from "@/components/admin/productos/rubro-celda"
 import {
   getProductos, getCategorias, getStockStats, getVencimientosProximos,
-  getTodosLosProductosParaExportar,
+  getTodosLosProductosParaExportar, getProductoPorCodigo,
   createProducto, updateProducto, desactivarProducto, ajustarStock,
   setPublicadoEnLanding, setPublicadoEnLandingMasivo, setControlaStock, asignarCodigoBarras,
   type ProductoInput, type StockStats,
@@ -305,6 +307,23 @@ export function ProductosManagement({ tenantId }: Props) {
     setProductoOpen(true)
   }
 
+  // Lector de código de barras: con el producto cargado se abre su ficha; si
+  // el código no está en ninguno, se ofrece guardarlo (en uno existente o en
+  // uno nuevo) para que el próximo escaneo lo encuentre.
+  const [codigoSinAsignar, setCodigoSinAsignar] = useState<string | null>(null)
+
+  const manejarCodigoLeido = async (codigo: string) => {
+    try {
+      const producto = await getProductoPorCodigo(tenantId, codigo)
+      if (producto) abrirEdicion(producto)
+      else setCodigoSinAsignar(codigo)
+    } catch {
+      toast.error("No se pudo buscar el código")
+    }
+  }
+
+  useLectorCodigoBarras((codigo) => { void manejarCodigoLeido(codigo) }, !readOnly)
+
   const guardarProducto = async (input: ProductoInput) => {
     try {
       if (editando) {
@@ -562,6 +581,16 @@ export function ProductosManagement({ tenantId }: Props) {
         <Input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={(e) => {
+            // El lector escribe en el buscador si tiene el foco y termina con
+            // Enter: se trata igual que un escaneo con el foco en otro lado.
+            if (e.key === "Enter" && !readOnly && pareceCodigoDeBarras(busqueda)) {
+              e.preventDefault()
+              const codigo = busqueda.trim()
+              setBusqueda("")
+              void manejarCodigoLeido(codigo)
+            }
+          }}
           placeholder="Buscar por nombre o código…"
           className="pl-10"
         />
@@ -911,6 +940,15 @@ export function ProductosManagement({ tenantId }: Props) {
         onOpenChange={setEscanearOpen}
         onCambio={recargarTodo}
         onCrearNuevo={abrirNuevoConCodigo}
+      />
+
+      <CodigoNoEncontradoDialog
+        tenantId={tenantId}
+        codigo={codigoSinAsignar}
+        open={codigoSinAsignar !== null}
+        onOpenChange={(o) => !o && setCodigoSinAsignar(null)}
+        onAsignado={(p) => { setCodigoSinAsignar(null); void recargarTodo(); abrirEdicion(p) }}
+        onAgregar={abrirNuevoConCodigo}
       />
 
       <BarcodeScannerDialog

@@ -10,7 +10,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { BarcodeScannerDialog } from "@/components/shared/barcode-scanner-dialog"
-import { AsignarCodigoDialog } from "@/components/admin/pos/asignar-codigo-dialog"
+import { CodigoNoEncontradoDialog } from "@/components/admin/productos/codigo-no-encontrado-dialog"
+import { pareceCodigoDeBarras, useLectorCodigoBarras } from "@/hooks/useLectorCodigoBarras"
 import { getMarcas, getProductoPorCodigo, getProductos } from "@/lib/supabase/productos"
 import { presentacionDe, type LineaCarrito } from "@/lib/ventas/carrito"
 import { precioFinal, tieneOferta } from "@/lib/productos/precios"
@@ -135,6 +136,13 @@ export function BuscadorProductos({ tenantId, carrito, onElegir, onQuitarUno, on
       return
     }
 
+    // Un código que no está en ningún producto se ofrece guardar: así el
+    // próximo escaneo lo encuentra solo.
+    if (pareceCodigoDeBarras(codigo)) {
+      setCodigoSinAsignar(codigo)
+      return
+    }
+
     // Sin match exacto no es un error: puede ser una búsqueda por texto a medias.
     if (resultados.length === 1) {
       elegir(resultados[0])
@@ -154,6 +162,10 @@ export function BuscadorProductos({ tenantId, carrito, onElegir, onQuitarUno, on
     }
     setCodigoSinAsignar(codigo)
   }
+
+  // Lector USB/Bluetooth con el foco fuera del buscador (en el carrito, un
+  // botón…): el código se toma igual, sin tener que hacer click en la barra.
+  useLectorCodigoBarras((codigo) => { void manejarCodigoEscaneado(codigo) })
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -285,7 +297,7 @@ export function BuscadorProductos({ tenantId, carrito, onElegir, onQuitarUno, on
         onDetected={manejarCodigoEscaneado}
       />
 
-      <AsignarCodigoDialog
+      <CodigoNoEncontradoDialog
         tenantId={tenantId}
         codigo={codigoSinAsignar}
         open={codigoSinAsignar !== null}
