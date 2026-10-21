@@ -649,14 +649,22 @@ export default function VetPublicPage({
           </div>
         </div>
 
-        {/* Onda crema que funde el hero con la página */}
-        <Onda className="absolute bottom-0 left-0 z-20 text-cream" />
+        {/* Onda que funde el hero con lo que sigue: crema, o verde si abajo va el sorteo */}
+        <Onda className={`absolute bottom-0 left-0 z-20 ${sorteoActivo ? "text-emerald-700" : "text-cream"}`} />
       </section>
 
       {/* ╔══════════════════════════════════════════════════╗
-          ║          SORTEO: cartelito que lleva abajo        ║
+          ║   SORTEO ACTIVO: pantalla completa tras el hero   ║
           ╚══════════════════════════════════════════════════╝ */}
-      {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
+      {sorteoActivo && (
+        <>
+          <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />
+          <div className="relative">
+            <SorteoBanner tenantId={slug} sorteo={sorteoActivo} />
+            <Onda className="absolute bottom-0 left-0 z-10 text-cream" />
+          </div>
+        </>
+      )}
 
       {/* ╔══════════════════════════════════════════════════╗
           ║               FEATURES STRIP                     ║
@@ -767,9 +775,8 @@ export default function VetPublicPage({
       )}
 
       {/* ╔══════════════════════════════════════════════════╗
-          ║                    SORTEOS                       ║
+          ║          SORTEOS FINALIZADOS (el activo va arriba) ║
           ╚══════════════════════════════════════════════════╝ */}
-      {sorteoActivo && <SorteoBanner tenantId={slug} sorteo={sorteoActivo} />}
       <SorteosHistorial sorteos={sorteosFinalizados} />
 
       {/* ╔══════════════════════════════════════════════════╗
@@ -1007,7 +1014,7 @@ export default function VetPublicPage({
                 </li>
                 {sorteoActivo && (
                   <li>
-                    <a href="#top" className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
+                    <a href="#sorteo-activo" className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors">
                       <Gift className="h-4 w-4 shrink-0" />
                       Sorteo activo: {sorteoActivo.nombre}
                     </a>

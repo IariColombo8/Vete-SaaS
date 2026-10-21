@@ -198,7 +198,7 @@ function DialogRegistro({ tenantId, sorteoId }: { tenantId: string; sorteoId: st
     <>
       <Button
         size="lg"
-        className="rounded-full bg-white font-bold text-emerald-700 shadow-lg transition-transform duration-300 hover:scale-105 hover:bg-white/90"
+        className="h-14 rounded-full bg-white px-8 text-base font-bold text-emerald-700 shadow-xl transition-transform duration-300 hover:scale-105 hover:bg-white/90 sm:text-lg"
         onClick={() => setCheckOpen(true)}
       >
         <UserPlus className="mr-2 h-4 w-4" /> Registrate y participá
@@ -252,36 +252,63 @@ function DialogRegistro({ tenantId, sorteoId }: { tenantId: string; sorteoId: st
   )
 }
 
-/** Foto principal del sorteo + la de cada premio que tenga una: todas las
- *  imágenes disponibles, para que el visitante pueda verlas todas. */
-function GaleriaSorteo({ sorteo }: { sorteo: Sorteo }) {
-  const imagenes = [
+interface ImagenSorteo { url: string; alt: string }
+
+/** Foto principal del sorteo + la de cada premio que tenga una. */
+function imagenesDeSorteo(sorteo: Sorteo): ImagenSorteo[] {
+  return [
     ...(sorteo.fotoUrl ? [{ url: sorteo.fotoUrl, alt: sorteo.nombre }] : []),
     ...sorteo.premios.filter((p) => p.fotoUrl).map((p) => ({ url: p.fotoUrl as string, alt: p.nombre })),
   ]
+}
+
+/** Galería grande: todas las imágenes del sorteo, una a la vez, rotando solas
+ *  cada 5 s (se puede elegir con las miniaturas). */
+function GaleriaSorteo({ imagenes }: { imagenes: ImagenSorteo[] }) {
   const [idx, setIdx] = useState(0)
-  if (imagenes.length === 0) return null
+
+  useEffect(() => {
+    if (imagenes.length <= 1) return
+    const t = setInterval(() => setIdx((c) => (c + 1) % imagenes.length), 5000)
+    return () => clearInterval(t)
+  }, [imagenes.length])
 
   return (
-    <div className="flex shrink-0 flex-col items-center gap-2">
-      <div className="float-soft rounded-2xl">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imagenes[idx].url}
-          alt={imagenes[idx].alt}
-          className="h-24 w-24 rounded-2xl object-cover shadow-xl ring-4 ring-white/30"
-        />
+    <div className="flex w-full flex-col items-center gap-4">
+      <div className="relative aspect-square w-full max-w-[34rem] overflow-hidden rounded-[2rem] shadow-2xl shadow-emerald-950/40 ring-8 ring-white/20 rotate-[-1.5deg]">
+        {imagenes.map((img, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={img.url + i}
+            src={img.url}
+            alt={img.alt}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              opacity: i === idx ? 1 : 0,
+              transform: i === idx ? "scale(1.04)" : "scale(1)",
+              transition: "opacity 1s ease-in-out, transform 5s ease-out",
+            }}
+          />
+        ))}
+        {imagenes.length > 1 && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-5 pb-4 pt-10 text-left">
+            <p className="text-sm font-bold text-white sm:text-base">{imagenes[idx].alt}</p>
+          </div>
+        )}
       </div>
       {imagenes.length > 1 && (
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap justify-center gap-2.5">
           {imagenes.map((img, i) => (
             <button
-              key={i}
+              key={img.url + i}
               type="button"
               aria-label={img.alt}
+              aria-current={i === idx ? "true" : undefined}
               onClick={() => setIdx(i)}
-              className={`h-7 w-7 overflow-hidden rounded-md ring-2 transition-all duration-300 hover:scale-110 ${
-                i === idx ? "ring-white" : "ring-white/30 opacity-70 hover:opacity-100"
+              className={`h-14 w-14 overflow-hidden rounded-xl ring-2 transition-all duration-300 hover:scale-110 sm:h-20 sm:w-20 ${
+                i === idx ? "ring-white ring-4" : "ring-white/30 opacity-70 hover:opacity-100"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -303,9 +330,17 @@ function textoCuentaRegresiva(hasta: string): string {
   return `Quedan ${dias} días`
 }
 
+/**
+ * Sorteo activo a pantalla completa, justo debajo del hero: galería grande de
+ * fotos (sorteo + premios), nombre enorme, premios y botones para participar.
+ * El fondo va de arriba hacia abajo (verde → teal) para empalmar con la onda
+ * del hero arriba y la de la página abajo.
+ */
 export function SorteoBanner({ tenantId, sorteo }: Props) {
   const [dialogFotoOpen, setDialogFotoOpen] = useState(false)
   const [visible, setVisible] = useState(false)
+  const imagenes = imagenesDeSorteo(sorteo)
+  const conFotos = imagenes.length > 0
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -313,7 +348,10 @@ export function SorteoBanner({ tenantId, sorteo }: Props) {
   }, [])
 
   return (
-    <section id="sorteo-activo" className="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 py-10 scroll-mt-20">
+    <section
+      id="sorteo-activo"
+      className="relative flex min-h-[100svh] items-center overflow-hidden bg-gradient-to-b from-emerald-700 via-emerald-600 to-teal-600 py-16 sm:py-24"
+    >
       {/* Blobs animados: mismo lenguaje visual que el hero, en verde. */}
       <div className="vet-blob vet-blob-1 opacity-60" />
       <div className="vet-blob vet-blob-2 opacity-50" />
@@ -322,42 +360,86 @@ export function SorteoBanner({ tenantId, sorteo }: Props) {
         backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.6) 1px, transparent 0)",
         backgroundSize: "32px 32px",
       }} />
+      <Gift className="pointer-events-none absolute -right-10 top-10 hidden h-64 w-64 rotate-12 text-white/[0.07] lg:block" />
+      <Sparkles className="float-soft pointer-events-none absolute left-[6%] top-[12%] h-10 w-10 text-amber-300/60 sm:h-14 sm:w-14" />
 
       <div
-        className="container relative mx-auto max-w-5xl px-6"
+        className="container relative mx-auto max-w-7xl px-6"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "none" : "translateY(24px) scale(0.98)",
           transition: "opacity 0.9s cubic-bezier(.16,1,.3,1), transform 0.9s cubic-bezier(.16,1,.3,1)",
         }}
       >
-        <div className="flex flex-col items-center gap-5 text-center text-white sm:flex-row sm:gap-6 sm:text-left">
-          <GaleriaSorteo sorteo={sorteo} />
-          <div className="flex-1">
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 backdrop-blur-md">
-              <Gift className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Sorteo activo</span>
+        <div
+          className={`grid items-center gap-10 text-white lg:gap-16 ${
+            conFotos ? "lg:grid-cols-2" : "mx-auto max-w-3xl"
+          }`}
+        >
+          {conFotos && <GaleriaSorteo imagenes={imagenes} />}
+
+          <div className={`flex flex-col items-center text-center ${conFotos ? "lg:items-start lg:text-left" : ""}`}>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur-md">
+              <Gift className="h-5 w-5" />
+              <span className="text-sm font-bold uppercase tracking-[0.15em]">Sorteo activo</span>
             </div>
-            <h2 className="text-xl font-black sm:text-2xl">{sorteo.nombre}</h2>
-            {sorteo.descripcion && <p className="mt-1 text-sm text-white/90">{sorteo.descripcion}</p>}
-            {sorteo.premios.length > 0 && (
-              <p className="mt-1 text-xs font-medium text-white/80">
-                Premios: {sorteo.premios.map((p) => p.nombre).join(" · ")}
-              </p>
+
+            <h2
+              className="text-4xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl"
+              style={{ textShadow: "0 4px 40px rgba(0,0,0,0.25)" }}
+            >
+              {sorteo.nombre}
+            </h2>
+
+            {sorteo.descripcion && (
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/90 sm:text-xl">{sorteo.descripcion}</p>
             )}
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-lg shadow-orange-900/20 animate-pulse">
+
+            <span className="mt-6 inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2 text-base font-bold text-white shadow-lg shadow-orange-900/20 animate-pulse sm:text-lg">
               {textoCuentaRegresiva(sorteo.hasta)}
             </span>
 
-            <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
+            {sorteo.premios.length > 0 && (
+              <div className="mt-8 w-full max-w-xl">
+                <p className="mb-3 text-sm font-bold uppercase tracking-[0.15em] text-white/80">
+                  {sorteo.premios.length === 1 ? "Premio" : "Premios"}
+                </p>
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {[...sorteo.premios].sort((a, b) => a.orden - b.orden).map((p, i) => (
+                    <li
+                      key={p.id ?? i}
+                      className="flex items-center gap-3 rounded-2xl bg-white/15 p-3 text-left backdrop-blur-md ring-1 ring-white/20"
+                    >
+                      {p.fotoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.fotoUrl} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                      ) : (
+                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                          <Gift className="h-6 w-6" />
+                        </span>
+                      )}
+                      <span className="min-w-0">
+                        {sorteo.premios.length > 1 && (
+                          <span className="block text-xs font-bold uppercase tracking-wider text-amber-200">{i + 1}° premio</span>
+                        )}
+                        <span className="block font-bold leading-tight sm:text-lg">{p.nombre}</span>
+                        {p.descripcion && <span className="block text-sm text-white/80">{p.descripcion}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <DialogRegistro tenantId={tenantId} sorteoId={sorteo.id} />
               {sorteo.mecanicas.foto && (
                 <Button
                   size="lg" variant="outline"
-                  className="rounded-full border-white/60 bg-white/10 font-bold text-white backdrop-blur-md transition-transform duration-300 hover:scale-105 hover:bg-white/20"
+                  className="h-14 rounded-full border-2 border-white/60 bg-white/10 px-8 text-base font-bold text-white backdrop-blur-md transition-transform duration-300 hover:scale-105 hover:bg-white/20 sm:text-lg"
                   onClick={() => setDialogFotoOpen(true)}
                 >
-                  <Camera className="mr-2 h-4 w-4" /> Subí la foto de tu mascota
+                  <Camera className="mr-2 h-5 w-5" /> Subí la foto de tu mascota
                 </Button>
               )}
             </div>
