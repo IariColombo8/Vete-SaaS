@@ -1,4 +1,5 @@
 import "server-only"
+import https from "node:https"
 import { XMLParser } from "fast-xml-parser"
 import { buscar, type Ambiente, type TicketAcceso } from "./wsaa"
 import type { AlicuotaResumen } from "./comprobante"
@@ -35,6 +36,39 @@ export class WsfeError extends Error {
 
 const parser = new XMLParser({ ignoreAttributes: true, removeNSPrefix: true, parseTagValue: false })
 
+/**
+ * El servidor de producción (servicios1.afip.gov.ar) negocia Diffie-Hellman
+ * de 1024 bits, y Node ≥ 17 (OpenSSL 3) lo corta con "dh key too small".
+ * `fetch` no deja bajar el nivel de seguridad por request, así que se usa
+ * `https.request` con SECLEVEL=1 solo para estas llamadas.
+ */
+function postTlsViejo(
+  url: string,
+  cuerpo: string,
+  headers: Record<string, string>,
+): Promise<{ status: number; xml: string }> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: "POST",
+        ciphers: "DEFAULT@SECLEVEL=1",
+        headers: { ...headers, "Content-Length": Buffer.byteLength(cuerpo) },
+        timeout: 30_000,
+      },
+      (res) => {
+        const partes: Buffer[] = []
+        res.on("data", (c: Buffer) => partes.push(c))
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, xml: Buffer.concat(partes).toString("utf8") }))
+        res.on("error", reject)
+      },
+    )
+    req.on("timeout", () => req.destroy(new WsfeError("WSFE: ARCA no respondió a tiempo")))
+    req.on("error", reject)
+    req.end(cuerpo)
+  })
+}
+
 function esc(v: string | number): string {
   return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
@@ -48,17 +82,15 @@ async function llamar(
     `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="${NS}">` +
     `<soapenv:Header/><soapenv:Body><ar:${operacion}>${cuerpo}</ar:${operacion}></soapenv:Body></soapenv:Envelope>`
 
-  const res = await fetch(URL_WSFE[ambiente], {
-    method: "POST",
-    headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: `${NS}${operacion}` },
-    body: envelope,
+  const res = await postTlsViejo(URL_WSFE[ambiente], envelope, {
+    "Content-Type": "text/xml; charset=utf-8",
+    SOAPAction: `${NS}${operacion}`,
   })
-  const xml = await res.text()
-  const doc = parser.parse(xml) as Record<string, unknown>
+  const doc = parser.parse(res.xml) as Record<string, unknown>
 
   const fault = buscar(doc, "Fault") as Record<string, unknown> | undefined
   if (fault) throw new WsfeError(`WSFE ${operacion}: ${String(fault.faultstring ?? "SOAP Fault")}`)
-  if (!res.ok) throw new WsfeError(`WSFE ${operacion}: HTTP ${res.status}`)
+  if (res.status < 200 || res.status >= 300) throw new WsfeError(`WSFE ${operacion}: HTTP ${res.status}`)
 
   const result = buscar(doc, `${operacion}Result`) as Record<string, unknown> | undefined
   if (!result) throw new WsfeError(`WSFE ${operacion}: respuesta sin resultado`)
