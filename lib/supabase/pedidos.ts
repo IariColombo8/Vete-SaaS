@@ -146,6 +146,12 @@ export async function registrarVentaPedido(
   return { ventaId: d.venta_id, numero: d.numero }
 }
 
+/** Staff: deja que el comprador descargue remito y factura. */
+export async function autorizarDocumentosPedido(pedidoId: string): Promise<void> {
+  const { error } = await supabase.rpc("autorizar_documentos_pedido", { p_pedido_id: pedidoId })
+  throwIfSupabaseError(error, "Error al autorizar los documentos del pedido")
+}
+
 export async function cancelarPedido(pedidoId: string, motivo: string): Promise<void> {
   const { error } = await supabase.rpc("cancelar_pedido", { p_pedido_id: pedidoId, p_motivo: motivo })
   throwIfSupabaseError(error, "Error al cancelar el pedido")
@@ -186,7 +192,7 @@ export interface NuevoPedidoInput {
 
 export async function crearPedidoWeb(
   input: NuevoPedidoInput,
-): Promise<{ pedidoId: string; numero: number; pago: InicioPago; errorPago: string | null }> {
+): Promise<{ pedidoId: string; numero: number; dni: string; pago: InicioPago; errorPago: string | null }> {
   return pedir("/api/tienda/pedidos", {
     method: "POST",
     headers: await headersComprador(),
@@ -194,9 +200,24 @@ export async function crearPedidoWeb(
   })
 }
 
-export async function getPedidoComprador(id: string): Promise<Pedido> {
-  const r = await pedir<{ pedido: Pedido }>(`/api/tienda/pedidos/${id}`, { headers: await headersComprador() })
+/**
+ * El pedido de la ruta /{veterinaria}/pedido/{dni}/{número}, si es de la
+ * cuenta logueada. `verificar` además consulta el pago en Mercado Pago (más lento).
+ */
+export async function ubicarPedido(
+  tenantId: string,
+  dni: string,
+  numero: number,
+  verificar = false,
+): Promise<Pedido> {
+  const q = new URLSearchParams({ tenant: tenantId, dni, numero: String(numero), verificar: verificar ? "1" : "0" })
+  const r = await pedir<{ pedido: Pedido }>(`/api/tienda/pedidos/ubicar?${q}`, { headers: await headersComprador() })
   return r.pedido
+}
+
+/** El comprador pide remito y factura; los ve cuando el staff lo autoriza. */
+export async function solicitarDocumentos(id: string): Promise<void> {
+  await pedir(`/api/tienda/pedidos/${id}/documentos`, { method: "POST", headers: await headersComprador() })
 }
 
 export async function reintentarPago(id: string): Promise<InicioPago> {

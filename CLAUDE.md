@@ -329,9 +329,20 @@ Completados (un retiro saltea Reparto), y Cancelados.
   `pedidos.venta_error` para resolver a mano.
 - **Factura automática salvo transferencia** (`facturaAutomatica`): online la
   emite el servidor (`emitirFacturaDeVenta` con usuario null); cobrado en el
-  panel, el `FacturarButton` con `autoEmitir`. El comprador baja remito y
-  factura desde `/[slug]/pedido/[id]` (`/api/tienda/pedidos/[id]/documentos`) y
-  recibe el aviso por el Gmail de la veterinaria si está conectado.
+  panel, el `FacturarButton` con `autoEmitir`. El aviso al comprador sale por el
+  Gmail de la veterinaria si está conectado.
+- **El comprador no ve remito ni factura por su cuenta** (`067_pedidos_documentos.sql`):
+  en su pedido toca "Solicitar", el panel muestra la solicitud y recién con
+  "Autorizar" (`autorizar_documentos_pedido`) la API `/api/tienda/pedidos/[id]/documentos`
+  se los entrega.
+- **URL del pedido: `/[slug]/pedido/{dni}/{número}`** (`rutaPedido`; DNI
+  obligatorio en el checkout). No es el secreto: `autorizarPedido` exige la
+  sesión de quien compró y responde igual para un pedido ajeno que para uno
+  inexistente. Pedidos viejos sin DNI usan `sin-dni`.
+- El QR tiene que salir rápido: el alta del pedido hace en paralelo todo lo que
+  no depende de otra cosa, el checkout deja el QR dibujado en sessionStorage
+  (`claveQr`) y la primera carga de la página no consulta a Mercado Pago (el
+  polling sí, con `verificar=1`).
 - Un pedido cobrado **no se edita** (`editar_pedido` lo rechaza): se cancela, lo
   que anula la venta. La devolución de un pago de MP se hace desde MP.
 - Sección `pedidos` en permisos (también empleado), feature `ventas` (Pro).
@@ -653,7 +664,7 @@ ocasional van a un menú "Más" (ver Productos). Excepciones: el mostrador
 | `/[slug]/turno` | Reserva de turno para ese tenant | Público |
 | `/[slug]/productos` | Catálogo público de productos (con carrito si la tienda toma pedidos) | Público |
 | `/[slug]/carrito` | Checkout: datos, retiro/envío, medio de pago | Comprar exige Google |
-| `/[slug]/pedido/[id]` | Seguimiento, pago (QR / Mercado Pago) y remito/factura del pedido | El comprador o staff |
+| `/[slug]/pedido/[dni]/[numero]` | Seguimiento y pago (QR / Mercado Pago) del pedido; remito/factura solo si el staff autoriza | La cuenta que compró o staff |
 | `/[slug]/libreta/[token]` | Libreta sanitaria pública (QR de la mascota) | Público (el token es el secreto) |
 | `/[slug]/cliente` | Área del cliente (sus turnos, sus mascotas) | Autenticado, dueño del email |
 | `/[slug]/mi-historia`, `/[slug]/mi-historia/[mascotaId]` | Historia clínica vista por el cliente | ídem |

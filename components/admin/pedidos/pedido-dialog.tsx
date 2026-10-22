@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import {
-  AlertTriangle, Bike, Loader2, Mail, MessageCircle, Pencil, Phone, Store, Wallet, XCircle,
+  AlertTriangle, Bike, FileCheck2, Loader2, Mail, MessageCircle, Pencil, Phone, Store, Wallet, XCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getProductosPublicadosPorIds } from "@/lib/supabase/productos"
 import {
-  cambiarEstadoPedido, cancelarPedido, editarPedido, registrarVentaPedido,
+  autorizarDocumentosPedido, cambiarEstadoPedido, cancelarPedido, editarPedido, registrarVentaPedido,
 } from "@/lib/supabase/pedidos"
 import { accionSiguiente, esEditable, esPagoOnline, siguienteEstado } from "@/lib/pedidos/reglas"
 import { etiquetaMedioWeb, numeroPedido, ESTADOS_PEDIDO, type EntregaPedido, type Pedido } from "@/lib/pedidos/tipos"
@@ -172,6 +172,20 @@ export function PedidoDialog({ tenantId, pedido, emisor, facturacion, onCerrar, 
       await onCambio()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo registrar el cobro")
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const autorizarDocumentos = async () => {
+    if (!pedido) return
+    setOcupado(true)
+    try {
+      await autorizarDocumentosPedido(pedido.id)
+      toast.success("Listo: el cliente ya puede descargar el remito y la factura")
+      await onCambio()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo autorizar")
     } finally {
       setOcupado(false)
     }
@@ -357,6 +371,23 @@ export function PedidoDialog({ tenantId, pedido, emisor, facturacion, onCerrar, 
             <p className="flex items-start gap-2 rounded bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               La factura automática falló: {pedido.facturaError}. Podés reintentarla abajo.
+            </p>
+          )}
+
+          {pedido.documentosEstado === "solicitado" && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded bg-sky-50 p-2 text-sm text-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+              <span className="flex items-center gap-2">
+                <FileCheck2 className="h-4 w-4 shrink-0" />
+                El cliente pidió el remito y la factura.
+              </span>
+              <Button size="sm" onClick={autorizarDocumentos} disabled={ocupado}>
+                Autorizar que los descargue
+              </Button>
+            </div>
+          )}
+          {pedido.documentosEstado === "autorizado" && (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <FileCheck2 className="h-3.5 w-3.5" /> El cliente puede descargar el remito y la factura desde su pedido.
             </p>
           )}
 

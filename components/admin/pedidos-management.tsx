@@ -214,6 +214,9 @@ function TarjetaPedido({ pedido: p, onAbrir }: { pedido: Pedido; onAbrir: () => 
         >
           {cobrado ? "Cobrado" : p.pagoEstado === "rechazado" ? "Pago rechazado" : "Sin cobrar"}
         </Badge>
+        {p.documentosEstado === "solicitado" && (
+          <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">Pide remito/factura</Badge>
+        )}
         {alerta && (
           <Badge className="gap-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
             <AlertTriangle className="h-3 w-3" /> Revisar

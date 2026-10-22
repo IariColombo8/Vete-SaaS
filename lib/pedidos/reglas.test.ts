@@ -7,6 +7,7 @@ import {
   medioVentaDesdeMP,
   mediosDisponibles,
   precioLineaWeb,
+  rutaPedido,
   siguienteEstado,
 } from "./reglas"
 import type { TiendaPublica } from "./tipos"
@@ -91,5 +92,11 @@ describe("disponibles", () => {
 
   it("entregas según la configuración", () => {
     expect(entregasDisponibles(base)).toEqual(["retiro"])
+  })
+})
+
+describe("rutaPedido", () => {
+  it("usa el DNI normalizado y el número", () => {
+    expect(rutaPedido({ tenantId: "vipvet", clienteDni: "30.123.456", numero: 12 })).toBe("/vipvet/pedido/30123456/12")
   })
 })

@@ -11,6 +11,8 @@ export type EntregaPedido = "retiro" | "envio"
 /** Cómo eligió pagar el cliente en la web. `tarjeta` y `qr` van por Mercado Pago. */
 export type MedioPagoWeb = "efectivo" | "transferencia" | "tarjeta" | "qr"
 export type PagoEstado = "pendiente" | "aprobado" | "rechazado"
+/** Remito y factura: el comprador los pide y el staff los autoriza (067). */
+export type DocumentosEstado = "solicitado" | "autorizado" | null
 
 export interface PedidoItem {
   id?: string
@@ -49,6 +51,7 @@ export interface Pedido {
   ventaId: string | null
   ventaError: string | null
   facturaError: string | null
+  documentosEstado: DocumentosEstado
   canceladoMotivo: string | null
   createdAt: string
   updatedAt: string
@@ -135,6 +138,7 @@ export function pedidoDesdeFila(f: Fila): Pedido {
     ventaId: (f.venta_id as string | null) ?? null,
     ventaError: (f.venta_error as string | null) ?? null,
     facturaError: (f.factura_error as string | null) ?? null,
+    documentosEstado: (f.documentos_estado as DocumentosEstado) ?? null,
     canceladoMotivo: (f.cancelado_motivo as string | null) ?? null,
     createdAt: (f.created_at as string) ?? "",
     updatedAt: (f.updated_at as string) ?? "",

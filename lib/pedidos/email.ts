@@ -10,7 +10,7 @@ import { etiquetaMedioWeb, numeroPedido, type Pedido } from "./tipos"
  *  · "recibido": al crear un pedido que se paga después (efectivo o
  *    transferencia), con el alias si es transferencia.
  *  · "pagado": cuando queda cobrado (Mercado Pago aprobó). Lleva al pedido,
- *    donde se descargan el remito y la factura.
+ *    donde se pueden solicitar el remito y la factura (los autoriza el staff).
  */
 
 export interface DatosEmailPedido {
@@ -47,7 +47,7 @@ export function htmlPedido(p: Pedido, d: DatosEmailPedido, tipo: TipoEmailPedido
 
   let pago: string
   if (tipo === "pagado") {
-    pago = "Tu pago quedó aprobado. En el pedido podés descargar el remito y la factura."
+    pago = "Tu pago quedó aprobado. Si necesitás el remito o la factura, pedilos desde el pedido."
   } else if (p.medioPago === "transferencia" && d.aliasTransferencia) {
     pago = `Transferí <strong>${formatCurrency(p.total)}</strong> al alias <strong>${e(d.aliasTransferencia)}</strong>${d.titularTransferencia ? ` (${e(d.titularTransferencia)})` : ""} y mandanos el comprobante.`
   } else if (esPagoOnline(p.medioPago)) {

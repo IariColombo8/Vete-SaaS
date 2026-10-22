@@ -94,3 +94,22 @@ export function entregasDisponibles(t: TiendaPublica): EntregaPedido[] {
   if (t.envioHabilitado) r.push("envio")
   return r
 }
+
+/** DNI sin puntos, espacios ni guiones: "30.123.456" → "30123456". */
+export function normalizarDni(dni: string): string {
+  return dni.replace(/\D/g, "")
+}
+
+/**
+ * Ruta pública del pedido: /{veterinaria}/pedido/{dni}/{número}. Es legible,
+ * pero no es el secreto: verla exige la sesión de quien compró (o staff).
+ */
+export function rutaPedido(p: { tenantId: string; clienteDni: string; numero: number }): string {
+  // Pedidos de antes de que el DNI fuera obligatorio: "sin-dni" se normaliza a "".
+  return `/${p.tenantId}/pedido/${normalizarDni(p.clienteDni) || "sin-dni"}/${p.numero}`
+}
+
+/** Clave en sessionStorage del QR que dejó el checkout, ya dibujado como imagen. */
+export function claveQr(slug: string, dni: string, numero: string | number): string {
+  return `vetpanel:qr:${slug}:${normalizarDni(dni)}:${numero}`
+}

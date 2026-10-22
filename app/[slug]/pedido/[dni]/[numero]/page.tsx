@@ -5,15 +5,15 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import QRCode from "qrcode"
 import {
-  ArrowLeft, CheckCircle2, CircleDashed, CreditCard, Download, FileText, Loader2, QrCode, XCircle,
+  ArrowLeft, CheckCircle2, CircleDashed, Clock, CreditCard, Download, FileText, Loader2, QrCode, XCircle,
 } from "lucide-react"
 import { useSlug } from "@/context/slug-context"
 import { useAuth } from "@/hooks/use-auth"
 import { signInWithGoogle } from "@/lib/supabase/auth"
 import {
-  getDocumentosPedido, getPedidoComprador, getTiendaPublica, reintentarPago, type InicioPago,
+  getDocumentosPedido, getTiendaPublica, reintentarPago, solicitarDocumentos, ubicarPedido, type InicioPago,
 } from "@/lib/supabase/pedidos"
-import { esPagoOnline } from "@/lib/pedidos/reglas"
+import { claveQr, esPagoOnline } from "@/lib/pedidos/reglas"
 import { etiquetaMedioWeb, numeroPedido, type EstadoPedido, type Pedido, type TiendaPublica } from "@/lib/pedidos/tipos"
 import { formatCantidad, formatCurrency, formatDateTime } from "@/lib/format"
 import { Button } from "@/components/ui/button"
@@ -30,13 +30,16 @@ const PASOS: { id: EstadoPedido; label: string }[] = [
 ]
 
 /**
- * Página del pedido para el comprador: estado, cómo pagar lo que falta (QR
- * en pantalla, volver a Mercado Pago, alias de transferencia) y, una vez
- * cobrado, el remito y la factura para descargar.
+ * Página del pedido para el comprador: /{veterinaria}/pedido/{dni}/{número}.
+ * Solo la ve la cuenta que hizo la compra (el servidor lo verifica).
+ *
+ * Muestra el estado, cómo pagar lo que falta (QR en pantalla, volver a
+ * Mercado Pago, alias) y deja SOLICITAR remito y factura: los descarga
+ * recién cuando la veterinaria lo autoriza desde Pedidos.
  */
 export default function PedidoPage() {
   const slug = useSlug()
-  const { id } = useParams<{ id: string }>()
+  const { dni, numero } = useParams<{ dni: string; numero: string }>()
   const { user, loading: cargandoSesion } = useAuth()
 
   const [pedido, setPedido] = useState<Pedido | null>(null)
@@ -47,9 +50,21 @@ export default function PedidoPage() {
   const [errorPago, setErrorPago] = useState("")
   const inicioPoll = useRef(Date.now())
 
-  const cargar = useCallback(async () => {
+  // El QR que generó el checkout se muestra apenas abre la página, sin
+  // esperar la sesión ni la consulta del pedido.
+  useEffect(() => {
     try {
-      const p = await getPedidoComprador(id)
+      const img = window.sessionStorage.getItem(claveQr(slug, dni, numero))
+      if (img) setQrImagen(img)
+    } catch {}
+    if (new URLSearchParams(window.location.search).get("errorPago")) {
+      setErrorPago("No se pudo generar el cobro. Probá de nuevo.")
+    }
+  }, [slug, dni, numero])
+
+  const cargar = useCallback(async (verificar: boolean) => {
+    try {
+      const p = await ubicarPedido(slug, dni, Number(numero), verificar)
       setPedido(p)
       setError("")
       return p
@@ -57,21 +72,14 @@ export default function PedidoPage() {
       setError(e instanceof Error ? e.message : "No se pudo cargar el pedido")
       return null
     }
-  }, [id])
+  }, [slug, dni, numero])
 
   useEffect(() => {
     if (!user) return
-    cargar()
+    // Primera carga sin consultar a Mercado Pago: rápida.
+    cargar(false)
     getTiendaPublica(slug).then(setTienda)
-    if (new URLSearchParams(window.location.search).get("errorPago")) {
-      setErrorPago("No se pudo generar el cobro. Probá de nuevo.")
-    }
-    // QR recién generado en el checkout: se dibuja sin pedir otro.
-    try {
-      const qr = window.sessionStorage.getItem(`vetpanel:qr:${id}`)
-      if (qr) QRCode.toDataURL(qr, { width: 320, margin: 2 }).then(setQrImagen)
-    } catch {}
-  }, [user, cargar, slug, id])
+  }, [user, cargar, slug])
 
   // Mientras el pago online esté pendiente, se le pregunta al servidor (que
   // consulta a Mercado Pago) cada pocos segundos.
@@ -82,7 +90,7 @@ export default function PedidoPage() {
     if (!esperandoPago) return
     const t = setInterval(() => {
       if (Date.now() - inicioPoll.current > POLL_MAX_MS) return
-      cargar()
+      cargar(true)
     }, POLL_MS)
     return () => clearInterval(t)
   }, [esperandoPago, cargar])
@@ -90,15 +98,16 @@ export default function PedidoPage() {
   useEffect(() => {
     if (pedido?.ventaId) {
       setQrImagen(null)
-      try { window.sessionStorage.removeItem(`vetpanel:qr:${id}`) } catch {}
+      try { window.sessionStorage.removeItem(claveQr(slug, dni, numero)) } catch {}
     }
-  }, [pedido?.ventaId, id])
+  }, [pedido?.ventaId, slug, dni, numero])
 
   const pagar = async () => {
+    if (!pedido) return
     setGenerando(true)
     setErrorPago("")
     try {
-      const pago: InicioPago = await reintentarPago(id)
+      const pago: InicioPago = await reintentarPago(pedido.id)
       if (pago.tipo === "redirect") {
         window.location.href = pago.url
         return
@@ -107,7 +116,7 @@ export default function PedidoPage() {
         setQrImagen(await QRCode.toDataURL(pago.qrData, { width: 320, margin: 2 }))
         inicioPoll.current = Date.now()
       }
-      await cargar()
+      await cargar(false)
     } catch (e) {
       setErrorPago(e instanceof Error ? e.message : "No se pudo generar el cobro")
     } finally {
@@ -115,26 +124,30 @@ export default function PedidoPage() {
     }
   }
 
-  if (cargandoSesion) return <Cargando />
-
-  if (!user) {
+  if (!pedido) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-cream px-6 text-center text-ink">
-        <p>Ingresá con la cuenta con la que hiciste el pedido.</p>
-        <Button className="rounded-full bg-coral hover:bg-coral-ink" onClick={() => signInWithGoogle(`/${slug}/pedido/${id}`)}>
-          Ingresar con Google
-        </Button>
+        {qrImagen && !error && <BloqueQr imagen={qrImagen} />}
+        {!cargandoSesion && !user ? (
+          <>
+            <p>Ingresá con la cuenta de Google con la que hiciste el pedido.</p>
+            <Button
+              className="rounded-full bg-coral hover:bg-coral-ink"
+              onClick={() => signInWithGoogle(`/${slug}/pedido/${dni}/${numero}`)}
+            >
+              Ingresar con Google
+            </Button>
+          </>
+        ) : error ? (
+          <>
+            <p>{error}</p>
+            <Link href={`/${slug}/productos`} className="font-semibold text-coral hover:underline">Volver a la tienda</Link>
+          </>
+        ) : (
+          !qrImagen && <Loader2 className="h-8 w-8 animate-spin text-coral" />
+        )}
       </main>
     )
-  }
-
-  if (!pedido) {
-    return error ? (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-cream px-6 text-center text-ink">
-        <p>{error}</p>
-        <Link href={`/${slug}/productos`} className="font-semibold text-coral hover:underline">Volver a la tienda</Link>
-      </main>
-    ) : <Cargando />
   }
 
   const pagado = Boolean(pedido.ventaId) || pedido.pagoEstado === "aprobado"
@@ -189,13 +202,7 @@ export default function PedidoPage() {
               {pedido.medioPago === "qr" && (
                 qrImagen ? (
                   <div className="flex flex-col items-center gap-2 py-2">
-                    <img src={qrImagen} alt="QR de Mercado Pago" className="h-64 w-64 rounded-2xl border" />
-                    <p className="text-center text-sm text-ink-muted">
-                      Escanealo con Mercado Pago o cualquier billetera. Total {formatCurrency(pedido.total)}.
-                    </p>
-                    <p className="flex items-center gap-2 text-xs text-ink-muted">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Esperando el pago…
-                    </p>
+                    <BloqueQr imagen={qrImagen} total={pedido.total} />
                     <button type="button" className="text-xs font-semibold text-coral hover:underline" onClick={pagar} disabled={generando}>
                       Generar un QR nuevo
                     </button>
@@ -243,7 +250,9 @@ export default function PedidoPage() {
             </>
           )}
 
-          {pedido.ventaId && <Documentos pedidoId={pedido.id} />}
+          {pedido.estado !== "cancelado" && (
+            <Documentos pedido={pedido} onSolicitado={() => cargar(false)} />
+          )}
         </section>
 
         {/* ── Detalle ── */}
@@ -281,32 +290,57 @@ export default function PedidoPage() {
   )
 }
 
-function Cargando() {
+function BloqueQr({ imagen, total }: { imagen: string; total?: number }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-cream">
-      <Loader2 className="h-8 w-8 animate-spin text-coral" />
-    </main>
+    <div className="flex flex-col items-center gap-2">
+      <img src={imagen} alt="QR de Mercado Pago" className="h-64 w-64 rounded-2xl border bg-white" />
+      <p className="max-w-xs text-center text-sm text-ink-muted">
+        Escanealo con Mercado Pago o cualquier billetera{total != null ? `. Total ${formatCurrency(total)}` : ""}.
+      </p>
+      <p className="flex items-center gap-2 text-xs text-ink-muted">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Esperando el pago…
+      </p>
+    </div>
   )
 }
 
-/** Remito y factura del pedido cobrado, dibujados con los mismos generadores del panel. */
-function Documentos({ pedidoId }: { pedidoId: string }) {
-  const [ocupado, setOcupado] = useState<"remito" | "factura" | null>(null)
-  const [hayFactura, setHayFactura] = useState<boolean | null>(null)
+/**
+ * Remito y factura: el comprador no los ve hasta que la veterinaria lo
+ * autoriza. Primero "Solicitar", después "Solicitado", y recién con la
+ * autorización (y el pedido cobrado) aparecen las descargas.
+ */
+function Documentos({ pedido, onSolicitado }: { pedido: Pedido; onSolicitado: () => void }) {
+  const [ocupado, setOcupado] = useState<"solicitar" | "remito" | "factura" | null>(null)
+  const [hayFactura, setHayFactura] = useState(false)
   const [error, setError] = useState("")
+  const habilitado = pedido.documentosEstado === "autorizado" && Boolean(pedido.ventaId)
 
   useEffect(() => {
-    getDocumentosPedido(pedidoId)
+    if (!habilitado) return
+    getDocumentosPedido(pedido.id)
       .then((d) => setHayFactura(Boolean(d.factura && d.fiscal)))
       .catch(() => setHayFactura(false))
-  }, [pedidoId])
+  }, [habilitado, pedido.id])
+
+  const solicitar = async () => {
+    setOcupado("solicitar")
+    setError("")
+    try {
+      await solicitarDocumentos(pedido.id)
+      onSolicitado()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo enviar la solicitud")
+    } finally {
+      setOcupado(null)
+    }
+  }
 
   const bajar = async (que: "remito" | "factura") => {
     setOcupado(que)
     setError("")
     try {
       const [docs, { aVenta }, remito] = await Promise.all([
-        getDocumentosPedido(pedidoId),
+        getDocumentosPedido(pedido.id),
         import("@/lib/supabase/ventas"),
         import("@/lib/ventas/remito"),
       ])
@@ -329,7 +363,7 @@ function Documentos({ pedidoId }: { pedidoId: string }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `factura-pedido.pdf`
+      a.download = `factura-pedido-${pedido.numero}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -343,18 +377,35 @@ function Documentos({ pedidoId }: { pedidoId: string }) {
 
   return (
     <div className="space-y-2 border-t pt-3">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Button variant="outline" className="rounded-full" onClick={() => bajar("remito")} disabled={ocupado !== null}>
-          {ocupado === "remito" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-          Remito
-        </Button>
-        {hayFactura && (
-          <Button variant="outline" className="rounded-full" onClick={() => bajar("factura")} disabled={ocupado !== null}>
-            {ocupado === "factura" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-            Factura
+      {habilitado ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button variant="outline" className="rounded-full" onClick={() => bajar("remito")} disabled={ocupado !== null}>
+            {ocupado === "remito" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            Remito
           </Button>
-        )}
-      </div>
+          {hayFactura && (
+            <Button variant="outline" className="rounded-full" onClick={() => bajar("factura")} disabled={ocupado !== null}>
+              {ocupado === "factura" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+              Factura
+            </Button>
+          )}
+        </div>
+      ) : pedido.documentosEstado === "autorizado" ? (
+        <p className="flex items-center gap-2 text-sm text-ink-muted">
+          <Clock className="h-4 w-4" />
+          El remito y la factura van a estar acá apenas el pedido quede cobrado.
+        </p>
+      ) : pedido.documentosEstado ? (
+        <p className="flex items-center gap-2 text-sm text-ink-muted">
+          <Clock className="h-4 w-4" />
+          Pediste el remito y la factura. Vas a poder descargarlos acá cuando la veterinaria lo autorice.
+        </p>
+      ) : (
+        <Button variant="outline" className="w-full rounded-full" onClick={solicitar} disabled={ocupado !== null}>
+          {ocupado === "solicitar" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+          Solicitar remito y factura
+        </Button>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   )

@@ -13,7 +13,7 @@ import { signInWithGoogle } from "@/lib/supabase/auth"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { getClienteByEmail } from "@/lib/supabase/clientes"
 import { crearPedidoWeb, getMisPedidos, getTiendaPublica } from "@/lib/supabase/pedidos"
-import { entregasDisponibles, mediosDisponibles, pasoCantidad } from "@/lib/pedidos/reglas"
+import { claveQr, entregasDisponibles, mediosDisponibles, normalizarDni, pasoCantidad, rutaPedido } from "@/lib/pedidos/reglas"
 import { ESTADOS_PEDIDO, MEDIOS_WEB, numeroPedido, type EntregaPedido, type MedioPagoWeb, type Pedido, type TiendaPublica } from "@/lib/pedidos/tipos"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { imagenSupabase } from "@/lib/imagenes"
@@ -91,6 +91,7 @@ export default function CarritoPage() {
     setError("")
     if (!nombre.trim()) return setError("Ingresá tu nombre")
     if (telefono.replace(/\D/g, "").length < 6) return setError("Ingresá un teléfono para coordinar la entrega")
+    if (!/^\d{6,9}$/.test(normalizarDni(dni))) return setError("Ingresá tu DNI (solo números)")
     if (!entrega) return setError("Elegí si retirás o te lo enviamos")
     if (entrega === "envio" && direccion.trim().length < 4) return setError("Ingresá la dirección de entrega")
     if (!medio) return setError("Elegí cómo vas a pagar")
@@ -102,7 +103,7 @@ export default function CarritoPage() {
         items: carrito.lineas.map((l) => ({ productoId: l.producto.id, cantidad: l.cantidad })),
         nombre: nombre.trim(),
         telefono: telefono.trim(),
-        dni: dni.trim(),
+        dni: normalizarDni(dni),
         entrega,
         direccion: entrega === "envio" ? direccion.trim() : "",
         nota: nota.trim(),
@@ -114,12 +115,16 @@ export default function CarritoPage() {
         return
       }
       if (r.pago.tipo === "qr") {
-        // El QR ya está generado: la página del pedido lo dibuja sin pedir otro.
+        // El QR se dibuja acá y viaja como imagen: la página del pedido lo
+        // muestra apenas abre, sin esperar la sesión ni otra consulta.
+        const { default: QRCode } = await import("qrcode")
+        const imagen = await QRCode.toDataURL(r.pago.qrData, { width: 320, margin: 2 })
         try {
-          window.sessionStorage.setItem(`vetpanel:qr:${r.pedidoId}`, r.pago.qrData)
+          window.sessionStorage.setItem(claveQr(slug, r.dni, r.numero), imagen)
         } catch {}
       }
-      router.push(`/${slug}/pedido/${r.pedidoId}${r.errorPago ? "?errorPago=1" : ""}`)
+      const ruta = rutaPedido({ tenantId: slug, clienteDni: r.dni, numero: r.numero })
+      router.push(`${ruta}${r.errorPago ? "?errorPago=1" : ""}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo registrar el pedido")
       setEnviando(false)
@@ -195,7 +200,7 @@ export default function CarritoPage() {
                         <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} inputMode="tel" autoComplete="tel" />
                       </div>
                       <div>
-                        <Label className="mb-1 block text-xs">DNI (opcional, para la factura)</Label>
+                        <Label className="mb-1 block text-xs">DNI</Label>
                         <Input value={dni} onChange={(e) => setDni(e.target.value)} inputMode="numeric" />
                       </div>
                     </div>
@@ -324,7 +329,7 @@ export default function CarritoPage() {
             <ul className="divide-y rounded-3xl border border-warm-border bg-white">
               {misPedidos.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/${slug}/pedido/${p.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-cream/60">
+                  <Link href={rutaPedido(p)} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-cream/60">
                     <span className="text-sm">
                       <strong>{numeroPedido(p.numero)}</strong>
                       <span className="ml-2 text-ink-muted">{formatDateTime(p.createdAt)}</span>

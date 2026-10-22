@@ -4,7 +4,12 @@ import { autorizarPedido } from "@/lib/pedidos/servidor"
 /**
  * Remito y factura de un pedido, para su comprador.
  *
- * GET → { ok, venta, factura, emisor, fiscal, facturaUrl }
+ * El comprador no los ve por su cuenta (067): primero los pide (POST) y el
+ * staff autoriza la solicitud desde Pedidos. Hasta entonces el GET responde
+ * 403 aunque la venta y la factura existan.
+ *
+ * POST → { ok } marca la solicitud.
+ * GET  → { ok, venta, factura, emisor, fiscal, facturaUrl }
  *  · `venta` / `factura`: filas crudas (el navegador las mapea con los mismos
  *    helpers del panel y dibuja los PDF con el mismo generador).
  *  · `facturaUrl`: link firmado al PDF guardado de la factura, si ya existe
@@ -18,7 +23,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const acceso = await autorizarPedido(request, id)
     if (!acceso.ok) return NextResponse.json({ ok: false, error: acceso.error }, { status: acceso.status })
-    const { admin, pedido } = acceso
+    const { admin, pedido, esStaff } = acceso
+    if (!esStaff && pedido.documentosEstado !== "autorizado") {
+      return NextResponse.json({ ok: false, error: "La veterinaria todavía no autorizó el remito y la factura" }, { status: 403 })
+    }
     if (!pedido.ventaId) return NextResponse.json({ ok: false, error: "El pedido todavía no está cobrado" }, { status: 409 })
 
     const [{ data: venta, error: e1 }, { data: factura }, { data: tenant }, { data: fiscal }] = await Promise.all([
@@ -75,5 +83,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   } catch (error) {
     console.error("[tienda/pedidos/documentos]", error)
     return NextResponse.json({ ok: false, error: "No se pudieron cargar los documentos" }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  try {
+    const acceso = await autorizarPedido(request, id)
+    if (!acceso.ok) return NextResponse.json({ ok: false, error: acceso.error }, { status: acceso.status })
+    const { admin, pedido } = acceso
+    if (pedido.estado === "cancelado") {
+      return NextResponse.json({ ok: false, error: "El pedido está cancelado" }, { status: 409 })
+    }
+    if (pedido.documentosEstado) return NextResponse.json({ ok: true, estado: pedido.documentosEstado })
+
+    const { error } = await admin
+      .from("pedidos")
+      .update({ documentos_estado: "solicitado", documentos_solicitados_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", pedido.id)
+      .is("documentos_estado", null)
+    if (error) throw error
+    return NextResponse.json({ ok: true, estado: "solicitado" })
+  } catch (error) {
+    console.error("[tienda/pedidos/documentos POST]", error)
+    return NextResponse.json({ ok: false, error: "No se pudo enviar la solicitud" }, { status: 500 })
   }
 }

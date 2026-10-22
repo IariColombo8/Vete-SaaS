@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { after, NextResponse } from "next/server"
 import { z } from "zod"
 import { getAdminDb, verificarToken } from "@/lib/supabase/admin"
 import { cargarPlanesServidor } from "@/lib/planes-servidor"
@@ -6,12 +6,14 @@ import { planAllows } from "@/lib/plans"
 import { cantidadValida, entregasDisponibles, mediosDisponibles, precioLineaWeb } from "@/lib/pedidos/reglas"
 import { tiendaPublicaDesdeJson } from "@/lib/pedidos/tipos"
 import { cargarPedido, iniciarPago, mensajePago, notificarPedido, origenDe } from "@/lib/pedidos/servidor"
+import { getConfigPoint } from "@/lib/mp-point/auth"
+import { normalizarDni } from "@/lib/pedidos/reglas"
 import type { OfertaTipo } from "@/lib/supabase/types"
 
 /**
  * Alta de un pedido desde la vidriera.
  *
- * POST { tenantId, items: [{ productoId, cantidad }], nombre, telefono, dni?,
+ * POST { tenantId, items: [{ productoId, cantidad }], nombre, telefono, dni,
  *        entrega, direccion?, nota?, medioPago }
  * Auth: cualquier usuario logueado (el comprador). Va por service_role.
  *
@@ -31,7 +33,8 @@ const bodySchema = z.object({
     .max(60),
   nombre: z.string().trim().min(1).max(200),
   telefono: z.string().trim().min(6).max(50),
-  dni: z.string().trim().max(20).optional().default(""),
+  // Obligatorio: identifica al cliente y forma la URL del pedido (/pedido/{dni}/{n}).
+  dni: z.string().trim().max(20).transform(normalizarDni).refine((v) => /^\d{6,9}$/.test(v)),
   entrega: z.enum(["retiro", "envio"]),
   direccion: z.string().trim().max(300).optional().default(""),
   nota: z.string().trim().max(500).optional().default(""),
@@ -63,7 +66,33 @@ export async function POST(request: Request) {
 
   const authHeader = request.headers.get("authorization") || ""
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
-  const user = token ? await verificarToken(token) : null
+  if (!token) return NextResponse.json({ ok: false, error: "Iniciá sesión para comprar" }, { status: 401 })
+
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ ok: false, error: "Revisá los datos del pedido" }, { status: 400 })
+  const d = parsed.data
+  if (d.entrega === "envio" && d.direccion.length < 4) {
+    return NextResponse.json({ ok: false, error: "Falta la dirección de entrega" }, { status: 400 })
+  }
+
+  // Todo lo que no depende de nada más, en paralelo: es lo que más tarda
+  // antes de poder pedirle el QR a Mercado Pago.
+  const ids = Array.from(new Set(d.items.map((i) => i.productoId)))
+  const [user, tenantRes, tiendaRes, , prodsRes, configMp] = await Promise.all([
+    verificarToken(token),
+    admin.from("tenants").select("slug, plan, nombre").eq("slug", d.tenantId).maybeSingle(),
+    admin.rpc("tienda_publica", { p_tenant: d.tenantId }),
+    cargarPlanesServidor(),
+    admin
+      .from("productos")
+      .select(
+        "id, nombre, marca, linea, peso_kg, imagen_url, precio, unidad, stock, controla_stock, publicado_en_landing, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad, oferta_hasta",
+      )
+      .eq("tenant_id", d.tenantId)
+      .eq("activo", true)
+      .in("id", ids),
+    d.medioPago === "tarjeta" || d.medioPago === "qr" ? getConfigPoint(admin, d.tenantId) : Promise.resolve(null),
+  ])
   if (!user?.email) return NextResponse.json({ ok: false, error: "Iniciá sesión para comprar" }, { status: 401 })
   // Comprar exige cuenta de Google (pedido del dueño): el email queda
   // verificado por Google y es con el que se identifica al cliente.
@@ -74,22 +103,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Para comprar tenés que ingresar con tu cuenta de Google" }, { status: 403 })
   }
 
-  const parsed = bodySchema.safeParse(await request.json().catch(() => null))
-  if (!parsed.success) return NextResponse.json({ ok: false, error: "Revisá los datos del pedido" }, { status: 400 })
-  const d = parsed.data
-  if (d.entrega === "envio" && d.direccion.length < 4) {
-    return NextResponse.json({ ok: false, error: "Falta la dirección de entrega" }, { status: 400 })
-  }
-
   try {
-    const [{ data: tenant }, { data: tiendaRaw }] = await Promise.all([
-      admin.from("tenants").select("slug, plan").eq("slug", d.tenantId).maybeSingle(),
-      admin.rpc("tienda_publica", { p_tenant: d.tenantId }),
-    ])
+    const tenant = tenantRes.data
     if (!tenant) return NextResponse.json({ ok: false, error: "Veterinaria no encontrada" }, { status: 404 })
 
-    await cargarPlanesServidor()
-    const tienda = tiendaPublicaDesdeJson(tiendaRaw as Record<string, unknown> | null)
+    const tienda = tiendaPublicaDesdeJson(tiendaRes.data as Record<string, unknown> | null)
     if (!tienda.pedidosHabilitados || !planAllows(tenant.plan as string, "productos")) {
       return NextResponse.json({ ok: false, error: "Esta veterinaria no está tomando pedidos online" }, { status: 409 })
     }
@@ -101,17 +119,8 @@ export async function POST(request: Request) {
     }
 
     // ── Productos y precios ──
-    const ids = Array.from(new Set(d.items.map((i) => i.productoId)))
-    const { data: prods, error: errProds } = await admin
-      .from("productos")
-      .select(
-        "id, nombre, marca, linea, peso_kg, imagen_url, precio, unidad, stock, controla_stock, publicado_en_landing, oferta_activa, oferta_tipo, oferta_valor, oferta_cantidad, oferta_hasta",
-      )
-      .eq("tenant_id", d.tenantId)
-      .eq("activo", true)
-      .in("id", ids)
-    if (errProds) throw errProds
-    const porId = new Map((prods as FilaProducto[]).map((p) => [p.id, p]))
+    if (prodsRes.error) throw prodsRes.error
+    const porId = new Map((prodsRes.data as FilaProducto[]).map((p) => [p.id, p]))
 
     // Misma línea dos veces (dos pestañas): se suman.
     const cantidades = new Map<string, number>()
@@ -174,21 +183,24 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     let clienteId: string
+    // Actualizar los datos del cliente no frena el pedido: va en paralelo.
+    let actualizacionCliente: PromiseLike<unknown> = Promise.resolve()
     if (existente) {
       clienteId = existente.id as string
       const cambios: Record<string, unknown> = { nombre: d.nombre, telefono: d.telefono }
       if (d.entrega === "envio") cambios.domicilio = d.direccion
       // El DNI es único por veterinaria: solo se completa si no tenía.
-      if (d.dni && !existente.dni) cambios.dni = d.dni
-      const { error } = await admin.from("clientes").update(cambios).eq("id", clienteId)
-      if (error && error.code !== "23505") throw error
+      if (!existente.dni) cambios.dni = d.dni
+      actualizacionCliente = admin.from("clientes").update(cambios).eq("id", clienteId).then(({ error }) => {
+        if (error && error.code !== "23505") console.error("[tienda/pedidos] No se actualizó el cliente", error.message)
+      })
     } else {
       const fila = {
         tenant_id: d.tenantId,
         nombre: d.nombre,
         telefono: d.telefono,
         email,
-        dni: d.dni || null,
+        dni: d.dni,
         domicilio: d.entrega === "envio" ? d.direccion : null,
         historial_datos: [],
       }
@@ -205,7 +217,7 @@ export async function POST(request: Request) {
     }
 
     // ── Pedido ──
-    const { data: creado, error: errPedido } = await admin.rpc("crear_pedido_web", {
+    const [{ data: creado, error: errPedido }] = await Promise.all([admin.rpc("crear_pedido_web", {
       p_tenant: d.tenantId,
       p_usuario_id: user.id,
       p_cliente_id: clienteId,
@@ -220,7 +232,7 @@ export async function POST(request: Request) {
         medio_pago: d.medioPago,
       },
       p_items: items,
-    })
+    }), actualizacionCliente])
     if (errPedido) throw errPedido
     const { pedido_id: pedidoId, numero } = creado as { pedido_id: string; numero: number }
 
@@ -231,16 +243,20 @@ export async function POST(request: Request) {
     let pago: Awaited<ReturnType<typeof iniciarPago>> = { tipo: "ninguno" }
     let errorPago: string | null = null
     try {
-      pago = await iniciarPago(admin, pedido, origen)
+      pago = await iniciarPago(admin, pedido, origen, {
+        config: configMp,
+        nombreTienda: (tenant.nombre as string | null) ?? undefined,
+      })
     } catch (e) {
       // El pedido ya existe: el cobro se puede reintentar desde su página.
       console.error("[tienda/pedidos] No se pudo iniciar el pago", pedidoId, e)
       errorPago = mensajePago(e)
     }
 
-    if (pago.tipo === "ninguno" && !errorPago) await notificarPedido(admin, pedido, origen, "recibido")
+    // El email sale después de responder: Gmail puede tardar un par de segundos.
+    if (pago.tipo === "ninguno" && !errorPago) after(() => notificarPedido(admin, pedido, origen, "recibido"))
 
-    return NextResponse.json({ ok: true, pedidoId, numero, pago, errorPago })
+    return NextResponse.json({ ok: true, pedidoId, numero, dni: d.dni, pago, errorPago })
   } catch (error) {
     console.error("[tienda/pedidos POST]", error)
     return NextResponse.json({ ok: false, error: "No se pudo registrar el pedido" }, { status: 500 })
