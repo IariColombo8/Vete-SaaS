@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/format"
 import { imagenSupabase } from "@/lib/imagenes"
 import { pasoCantidad } from "@/lib/pedidos/reglas"
 import { useCarritoTienda } from "@/hooks/use-carrito-tienda"
+import { MisPedidosFlotante } from "./mis-pedidos-flotante"
 
 interface Props {
   slug: string
@@ -15,11 +16,21 @@ interface Props {
 }
 
 /**
- * Botón flotante del carrito de la vidriera y su panel. Solo aparece cuando
- * hay algo en el carrito; "Finalizar compra" lleva a /[slug]/carrito.
+ * Botones flotantes de la vidriera: "Mis pedidos" (abajo a la izquierda, para
+ * quien ya compró) y el carrito (abajo a la derecha, solo con algo adentro).
  */
-export function CarritoFlotante({ slug, logo }: Props) {
-  const { lineas, total, unidades, cambiarCantidad, quitar } = useCarritoTienda(slug)
+export function CarritoFlotante(props: Props) {
+  return (
+    <>
+      <MisPedidosFlotante slug={props.slug} />
+      <Carrito {...props} />
+    </>
+  )
+}
+
+/** El botón flotante del carrito, solo con algo adentro. */
+function Carrito({ slug, logo }: Props) {
+  const { total, unidades } = useCarritoTienda(slug)
   const [abierto, setAbierto] = useState(false)
 
   if (unidades === 0) return null
@@ -41,85 +52,121 @@ export function CarritoFlotante({ slug, logo }: Props) {
         </span>
         <span className="text-sm font-bold">{formatCurrency(total)}</span>
       </button>
-
-      <Sheet open={abierto} onOpenChange={setAbierto}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-          <SheetHeader className="border-b">
-            <SheetTitle>Tu carrito</SheetTitle>
-            <SheetDescription>
-              {unidades} producto{unidades === 1 ? "" : "s"}
-            </SheetDescription>
-          </SheetHeader>
-
-          <ul className="flex-1 divide-y overflow-y-auto px-4">
-            {lineas.map((l) => {
-              const paso = pasoCantidad(l.producto.unidad)
-              return (
-                <li key={l.producto.id} className="flex gap-3 py-3">
-                  <img
-                    src={imagenSupabase(l.producto.imagenUrl || logo || "/logo-512.png", 128)}
-                    alt=""
-                    className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-1"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-sm font-medium">{l.producto.nombre}</p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="inline-flex items-center rounded-full border">
-                        <button
-                          type="button" aria-label="Menos"
-                          onClick={() => cambiarCantidad(l.producto.id, l.cantidad - paso)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
-                        >
-                          <Minus className="h-3.5 w-3.5" />
-                        </button>
-                        <span className="min-w-12 text-center text-sm font-semibold tabular-nums">
-                          {l.cantidad.toLocaleString("es-AR")}{l.producto.unidad === "kg" ? " kg" : ""}
-                        </span>
-                        <button
-                          type="button" aria-label="Más"
-                          onClick={() => cambiarCantidad(l.producto.id, l.cantidad + paso)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <span className="text-sm font-bold tabular-nums">{formatCurrency(l.subtotal)}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button" aria-label={`Quitar ${l.producto.nombre}`}
-                    onClick={() => quitar(l.producto.id)}
-                    className="self-start rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-
-          <div className="space-y-3 border-t p-4">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="text-2xl font-extrabold tabular-nums">{formatCurrency(total)}</span>
-            </div>
-            <Link
-              href={`/${slug}/carrito`}
-              onClick={() => setAbierto(false)}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-coral text-sm font-bold text-white hover:bg-coral-ink"
-            >
-              Finalizar compra
-            </Link>
-            <button
-              type="button"
-              onClick={() => setAbierto(false)}
-              className="w-full text-center text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Seguir comprando
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <CarritoSheet slug={slug} logo={logo} open={abierto} onOpenChange={setAbierto} />
     </>
+  )
+}
+
+/** Versión de la barra superior: ícono con la cantidad, abre el mismo panel. */
+export function CarritoBoton({ slug, logo }: Props) {
+  const { unidades } = useCarritoTienda(slug)
+  const [abierto, setAbierto] = useState(false)
+
+  if (unidades === 0) return null
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-ink/5"
+        aria-label={`Ver carrito (${unidades} productos)`}
+      >
+        <ShoppingCart className="h-5 w-5" />
+        <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-extrabold text-white">
+          {unidades}
+        </span>
+      </button>
+      <CarritoSheet slug={slug} logo={logo} open={abierto} onOpenChange={setAbierto} />
+    </>
+  )
+}
+
+/** Panel lateral del carrito; "Finalizar compra" lleva a /[slug]/carrito. */
+function CarritoSheet({
+  slug, logo, open, onOpenChange,
+}: Props & { open: boolean; onOpenChange: (abierto: boolean) => void }) {
+  const { lineas, total, unidades, cambiarCantidad, quitar } = useCarritoTienda(slug)
+  const setAbierto = onOpenChange
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+        <SheetHeader className="border-b">
+          <SheetTitle>Tu carrito</SheetTitle>
+          <SheetDescription>
+            {unidades} producto{unidades === 1 ? "" : "s"}
+          </SheetDescription>
+        </SheetHeader>
+
+        <ul className="flex-1 divide-y overflow-y-auto px-4">
+          {lineas.map((l) => {
+            const paso = pasoCantidad(l.producto.unidad)
+            return (
+              <li key={l.producto.id} className="flex gap-3 py-3">
+                <img
+                  src={imagenSupabase(l.producto.imagenUrl || logo || "/logo-512.png", 128)}
+                  alt=""
+                  className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-1"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm font-medium">{l.producto.nombre}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center rounded-full border">
+                      <button
+                        type="button" aria-label="Menos"
+                        onClick={() => cambiarCantidad(l.producto.id, l.cantidad - paso)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="min-w-12 text-center text-sm font-semibold tabular-nums">
+                        {l.cantidad.toLocaleString("es-AR")}{l.producto.unidad === "kg" ? " kg" : ""}
+                      </span>
+                      <button
+                        type="button" aria-label="Más"
+                        onClick={() => cambiarCantidad(l.producto.id, l.cantidad + paso)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <span className="text-sm font-bold tabular-nums">{formatCurrency(l.subtotal)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button" aria-label={`Quitar ${l.producto.nombre}`}
+                  onClick={() => quitar(l.producto.id)}
+                  className="self-start rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+
+        <div className="space-y-3 border-t p-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-2xl font-extrabold tabular-nums">{formatCurrency(total)}</span>
+          </div>
+          <Link
+            href={`/${slug}/carrito`}
+            onClick={() => setAbierto(false)}
+            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-coral text-sm font-bold text-white hover:bg-coral-ink"
+          >
+            Finalizar compra
+          </Link>
+          <button
+            type="button"
+            onClick={() => setAbierto(false)}
+            className="w-full text-center text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Seguir comprando
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

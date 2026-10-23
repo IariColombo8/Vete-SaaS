@@ -192,7 +192,7 @@ export interface NuevoPedidoInput {
 
 export async function crearPedidoWeb(
   input: NuevoPedidoInput,
-): Promise<{ pedidoId: string; numero: number; dni: string; pago: InicioPago; errorPago: string | null }> {
+): Promise<{ pedidoId: string; numero: number; dni: string; pago: InicioPago; errorPago: string | null; pedido: Pedido }> {
   return pedir("/api/tienda/pedidos", {
     method: "POST",
     headers: await headersComprador(),

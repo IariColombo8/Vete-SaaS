@@ -21,8 +21,9 @@ import type { OfertaTipo } from "@/lib/supabase/types"
  * del navegador) y se valida el stock. El cliente se busca por el email de
  * la cuenta y, si no existe, se da de alta en la veterinaria.
  *
- * Responde { ok, pedidoId, numero, pago } donde `pago` es lo que tiene que
- * hacer el navegador: redirigir a Mercado Pago, dibujar el QR o nada.
+ * Responde { ok, pedidoId, numero, pago, pedido } donde `pago` es lo que tiene
+ * que hacer el navegador: redirigir a Mercado Pago, dibujar el QR o nada. El
+ * `pedido` completo va para que su página se dibuje sin otra consulta.
  */
 
 const bodySchema = z.object({
@@ -256,7 +257,8 @@ export async function POST(request: Request) {
     // El email sale después de responder: Gmail puede tardar un par de segundos.
     if (pago.tipo === "ninguno" && !errorPago) after(() => notificarPedido(admin, pedido, origen, "recibido"))
 
-    return NextResponse.json({ ok: true, pedidoId, numero, dni: d.dni, pago, errorPago })
+    if (pago.tipo !== "ninguno") pedido.pagoEstado = "pendiente"
+    return NextResponse.json({ ok: true, pedidoId, numero, dni: d.dni, pago, errorPago, pedido })
   } catch (error) {
     console.error("[tienda/pedidos POST]", error)
     return NextResponse.json({ ok: false, error: "No se pudo registrar el pedido" }, { status: 500 })

@@ -113,3 +113,26 @@ export function rutaPedido(p: { tenantId: string; clienteDni: string; numero: nu
 export function claveQr(slug: string, dni: string, numero: string | number): string {
   return `vetpanel:qr:${slug}:${normalizarDni(dni)}:${numero}`
 }
+
+/**
+ * Clave en sessionStorage del pedido recién creado: la página del pedido lo
+ * dibuja entero apenas abre, sin esperar la sesión ni la consulta al servidor.
+ */
+export function clavePedido(slug: string, dni: string, numero: string | number): string {
+  return `vetpanel:pedido:${slug}:${normalizarDni(dni)}:${numero}`
+}
+
+/** Pedido que sigue en curso: el comprador todavía tiene algo que esperar. */
+export function pedidoAbierto(p: { estado: string }): boolean {
+  return p.estado === "pendiente" || p.estado === "preparacion" || p.estado === "reparto"
+}
+
+/** Pago online que el comprador todavía no terminó. */
+export function faltaPagar(p: {
+  medioPago: MedioPagoWeb
+  ventaId: string | null
+  pagoEstado: string | null
+  estado: string
+}): boolean {
+  return esPagoOnline(p.medioPago) && !p.ventaId && p.pagoEstado !== "aprobado" && p.estado !== "cancelado"
+}

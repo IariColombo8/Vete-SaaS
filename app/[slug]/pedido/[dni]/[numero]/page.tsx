@@ -13,7 +13,7 @@ import { signInWithGoogle } from "@/lib/supabase/auth"
 import {
   getDocumentosPedido, getTiendaPublica, reintentarPago, solicitarDocumentos, ubicarPedido, type InicioPago,
 } from "@/lib/supabase/pedidos"
-import { claveQr, esPagoOnline } from "@/lib/pedidos/reglas"
+import { claveQr, clavePedido, faltaPagar } from "@/lib/pedidos/reglas"
 import { etiquetaMedioWeb, numeroPedido, type EstadoPedido, type Pedido, type TiendaPublica } from "@/lib/pedidos/tipos"
 import { formatCantidad, formatCurrency, formatDateTime } from "@/lib/format"
 import { Button } from "@/components/ui/button"
@@ -50,12 +50,15 @@ export default function PedidoPage() {
   const [errorPago, setErrorPago] = useState("")
   const inicioPoll = useRef(Date.now())
 
-  // El QR que generó el checkout se muestra apenas abre la página, sin
-  // esperar la sesión ni la consulta del pedido.
+  // El pedido y el QR que dejó el checkout se muestran apenas abre la
+  // página, sin esperar la sesión ni la consulta al servidor (que después
+  // los refresca).
   useEffect(() => {
     try {
       const img = window.sessionStorage.getItem(claveQr(slug, dni, numero))
       if (img) setQrImagen(img)
+      const guardado = window.sessionStorage.getItem(clavePedido(slug, dni, numero))
+      if (guardado) setPedido((p) => p ?? (JSON.parse(guardado) as Pedido))
     } catch {}
     if (new URLSearchParams(window.location.search).get("errorPago")) {
       setErrorPago("No se pudo generar el cobro. Probá de nuevo.")
@@ -83,9 +86,7 @@ export default function PedidoPage() {
 
   // Mientras el pago online esté pendiente, se le pregunta al servidor (que
   // consulta a Mercado Pago) cada pocos segundos.
-  const esperandoPago = Boolean(
-    pedido && esPagoOnline(pedido.medioPago) && !pedido.ventaId && pedido.pagoEstado !== "aprobado" && pedido.estado !== "cancelado",
-  )
+  const esperandoPago = Boolean(pedido && faltaPagar(pedido))
   useEffect(() => {
     if (!esperandoPago) return
     const t = setInterval(() => {

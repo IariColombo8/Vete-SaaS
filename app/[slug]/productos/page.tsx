@@ -22,7 +22,6 @@ import { ProductoTarjeta } from "@/components/public/producto-tarjeta"
 import { PromocionTarjeta } from "@/components/public/promocion-tarjeta"
 import { FiltrosSidebar, type FiltrosState } from "@/components/public/filtros-sidebar"
 import { DetalleDialog } from "@/components/public/detalle-dialog"
-import { CarritoFlotante } from "@/components/public/carrito-flotante"
 import { getTiendaPublica } from "@/lib/supabase/pedidos"
 import { useCarritoTienda } from "@/hooks/use-carrito-tienda"
 
@@ -321,7 +320,6 @@ export default function ProductosPublicosPage() {
       />
 
       {sorteoActivo && <SorteoTeaser tenantId={slug} sorteo={sorteoActivo} />}
-      {tiendaAbierta && <CarritoFlotante slug={slug} logo={config?.logo} />}
     </main>
   )
 }

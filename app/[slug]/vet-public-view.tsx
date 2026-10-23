@@ -446,6 +446,12 @@ export default function VetPublicPage({
   // La veterinaria toma pedidos online: la vidriera suma al carrito.
   const [tiendaAbierta, setTiendaAbierta] = useState(false)
   const carrito = useCarritoTienda(slug)
+  // Desde la portada, agregar algo lleva al catálogo completo para seguir
+  // comprando: acá solo se ve una muestra, y allá está la barra con el carrito.
+  const agregarYSeguir = (p: Producto, cantidad?: number) => {
+    carrito.agregar(p, cantidad)
+    router.push(`/${slug}/productos`)
+  }
 
   // Vidriera, promos y sorteos van debajo del pliegue: se cargan en el cliente
   // sin frenar el hero. Si la veterinaria no existe, no hay nada que pedir.
@@ -766,7 +772,7 @@ export default function VetPublicPage({
               {muestraProductos && productosOrdenados.slice(0, 11).map((p) => (
                 <ProductoTarjeta
                   key={p.id} producto={p} logo={logo} onClick={() => setProductoSeleccionado(p)}
-                  onAgregar={puedeComprar ? () => carrito.agregar(p) : undefined}
+                  onAgregar={puedeComprar ? () => agregarYSeguir(p) : undefined}
                   enCarrito={carrito.lineas.find((l) => l.producto.id === p.id)?.cantidad}
                 />
               ))}
@@ -1108,7 +1114,7 @@ export default function VetPublicPage({
         onOpenChange={(open) => {
           if (!open) { setProductoSeleccionado(null); setPromocionSeleccionada(null) }
         }}
-        onAgregar={puedeComprar ? (p, cantidad) => carrito.agregar(p, cantidad) : undefined}
+        onAgregar={puedeComprar ? agregarYSeguir : undefined}
       />
       {puedeComprar && <CarritoFlotante slug={slug} logo={logo} />}
     </main>

@@ -13,7 +13,9 @@ import { signInWithGoogle } from "@/lib/supabase/auth"
 import { getTenantConfig } from "@/lib/supabase/queries"
 import { getClienteByEmail } from "@/lib/supabase/clientes"
 import { crearPedidoWeb, getMisPedidos, getTiendaPublica } from "@/lib/supabase/pedidos"
-import { claveQr, entregasDisponibles, mediosDisponibles, normalizarDni, pasoCantidad, rutaPedido } from "@/lib/pedidos/reglas"
+import {
+  claveQr, clavePedido, entregasDisponibles, mediosDisponibles, normalizarDni, pasoCantidad, rutaPedido,
+} from "@/lib/pedidos/reglas"
 import { ESTADOS_PEDIDO, MEDIOS_WEB, numeroPedido, type EntregaPedido, type MedioPagoWeb, type Pedido, type TiendaPublica } from "@/lib/pedidos/tipos"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { imagenSupabase } from "@/lib/imagenes"
@@ -87,6 +89,25 @@ export default function CarritoPage() {
   const medios = useMemo(() => (tienda ? mediosDisponibles(tienda) : []), [tienda])
   const entregas = useMemo(() => (tienda ? entregasDisponibles(tienda) : []), [tienda])
 
+  // Quien ya compró encuentra todo como la última vez: datos, entrega y
+  // medio de pago. Solo completa lo vacío y lo que la tienda sigue ofreciendo.
+  const ultimo = misPedidos[0]
+  useEffect(() => {
+    if (!ultimo || !tienda) return
+    setNombre((n) => n || ultimo.clienteNombre)
+    setTelefono((t) => t || ultimo.clienteTelefono)
+    setDni((d) => d || ultimo.clienteDni)
+    setDireccion((d) => d || ultimo.direccion)
+    setEntrega((e) => e ?? (entregasDisponibles(tienda).includes(ultimo.entrega) ? ultimo.entrega : null))
+    setMedio((m) => m ?? (mediosDisponibles(tienda).includes(ultimo.medioPago) ? ultimo.medioPago : null))
+  }, [ultimo, tienda])
+
+  // La página del pedido se baja mientras se completa el formulario: al
+  // confirmar, la navegación no espera ese JS.
+  useEffect(() => {
+    router.prefetch(rutaPedido({ tenantId: slug, clienteDni: "", numero: 0 }))
+  }, [router, slug])
+
   const confirmar = async () => {
     setError("")
     if (!nombre.trim()) return setError("Ingresá tu nombre")
@@ -114,9 +135,12 @@ export default function CarritoPage() {
         window.location.href = r.pago.url
         return
       }
+      // Pedido y QR viajan a la página del pedido por sessionStorage: se
+      // dibuja entera apenas abre, sin esperar la sesión ni otra consulta.
+      try {
+        window.sessionStorage.setItem(clavePedido(slug, r.dni, r.numero), JSON.stringify(r.pedido))
+      } catch {}
       if (r.pago.tipo === "qr") {
-        // El QR se dibuja acá y viaja como imagen: la página del pedido lo
-        // muestra apenas abre, sin esperar la sesión ni otra consulta.
         const { default: QRCode } = await import("qrcode")
         const imagen = await QRCode.toDataURL(r.pago.qrData, { width: 320, margin: 2 })
         try {
@@ -156,6 +180,7 @@ export default function CarritoPage() {
 
   return (
     <main className="min-h-screen bg-cream pb-16 text-ink">
+      {enviando && <Procesando medio={medio} />}
       <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6">
         <Link href={`/${slug}/productos`} className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-ink-muted hover:text-ink">
           <ArrowLeft className="h-4 w-4" /> Seguir comprando en {nombreVet}
@@ -188,8 +213,13 @@ export default function CarritoPage() {
               ) : (
                 <>
                   <section className="space-y-4 rounded-3xl border border-warm-border bg-white p-6">
-                    <h2 className="text-lg font-semibold">1. Tus datos</h2>
-                    <p className="-mt-2 text-xs text-ink-muted">Comprás como {user?.email}</p>
+                    <h2 className="text-lg font-semibold">
+                      {ultimo ? `¡Hola de nuevo, ${(nombre || ultimo.clienteNombre).split(" ")[0]}! 👋` : "1. Tus datos"}
+                    </h2>
+                    <p className="-mt-2 text-xs text-ink-muted">
+                      Comprás como {user?.email}
+                      {ultimo && " · Dejamos todo como en tu última compra"}
+                    </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="sm:col-span-2">
                         <Label className="mb-1 block text-xs">Nombre y apellido</Label>
@@ -346,6 +376,32 @@ export default function CarritoPage() {
         )}
       </div>
     </main>
+  )
+}
+
+/**
+ * Pantalla mientras el servidor arma el pedido y le pide el cobro a Mercado
+ * Pago (un par de segundos): el botón solo con un spinner parecía colgado.
+ */
+function Procesando({ medio }: { medio: MedioPagoWeb | null }) {
+  const Icono = medio === "tarjeta" ? CreditCard : medio === "qr" ? QrCode : ShoppingBag
+  const texto =
+    medio === "tarjeta" ? "Te llevamos a Mercado Pago…" : medio === "qr" ? "Generando tu QR…" : "Confirmando tu pedido…"
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-cream/95 px-6 text-center backdrop-blur-sm"
+    >
+      <span className="relative flex h-20 w-20 items-center justify-center">
+        <span className="absolute inset-0 animate-ping rounded-full bg-coral/20" />
+        <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-coral text-white shadow-lg">
+          <Icono className="h-9 w-9" />
+        </span>
+      </span>
+      <p className="font-display text-2xl font-semibold text-ink">{texto}</p>
+      <p className="text-sm text-ink-muted">Es un momento, no cierres esta página.</p>
+    </div>
   )
 }
 

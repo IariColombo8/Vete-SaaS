@@ -342,7 +342,16 @@ Completados (un retiro saltea Reparto), y Cancelados.
 - El QR tiene que salir rápido: el alta del pedido hace en paralelo todo lo que
   no depende de otra cosa, el checkout deja el QR dibujado en sessionStorage
   (`claveQr`) y la primera carga de la página no consulta a Mercado Pago (el
-  polling sí, con `verificar=1`).
+  polling sí, con `verificar=1`). El alta devuelve también el `pedido`
+  completo, que viaja por sessionStorage (`clavePedido`): la página del
+  pedido se dibuja entera al abrir, sin pasar por un estado a medias.
+- **Comprador que vuelve:** la sesión de Google queda en la cookie de
+  Supabase. `useMisPedidos` (`hooks/use-mis-pedidos.ts`) busca sus pedidos
+  solo si esa cookie existe —el visitante común no baja Supabase— y "Mis
+  pedidos" aparece flotante en la portada, en la barra `VetPublicNavbar`
+  (catálogo, Mi historia…, junto al carrito, en chunk aparte con `dynamic`) y
+  como lista en Mi historia. El checkout precarga datos, entrega y medio del
+  último pedido. En la portada, agregar al carrito lleva a `/productos`.
 - Un pedido cobrado **no se edita** (`editar_pedido` lo rechaza): se cancela, lo
   que anula la venta. La devolución de un pago de MP se hace desde MP.
 - Sección `pedidos` en permisos (también empleado), feature `ventas` (Pro).
