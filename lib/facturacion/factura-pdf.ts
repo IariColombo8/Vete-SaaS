@@ -1,7 +1,14 @@
 import QRCode from "qrcode"
 import type { Venta } from "@/lib/supabase/types"
 import type { Comprobante, EstadoFacturacion } from "@/lib/supabase/comprobantes"
-import { cargarLogo, generarRemitoPDF, telefonoWhatsApp, type EmisorRemito, type ComprobanteFiscal } from "@/lib/ventas/remito"
+import {
+  cargarLogo,
+  generarRemitoPDF,
+  LOGO_SERVITEC_URL,
+  telefonoWhatsApp,
+  type EmisorRemito,
+  type ComprobanteFiscal,
+} from "@/lib/ventas/remito"
 import { formatCurrencyDecimals } from "@/lib/format"
 import {
   CONDICION_IVA_LABEL,
@@ -142,8 +149,12 @@ export async function generarFacturaPDF(
   comprobante: Comprobante,
   fiscal: EmisorFiscal,
 ): Promise<Blob> {
-  const [logo, datos] = await Promise.all([cargarLogo(emisor.logoUrl), datosParaPdf(comprobante, fiscal)])
-  return generarRemitoPDF(venta, emisor, logo, datos).output("blob")
+  const [logo, logoServitec, datos] = await Promise.all([
+    cargarLogo(emisor.logoUrl),
+    cargarLogo(LOGO_SERVITEC_URL),
+    datosParaPdf(comprobante, fiscal),
+  ])
+  return generarRemitoPDF(venta, emisor, logo, datos, logoServitec).output("blob")
 }
 
 /** Texto para mandar la factura por WhatsApp (el PDF se adjunta a mano). */
