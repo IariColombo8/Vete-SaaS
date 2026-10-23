@@ -22,6 +22,8 @@ export const COLOR = {
   papel: [255, 255, 255] as RGB,
   cebra: [250, 251, 252] as RGB,
   rojo: [220, 38, 38] as RGB,
+  /** Link del sello "generado por ServiTec". */
+  servitec: [15, 118, 110] as RGB,
 } as const
 
 export interface OpcionesTexto {

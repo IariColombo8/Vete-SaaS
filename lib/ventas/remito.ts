@@ -96,6 +96,12 @@ const ALTO_ENCABEZADO = 104
 const ALTO_FILA = 19
 const ALTO_PIE = 30
 
+/** Logo del sello "generado por ServiTec" del pie. Si falta, el sello sale solo con texto. */
+export const LOGO_SERVITEC_URL = "/logo-small.png"
+
+/** Ancho de la columna del sello de ServiTec, a la derecha del pie. */
+const ANCHO_SERVITEC = 170
+
 /** Ancho de cada columna del detalle, de derecha a izquierda. */
 const COL = { cantidad: 62, precio: 78, importe: 84 }
 
@@ -208,6 +214,7 @@ export function generarRemitoPDF(
   emisor: EmisorRemito,
   logo: Logo = null,
   factura?: ComprobanteFiscal,
+  logoServitec: Logo = null,
 ): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4" })
   const l = new Lienzo(doc)
@@ -247,6 +254,8 @@ export function generarRemitoPDF(
       dibujarTotales(l, m, venta, yFin, factura)
       dibujarPie(l, m, venta, factura)
     }
+    // El sello va en todas las hojas, como la numeración.
+    dibujarSelloServitec(l, m, logoServitec, factura)
   })
 
   if (factura?.esPrueba) sellar(l, "SIN VALOR FISCAL", COLOR.gris)
@@ -629,7 +638,7 @@ function dibujarPie(l: Lienzo, m: Marco, venta: Venta, factura?: ComprobanteFisc
     )
   } else if (venta.observaciones) {
     l.texto(
-      l.recortar(`Observaciones: ${venta.observaciones}`, m.ancho, { size: 8 }),
+      l.recortar(`Observaciones: ${venta.observaciones}`, m.ancho - ANCHO_SERVITEC - 10, { size: 8 }),
       m.izq,
       l.alto - MARGEN - 12,
       { size: 8, color: COLOR.gris },
@@ -645,6 +654,37 @@ function dibujarPie(l: Lienzo, m: Marco, venta: Venta, factura?: ComprobanteFisc
       align: "right",
     })
   }
+}
+
+/**
+ * "Generado por ServiTec – Sistemas de Gestión", centrado en una columna a la
+ * derecha del pie. En la factura queda entre el bloque QR/CAE y el borde,
+ * debajo del total.
+ */
+function dibujarSelloServitec(l: Lienzo, m: Marco, logo: Logo, factura?: ComprobanteFiscal) {
+  const centro = m.der - ANCHO_SERVITEC / 2
+  const yBase = l.alto - MARGEN - 30
+
+  l.texto(
+    factura ? "Comprobante Electrónico generado por:" : "Comprobante generado por:",
+    centro,
+    yBase,
+    { size: 6.5, color: COLOR.gris, align: "center" },
+  )
+
+  const nombre = "ServiTec – Sistemas de Gestión"
+  const LOGO = 16
+  const anchoNombre = l.medirTexto(nombre, { size: 9, bold: true })
+  const anchoFila = anchoNombre + (logo ? LOGO + 4 : 0)
+  let x = centro - anchoFila / 2
+  const yNombre = yBase + 14
+  if (logo) {
+    l.doc.addImage(logo.dataUrl, x, yNombre - LOGO + 4, LOGO, LOGO)
+    x += LOGO + 4
+  }
+  l.texto(nombre, x, yNombre, { size: 9, bold: true })
+
+  l.texto("www.servitec.net.ar", centro, yNombre + 11, { size: 7, color: COLOR.servitec, align: "center" })
 }
 
 /** Sello diagonal sobre todas las páginas de un remito anulado. */
@@ -668,8 +708,6 @@ function sellar(l: Lienzo, texto: string, color: RGB) {
 
 function numerarPaginas(l: Lienzo, doc: jsPDF) {
   const total = doc.getNumberOfPages()
-  if (total < 2) return
-
   for (let p = 1; p <= total; p++) {
     doc.setPage(p)
     l.texto(`Hoja ${p} de ${total}`, l.ancho / 2, l.alto - MARGEN + 12, {
@@ -682,8 +720,8 @@ function numerarPaginas(l: Lienzo, doc: jsPDF) {
 
 /** Resuelve el logo, genera el PDF y dispara la descarga. */
 export async function descargarRemitoPDF(venta: Venta, emisor: EmisorRemito): Promise<void> {
-  const logo = await cargarLogo(emisor.logoUrl)
-  generarRemitoPDF(venta, emisor, logo).save(nombreArchivoRemito(venta))
+  const [logo, logoServitec] = await Promise.all([cargarLogo(emisor.logoUrl), cargarLogo(LOGO_SERVITEC_URL)])
+  generarRemitoPDF(venta, emisor, logo, undefined, logoServitec).save(nombreArchivoRemito(venta))
 }
 
 export { telefonoWhatsApp } from "@/lib/telefono"
