@@ -96,8 +96,11 @@ const ALTO_ENCABEZADO = 104
 const ALTO_FILA = 19
 const ALTO_PIE = 30
 
-/** Logo del sello "generado por ServiTec" del pie. Si falta, el sello sale solo con texto. */
-export const LOGO_SERVITEC_URL = "/logo-small.png"
+/**
+ * Logo del sello "generado por ServiTec" del pie, servido desde su sitio (con
+ * CORS abierto). Si no carga, el sello sale solo con texto.
+ */
+export const LOGO_SERVITEC_URL = "https://www.servitec.net.ar/logo.png"
 
 /** Ancho de la columna del sello de ServiTec, a la derecha del pie. */
 const ANCHO_SERVITEC = 170
@@ -679,7 +682,9 @@ function dibujarSelloServitec(l: Lienzo, m: Marco, logo: Logo, factura?: Comprob
   let x = centro - anchoFila / 2
   const yNombre = yBase + 14
   if (logo) {
-    l.doc.addImage(logo.dataUrl, x, yNombre - LOGO + 4, LOGO, LOGO)
+    // Con alias se incrusta una sola vez aunque haya varias hojas; sin
+    // compresión, jsPDF guarda el PNG en crudo y suma ~250 KB al PDF.
+    l.doc.addImage(logo.dataUrl, "PNG", x, yNombre - LOGO + 4, LOGO, LOGO, "logo-servitec", "FAST")
     x += LOGO + 4
   }
   l.texto(nombre, x, yNombre, { size: 9, bold: true })
