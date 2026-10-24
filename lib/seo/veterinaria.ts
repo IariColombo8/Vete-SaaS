@@ -1,5 +1,6 @@
 import type { HorarioTenant, TenantConfig } from "@/lib/supabase/types"
 import { diaToWeekdays } from "@/lib/turnos/horarios"
+import { redesConLink } from "@/lib/redes"
 
 /**
  * Datos estructurados (schema.org, JSON-LD) de la página pública de cada
@@ -101,6 +102,7 @@ export function datosEstructuradosVeterinaria(
     logo,
     image: fotos.length > 0 ? fotos : logo ? [logo] : undefined,
     hasMap: texto(config.googleMapsUrl),
+    sameAs: redesConLink(config.redes).map((r) => r.url),
     address,
     openingHoursSpecification: horariosAEspecificacion(config.horarios ?? []),
     makesOffer,

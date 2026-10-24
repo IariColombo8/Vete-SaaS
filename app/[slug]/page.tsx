@@ -73,11 +73,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function configPublica(config: TenantConfig): TenantConfig {
   const {
     nombre, plan, status, telefono, email, direccion, ciudad, slogan, descripcion,
-    servicios, horarios, fotosHero, fotosHeroMobile, logo, modalidad, googleMapsUrl,
+    servicios, horarios, fotosHero, fotosHeroMobile, logo, modalidad, googleMapsUrl, redes,
   } = config
   return {
     nombre, plan, status, telefono, email, direccion, ciudad, slogan, descripcion,
-    servicios, horarios, fotosHero, fotosHeroMobile, logo, modalidad, googleMapsUrl,
+    servicios, horarios, fotosHero, fotosHeroMobile, logo, modalidad, googleMapsUrl, redes,
   }
 }
 

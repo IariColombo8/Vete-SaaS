@@ -5,6 +5,8 @@ import Link from "next/link"
 import { useSlug } from "@/context/slug-context"
 import { getTenantConfig, updateTenantConfig, getTurnoConfig, updateTurnoConfig } from "@/lib/supabase/queries"
 import type { HorarioTenant, MascotaTurnoConfig, ServicioTurnoConfig, VacunaTurnoConfig, TurnoConfig, Profesional, TenantConfig } from "@/lib/supabase/queries"
+import type { RedesSociales } from "@/lib/supabase/types"
+import { NOMBRE_RED, REDES, urlRed } from "@/lib/redes"
 import { MASCOTAS_DEFAULT, SERVICIOS_DEFAULT, VACUNAS_DEFAULT } from "@/lib/turno-defaults"
 import { DIAS_SEMANA, diaToWeekdays, weekdaysToDiaString } from "@/lib/turnos/horarios"
 import { Button } from "@/components/ui/button"
@@ -16,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { Save, Loader2, Plus, Trash2, PawPrint, FileText, Syringe, Stethoscope, Store, ArrowRight, Settings, CreditCard, CalendarDays, Mail } from "lucide-react"
+import { Save, Loader2, Plus, Trash2, PawPrint, FileText, Syringe, Stethoscope, Store, ArrowRight, Settings, CreditCard, CalendarDays, Mail, Instagram, Facebook } from "lucide-react"
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 import { EquipoManagement } from "@/components/admin/equipo-management"
 import { EmailProviderConfig } from "@/components/admin/email-provider-config"
@@ -55,6 +57,7 @@ export default function ConfiguracionPage() {
 
   // ── Datos de la veterinaria ──
   const [basic, setBasic] = useState({ nombre: "", telefono: "", email: "", direccion: "", ciudad: "" })
+  const [redes, setRedes] = useState<RedesSociales>({})
   const [horarios, setHorarios] = useState<HorarioTenant[]>(HORARIOS_DEFAULT)
   const [minHoras, setMinHoras] = useState(2)
   const [calendarIdField, setCalendarIdField] = useState("")
@@ -71,6 +74,7 @@ export default function ConfiguracionPage() {
     Promise.all([getTenantConfig(slug), getTurnoConfig(slug)]).then(([cfg, turnoCfg]) => {
       if (cfg) {
         setBasic({ nombre: cfg.nombre || "", telefono: cfg.telefono || "", email: cfg.email || "", direccion: cfg.direccion || "", ciudad: cfg.ciudad || "" })
+        setRedes(cfg.redes ?? {})
         setHorarios(cfg.horarios?.length ? cfg.horarios : HORARIOS_DEFAULT)
         if (cfg.minHorasAnticipacion !== undefined) setMinHoras(cfg.minHorasAnticipacion)
         if (cfg.calendarId) setCalendarIdField(cfg.calendarId)
@@ -328,6 +332,54 @@ export default function ConfiguracionPage() {
                     </div>
                   </div>
                   <SaveButton loading={saving === "basic"} />
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* ── REDES SOCIALES ── */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Redes sociales</CardTitle>
+                <CardDescription>Aparecen como botones en tu página pública. Pegá el link del perfil o tu @usuario.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={e => {
+                    e.preventDefault()
+                    // Se guarda normalizado; lo que no se reconoce como perfil se descarta.
+                    const limpio: RedesSociales = {}
+                    for (const red of REDES) {
+                      const url = urlRed(red, redes[red])
+                      if (url) limpio[red] = url
+                    }
+                    setRedes(limpio)
+                    saveDatos("redes", { redes: limpio })
+                  }}
+                  className="space-y-4"
+                >
+                  {REDES.map(red => {
+                    const Icono = red === "instagram" ? Instagram : Facebook
+                    const valor = redes[red] ?? ""
+                    const invalido = valor.trim() !== "" && !urlRed(red, valor)
+                    return (
+                      <div key={red} className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5">
+                          <Icono className="h-4 w-4" />
+                          {NOMBRE_RED[red]}
+                        </Label>
+                        <Input
+                          value={valor}
+                          onChange={e => setRedes(p => ({ ...p, [red]: e.target.value }))}
+                          placeholder={`https://www.${red}.com/tu-veterinaria`}
+                          aria-invalid={invalido}
+                        />
+                        {invalido && (
+                          <p className="text-xs text-destructive">No parece un perfil de {NOMBRE_RED[red]}.</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <SaveButton loading={saving === "redes"} />
                 </form>
               </CardContent>
             </Card>

@@ -9,7 +9,9 @@ import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
   ChevronLeft, ChevronRight, ArrowRight,
   Shield, Star, Home, PawPrint, UserPlus, Gift, ShoppingBag, Info, Code2, Sparkles,
+  Instagram, Facebook,
 } from "lucide-react"
+import { NOMBRE_RED, redesConLink } from "@/lib/redes"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { tieneOferta } from "@/lib/productos/precios"
@@ -70,6 +72,11 @@ const TONOS = [
   { fondo: "bg-teal-soft", texto: "text-teal-ink", borde: "hover:border-teal/40" },
   { fondo: "bg-amber/15", texto: "text-ink", borde: "hover:border-amber/50" },
 ] as const
+
+function IconoRed({ red, className }: { red: "instagram" | "facebook"; className?: string }) {
+  const Icono = red === "instagram" ? Instagram : Facebook
+  return <Icono className={className} />
+}
 
 /* ═══════════════════════════ MAPA ═══════════════════════════ */
 
@@ -520,6 +527,7 @@ export default function VetPublicPage({
   const logo        = config?.logo
   const modalidad   = config?.modalidad ?? "local"
   const googleMapsUrl = config?.googleMapsUrl
+  const redes       = redesConLink(config?.redes)
   const hayFotos    = fotosDesktop.length > 0 || fotosMobile.length > 0
   const srcMapa     = googleMapsUrl ? srcDeMapa(googleMapsUrl) : null
   const muestraMapa = (modalidad === "local" || modalidad === "ambos") && !!srcMapa
@@ -662,6 +670,31 @@ export default function VetPublicPage({
               Historia clínica de mi mascota
             </Button>
           </div>
+
+          {redes.length > 0 && (
+            <div
+              className="vet-hero-in mt-3 sm:mt-6 flex flex-wrap items-center justify-center gap-2"
+              style={{ animationDelay: "0.65s" }}
+            >
+              {redes.map((r) => (
+                <a
+                  key={r.red}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${NOMBRE_RED[r.red]} de ${nombre}`}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105 ${
+                    r.red === "instagram"
+                      ? "bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af]"
+                      : "bg-[#1877f2]"
+                  }`}
+                >
+                  <IconoRed red={r.red} className="h-4 w-4" />
+                  @{r.usuario}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Onda que funde el hero con lo que sigue: crema, o verde si abajo va el sorteo */}
@@ -860,7 +893,19 @@ export default function VetPublicPage({
                           {email}
                         </a>
                       )}
-                      {!(direccion || email || telefono || atiendeDomicilio) && (
+                      {redes.map((r) => (
+                        <a
+                          key={r.red}
+                          href={r.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm font-semibold text-ink hover:text-coral transition-colors break-all"
+                        >
+                          <IconoRed red={r.red} className="h-4 w-4 text-coral" />
+                          @{r.usuario}
+                        </a>
+                      ))}
+                      {!(direccion || email || telefono || atiendeDomicilio || redes.length) && (
                         <p className="text-ink-muted italic text-xs">Datos de contacto no configurados aun.</p>
                       )}
                     </div>
@@ -993,6 +1038,18 @@ export default function VetPublicPage({
                     {email}
                   </a>
                 )}
+                {redes.map((r) => (
+                  <a
+                    key={r.red}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors break-all"
+                  >
+                    <IconoRed red={r.red} className="h-4 w-4 shrink-0 text-amber" />
+                    @{r.usuario}
+                  </a>
+                ))}
               </div>
             </div>
 

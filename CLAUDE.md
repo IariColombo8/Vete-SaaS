@@ -627,6 +627,11 @@ del Dashboard (que quedó en plan + métricas) y de Configuración → Datos. Lo
 **horarios quedan en Configuración** a propósito: también definen qué turnos se
 pueden reservar, no son solo vidriera.
 
+**Redes sociales** (`068_redes_sociales.sql`, `tenants.redes` jsonb): se cargan
+en Configuración → Clínica (Instagram, Facebook; link o `@usuario`, se guarda
+normalizado con `lib/redes.ts`). En la página pública salen como botón en el
+hero, en la tarjeta de contacto y en el pie, y como `sameAs` en el JSON-LD.
+
 **Encabezado de pantalla: `EncabezadoPagina`** (`components/admin/encabezado-pagina.tsx`).
 Toda pantalla del panel arranca con él (icono, título, descripción, acciones a
 la derecha). No dibujar encabezados a mano ni volver al estilo viejo de Turnos
