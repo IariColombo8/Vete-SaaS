@@ -8,6 +8,15 @@ import { Menu, X, Stethoscope, LayoutDashboard } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Paw } from "@/components/landing/pet-art"
 import { imagenSupabase } from "@/lib/imagenes"
+import dynamic from "next/dynamic"
+
+// Carrito y "Mis pedidos" solo existen en las páginas de una veterinaria: en
+// chunk aparte para no sumarle JS a la landing, el blog y precios.
+const CarritoBoton = dynamic(() => import("@/components/public/carrito-flotante").then((m) => m.CarritoBoton), { ssr: false })
+const MisPedidosBoton = dynamic(
+  () => import("@/components/public/mis-pedidos-flotante").then((m) => m.MisPedidosBoton),
+  { ssr: false },
+)
 
 // El navbar está en todas las páginas: Supabase y el resolver de rol se
 // importan recién al usarlos para que no entren en el JS inicial de la
@@ -223,10 +232,14 @@ function VetPublicNavbar() {
             }
             <span className="font-bold text-sm">{tenant?.nombre ?? ""}</span>
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Quien compró en la tienda ve sus pedidos; el carrito, si tiene algo
+                (en el checkout no: ya está a la vista). */}
+            {slug && <MisPedidosBoton slug={slug} />}
+            {slug && !pathname.endsWith("/carrito") && <CarritoBoton slug={slug} logo={tenant?.logo} />}
             <Button
               size="sm"
-              className="rounded-full bg-coral hover:bg-coral-ink text-white font-semibold shadow-lg shadow-coral/25"
+              className="ml-1 rounded-full bg-coral hover:bg-coral-ink text-white font-semibold shadow-lg shadow-coral/25"
               onClick={() => router.push(`/${slug}/turno`)}
             >
               Sacar turno

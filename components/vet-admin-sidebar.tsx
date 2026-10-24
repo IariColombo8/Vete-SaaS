@@ -1,9 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  Calendar, ExternalLink, FileText, Gift, HandCoins, LayoutDashboard, Lock, LogOut, Landmark, Package,
+  Calendar, ClipboardList, ExternalLink, FileText, Gift, HandCoins, LayoutDashboard, Lock, LogOut, Landmark, Package,
   Receipt, Settings, ShoppingCart, Stethoscope, Store, Users, Wallet,
 } from "lucide-react"
 import {
@@ -14,6 +15,7 @@ import {
 import { canAccessSection, type AdminSection } from "@/lib/auth/permissions"
 import type { UserRole } from "@/lib/supabase/queries"
 import { planAllows, type Feature } from "@/lib/plans"
+import { contarPedidosPendientes } from "@/lib/supabase/pedidos"
 
 interface Props {
   slug: string
@@ -36,8 +38,8 @@ interface ItemNav {
 /**
  * Cuatro bloques, uno por tipo de trabajo:
  * - Clínica: atender animales.
- * - Comercio: el mostrador, en el orden del día (vender → caja → ventas →
- *   cobrar cuentas → reponer productos).
+ * - Comercio: el mostrador, en el orden del día (vender → pedidos web → caja →
+ *   ventas → cobrar cuentas → reponer productos).
  * - Online: lo que ve el cliente desde afuera (página, catálogo, promos).
  * - Administración: lo del dueño (gastos, configuración).
  * Cada grupo lleva su título; colapsado, los títulos se ocultan solos y
@@ -59,6 +61,7 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
       tour: "comercio",
       items: [
         { href: `/${slug}/admin/Vender`,          label: "Punto de venta",   icon: ShoppingCart, section: "pos",             feature: "ventas" },
+        { href: `/${slug}/admin/Pedidos`,         label: "Pedidos",          icon: ClipboardList, section: "pedidos",       feature: "ventas" },
         { href: `/${slug}/admin/Caja`,            label: "Caja",             icon: Wallet,       section: "caja",            feature: "ventas" },
         { href: `/${slug}/admin/Ventas`,          label: "Ventas",           icon: Receipt,      section: "ventas",          feature: "ventas" },
         { href: `/${slug}/admin/CuentaCorriente`, label: "Cuenta corriente", icon: Landmark,     section: "cuentaCorriente", feature: "ventas" },
@@ -87,6 +90,7 @@ function gruposNav(slug: string): { titulo: string; tour?: string; items: ItemNa
 export function VetAdminSidebar({ slug, vetNombre, role, plan, onSalir }: Props) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
+  const pendientes = usePedidosPendientes(slug, canAccessSection(role, "pedidos") && planAllows(plan, "ventas"))
 
   // Un grupo cuyos items no pasan el filtro de rol desaparece entero, así no
   // queda un título suelto sin nada debajo.
@@ -154,6 +158,14 @@ export function VetAdminSidebar({ slug, vetNombre, role, plan, onSalir }: Props)
                           <span className={bloqueada ? "text-sidebar-foreground/60" : undefined}>{label}</span>
                         </Link>
                       </SidebarMenuButton>
+                      {!bloqueada && href.endsWith("/Pedidos") && pendientes > 0 && (
+                        <SidebarMenuBadge
+                          className="bg-coral text-white"
+                          aria-label={`${pendientes} pedidos pendientes`}
+                        >
+                          {pendientes}
+                        </SidebarMenuBadge>
+                      )}
                       {bloqueada && (
                         <SidebarMenuBadge
                           className="gap-0.5 bg-warning-soft text-warning-soft-foreground"
@@ -192,4 +204,21 @@ export function VetAdminSidebar({ slug, vetNombre, role, plan, onSalir }: Props)
       </SidebarFooter>
     </Sidebar>
   )
+}
+
+/** Pedidos web sin empezar, para el número junto a "Pedidos". Se refresca cada minuto. */
+function usePedidosPendientes(slug: string, activo: boolean): number {
+  const [cantidad, setCantidad] = useState(0)
+  useEffect(() => {
+    if (!activo) return
+    let vigente = true
+    const contar = () => contarPedidosPendientes(slug).then((n) => { if (vigente) setCantidad(n) })
+    contar()
+    const t = setInterval(contar, 60_000)
+    return () => {
+      vigente = false
+      clearInterval(t)
+    }
+  }, [slug, activo])
+  return cantidad
 }

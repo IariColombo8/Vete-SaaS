@@ -184,6 +184,8 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
                   <p className="text-xs text-muted-foreground">
                     <span className="font-mono tabular-nums">N° {String(venta.numero).padStart(5, "0")}</span>
                     {" · "}
+                    <OrigenVenta venta={venta} />
+                    {" · "}
                     {formatDateTime(venta.createdAt)}
                   </p>
                   <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{resumenItems(venta)}</p>
@@ -238,6 +240,7 @@ export function HistorialVentas({ ventas, emisor, cargando, onCambio, tenantId, 
                         {String(venta.numero).padStart(5, "0")}
                       </span>
                     </span>
+                    <span className="mt-1 block text-[11px]"><OrigenVenta venta={venta} /></span>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">
                     {formatDateTime(venta.createdAt)}
@@ -439,5 +442,15 @@ function AnularDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+/** Mostrador o tienda web (con el número de pedido). */
+function OrigenVenta({ venta }: { venta: Venta }) {
+  if (venta.origen !== "web") return <span className="text-muted-foreground">Mostrador</span>
+  return (
+    <span className="rounded bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+      Tienda web{venta.pedidoNumero ? ` · Pedido N° ${String(venta.pedidoNumero).padStart(4, "0")}` : ""}
+    </span>
   )
 }

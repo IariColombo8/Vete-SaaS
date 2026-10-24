@@ -114,6 +114,12 @@ export interface TurnoConfig {
   profesionales?: Profesional[]
 }
 
+/** Lo que escribió el dueño por red (link o "@usuario"); ver lib/redes.ts. */
+export interface RedesSociales {
+  instagram?: string
+  facebook?: string
+}
+
 export interface TenantConfig {
   nombre?: string
   /** Id de `planes` (ver lib/plans.ts). */
@@ -134,6 +140,7 @@ export interface TenantConfig {
   logo?: string
   modalidad?: Modalidad
   googleMapsUrl?: string
+  redes?: RedesSociales
   /** Horas mínimas de anticipación para turnos del mismo día (default 2) */
   minHorasAnticipacion?: number
   /** ID del Google Calendar donde se crean los eventos de turno */
@@ -625,6 +632,10 @@ export interface Venta {
   createdAt: string
   /** Un cobro de cuenta corriente, no una venta de productos (sin items). */
   esPagoCtaCte: boolean
+  /** "web" = salió de un pedido de la vidriera (066_pedidos_web.sql). Sin dato = mostrador. */
+  origen?: "mostrador" | "web"
+  /** Número del pedido web, si la venta salió de uno. */
+  pedidoNumero?: number
   /** Solo viene cuando se pide el detalle completo. */
   items?: VentaItem[]
   /** Desglose de "mixto". Solo viene cuando se pide el detalle completo. */

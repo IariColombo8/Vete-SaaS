@@ -17,11 +17,12 @@ import { ExternalLink, Save, Loader2, Plus, Trash2, Upload, X, ImageIcon, Stetho
 import { EncabezadoPagina } from "@/components/admin/encabezado-pagina"
 import { useReadOnly } from "@/lib/auth/read-only-context"
 import { EnlacesTienda } from "@/components/admin/tienda-virtual/enlaces-tienda"
+import { PedidosOnline } from "@/components/admin/tienda-virtual/pedidos-online"
 
 const EMOJIS = ["🩺","💉","🏥","🛁","🚨","🧪","🐾","🐶","🐱","✂️","🦷","🔬","❤️","🌿","💊","🩻"]
 
-type TabTienda = "enlaces" | "portada" | "servicios" | "ubicacion"
-const TABS: TabTienda[] = ["enlaces", "portada", "servicios", "ubicacion"]
+type TabTienda = "enlaces" | "pedidos" | "portada" | "servicios" | "ubicacion"
+const TABS: TabTienda[] = ["enlaces", "pedidos", "portada", "servicios", "ubicacion"]
 
 /**
  * Todo lo que ve el cliente en la web pública de la veterinaria: los links
@@ -232,8 +233,9 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
         />
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabTienda)} className="max-w-3xl">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
             <TabsTrigger value="enlaces">Enlaces</TabsTrigger>
+            <TabsTrigger value="pedidos">Pedidos online</TabsTrigger>
             <TabsTrigger value="portada">Portada</TabsTrigger>
             <TabsTrigger value="servicios">Servicios</TabsTrigger>
             <TabsTrigger value="ubicacion">Ubicación</TabsTrigger>
@@ -241,6 +243,10 @@ export function TiendaVirtualManagement({ tenantId: slug }: { tenantId: string }
 
           <TabsContent value="enlaces" className="space-y-6 mt-6">
             <EnlacesTienda slug={slug} conCatalogo={conCatalogo} />
+          </TabsContent>
+
+          <TabsContent value="pedidos" className="space-y-6 mt-6">
+            <PedidosOnline slug={slug} conCatalogo={conCatalogo} />
           </TabsContent>
 
           <TabsContent value="portada" className="space-y-6 mt-6">

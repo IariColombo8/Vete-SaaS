@@ -9,7 +9,9 @@ import {
   CalendarPlus, Phone, Mail, MapPin, Clock, Stethoscope,
   ChevronLeft, ChevronRight, ArrowRight,
   Shield, Star, Home, PawPrint, UserPlus, Gift, ShoppingBag, Info, Code2, Sparkles,
+  Instagram, Facebook,
 } from "lucide-react"
+import { NOMBRE_RED, redesConLink } from "@/lib/redes"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { tieneOferta } from "@/lib/productos/precios"
@@ -20,6 +22,7 @@ import {
   ANCHOS_HERO, ANCHOS_HERO_MOBILE, ANCHOS_LOGO, SIZES_LOGO_HERO, imagenSupabase, srcSetSupabase,
 } from "@/lib/imagenes"
 import { Paw, DogFace, CatFace, Bone, HeartPulse } from "@/components/landing/pet-art"
+import { useCarritoTienda } from "@/hooks/use-carrito-tienda"
 
 // Todo lo que no está en el hero se carga en chunks aparte y sin SSR: la
 // vidriera, promos y sorteos recién existen cuando llega la consulta a
@@ -33,6 +36,7 @@ const DetalleDialog = dynamic(() => import("@/components/public/detalle-dialog")
 const SorteoBanner = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoBanner), { ssr: false })
 const SorteoTeaser = dynamic(() => import("@/components/public/sorteo-banner").then((m) => m.SorteoTeaser), { ssr: false })
 const SorteosHistorial = dynamic(() => import("@/components/public/sorteos-historial").then((m) => m.SorteosHistorial), { ssr: false })
+const CarritoFlotante = dynamic(() => import("@/components/public/carrito-flotante").then((m) => m.CarritoFlotante), { ssr: false })
 const RegistroClienteDialog = dynamic(() => import("@/components/turnos/RegistroClienteDialog").then((m) => m.RegistroClienteDialog), { ssr: false })
 
 /* ═══════════════════════════ DEFAULTS ═══════════════════════════ */
@@ -68,6 +72,11 @@ const TONOS = [
   { fondo: "bg-teal-soft", texto: "text-teal-ink", borde: "hover:border-teal/40" },
   { fondo: "bg-amber/15", texto: "text-ink", borde: "hover:border-amber/50" },
 ] as const
+
+function IconoRed({ red, className }: { red: "instagram" | "facebook"; className?: string }) {
+  const Icono = red === "instagram" ? Instagram : Facebook
+  return <Icono className={className} />
+}
 
 /* ═══════════════════════════ MAPA ═══════════════════════════ */
 
@@ -441,6 +450,15 @@ export default function VetPublicPage({
   // El botón "Registrarme como cliente" sale en el HTML; el diálogo (formulario,
   // Supabase, Radix) se descarga recién al primer click.
   const [registroAbierto, setRegistroAbierto] = useState(false)
+  // La veterinaria toma pedidos online: la vidriera suma al carrito.
+  const [tiendaAbierta, setTiendaAbierta] = useState(false)
+  const carrito = useCarritoTienda(slug)
+  // Desde la portada, agregar algo lleva al catálogo completo para seguir
+  // comprando: acá solo se ve una muestra, y allá está la barra con el carrito.
+  const agregarYSeguir = (p: Producto, cantidad?: number) => {
+    carrito.agregar(p, cantidad)
+    router.push(`/${slug}/productos`)
+  }
 
   // Vidriera, promos y sorteos van debajo del pliegue: se cargan en el cliente
   // sin frenar el hero. Si la veterinaria no existe, no hay nada que pedir.
@@ -452,17 +470,20 @@ export default function VetPublicPage({
       import("@/lib/supabase/productos"),
       import("@/lib/supabase/promociones"),
       import("@/lib/supabase/sorteos"),
+      import("@/lib/supabase/pedidos"),
     ])
-      .then(async ([productos, promociones, sorteos]) => {
-        const [prods, promos, sorteo, historial] = await Promise.all([
+      .then(async ([productos, promociones, sorteos, pedidos]) => {
+        const [prods, promos, sorteo, historial, tienda] = await Promise.all([
           productos.getProductosPublicados(slug), promociones.getPromocionesPublicadas(slug),
           sorteos.getSorteoActivo(slug), sorteos.getSorteosFinalizadosPublicados(slug),
+          pedidos.getTiendaPublica(slug),
         ])
         if (!vigente) return
         setProductos(prods)
         setPromociones(promos)
         setSorteoActivo(sorteo)
         setSorteosFinalizados(historial)
+        setTiendaAbierta(tienda.pedidosHabilitados)
 
         const ids = Array.from(new Set(promos.flatMap((p) => p.items.map((i) => i.productoId))))
         const productosPromo = await productos.getProductosPublicadosPorIds(slug, ids)
@@ -506,11 +527,13 @@ export default function VetPublicPage({
   const logo        = config?.logo
   const modalidad   = config?.modalidad ?? "local"
   const googleMapsUrl = config?.googleMapsUrl
+  const redes       = redesConLink(config?.redes)
   const hayFotos    = fotosDesktop.length > 0 || fotosMobile.length > 0
   const srcMapa     = googleMapsUrl ? srcDeMapa(googleMapsUrl) : null
   const muestraMapa = (modalidad === "local" || modalidad === "ambos") && !!srcMapa
   const tieneFeatureProductos = vidriera.productos
   const muestraProductos = tieneFeatureProductos && productos.length > 0
+  const puedeComprar = muestraProductos && tiendaAbierta
   const tieneFeaturePromos = vidriera.promos
   const muestraPromociones = tieneFeaturePromos && promociones.length > 0
   // Prioridad en la vidriera: ofertas primero, después los que tienen foto,
@@ -647,6 +670,31 @@ export default function VetPublicPage({
               Historia clínica de mi mascota
             </Button>
           </div>
+
+          {redes.length > 0 && (
+            <div
+              className="vet-hero-in mt-3 sm:mt-6 flex flex-wrap items-center justify-center gap-2"
+              style={{ animationDelay: "0.65s" }}
+            >
+              {redes.map((r) => (
+                <a
+                  key={r.red}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${NOMBRE_RED[r.red]} de ${nombre}`}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105 ${
+                    r.red === "instagram"
+                      ? "bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af]"
+                      : "bg-[#1877f2]"
+                  }`}
+                >
+                  <IconoRed red={r.red} className="h-4 w-4" />
+                  @{r.usuario}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Onda que funde el hero con lo que sigue: crema, o verde si abajo va el sorteo */}
@@ -755,7 +803,11 @@ export default function VetPublicPage({
                 />
               )}
               {muestraProductos && productosOrdenados.slice(0, 11).map((p) => (
-                <ProductoTarjeta key={p.id} producto={p} logo={logo} onClick={() => setProductoSeleccionado(p)} />
+                <ProductoTarjeta
+                  key={p.id} producto={p} logo={logo} onClick={() => setProductoSeleccionado(p)}
+                  onAgregar={puedeComprar ? () => agregarYSeguir(p) : undefined}
+                  enCarrito={carrito.lineas.find((l) => l.producto.id === p.id)?.cantidad}
+                />
               ))}
             </VidrieraCarrusel>
 
@@ -841,7 +893,19 @@ export default function VetPublicPage({
                           {email}
                         </a>
                       )}
-                      {!(direccion || email || telefono || atiendeDomicilio) && (
+                      {redes.map((r) => (
+                        <a
+                          key={r.red}
+                          href={r.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm font-semibold text-ink hover:text-coral transition-colors break-all"
+                        >
+                          <IconoRed red={r.red} className="h-4 w-4 text-coral" />
+                          @{r.usuario}
+                        </a>
+                      ))}
+                      {!(direccion || email || telefono || atiendeDomicilio || redes.length) && (
                         <p className="text-ink-muted italic text-xs">Datos de contacto no configurados aun.</p>
                       )}
                     </div>
@@ -974,6 +1038,18 @@ export default function VetPublicPage({
                     {email}
                   </a>
                 )}
+                {redes.map((r) => (
+                  <a
+                    key={r.red}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors break-all"
+                  >
+                    <IconoRed red={r.red} className="h-4 w-4 shrink-0 text-amber" />
+                    @{r.usuario}
+                  </a>
+                ))}
               </div>
             </div>
 
@@ -1095,7 +1171,9 @@ export default function VetPublicPage({
         onOpenChange={(open) => {
           if (!open) { setProductoSeleccionado(null); setPromocionSeleccionada(null) }
         }}
+        onAgregar={puedeComprar ? agregarYSeguir : undefined}
       />
+      {puedeComprar && <CarritoFlotante slug={slug} logo={logo} />}
     </main>
   )
 }

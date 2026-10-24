@@ -17,7 +17,10 @@ import { MASCOTAS_DEFAULT } from "@/lib/turno-defaults"
 import { slugificarMascota } from "@/lib/mascotas/slug"
 import { formatCurrency } from "@/lib/format"
 import type { Cliente, Mascota, Sorteo } from "@/lib/supabase/types"
-import { Search, Loader2, PawPrint, CalendarPlus, ShoppingBag } from "lucide-react"
+import { ListaMisPedidos } from "@/components/public/mis-pedidos-flotante"
+import { haySesionGuardada, useMisPedidos } from "@/hooks/use-mis-pedidos"
+import { signInWithGoogle } from "@/lib/supabase/auth"
+import { Search, Loader2, PawPrint, CalendarPlus, ShoppingBag, Package } from "lucide-react"
 
 function emojiPorTipo(tipo: string): string {
   return MASCOTAS_DEFAULT.find((m) => m.id === tipo)?.emoji ?? "🐾"
@@ -33,6 +36,11 @@ export default function MiHistoriaPage() {
   const [mascotas, setMascotas] = useState<Mascota[]>([])
   const [compras, setCompras] = useState<CompraClientePublico[]>([])
   const [sorteoActivo, setSorteoActivo] = useState<Sorteo | null>(null)
+  // Pedidos de la tienda web (en curso, en reparto, entregados): son de la
+  // cuenta de Google, no del DNI, así que se ven con la sesión iniciada.
+  const { pedidos: misPedidos, cargando: cargandoPedidos } = useMisPedidos(slug)
+  const [conSesion, setConSesion] = useState(true)
+  useEffect(() => setConSesion(haySesionGuardada()), [])
 
   useEffect(() => {
     getSorteoActivo(slug).then(setSorteoActivo)
@@ -95,6 +103,36 @@ export default function MiHistoriaPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {misPedidos.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-emerald-600" />
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Mis pedidos</p>
+            </div>
+            <Card className="overflow-hidden">
+              <ListaMisPedidos pedidos={misPedidos} />
+            </Card>
+          </div>
+        )}
+
+        {buscado && cliente && !conSesion && !cargandoPedidos && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-left">
+              <Package className="h-8 w-8 shrink-0 text-emerald-600" />
+              <p className="flex-1 text-sm text-slate-600 dark:text-slate-400">
+                ¿Compraste en la tienda online? Ingresá con Google para seguir tus pedidos.
+              </p>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={() => signInWithGoogle(`/${slug}/mi-historia`)}
+              >
+                Ingresar con Google
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {buscado && !cliente && (
           <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
