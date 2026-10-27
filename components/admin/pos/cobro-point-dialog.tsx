@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import QRCode from "qrcode"
-import { CheckCircle2, CreditCard, Loader2, QrCode, XCircle } from "lucide-react"
+import { AlertTriangle, CheckCircle2, CreditCard, Loader2, QrCode, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { formatCurrency } from "@/lib/format"
@@ -45,6 +45,13 @@ type Fase =
   | { tipo: "fallo"; motivo: string; cobroId?: string }
 
 const INTERVALO_POLL_MS = 2000
+
+/**
+ * Si pasado este tiempo la orden sigue en `created`, la terminal no la tomó:
+ * está apagada, sin conexión o con la app de MP cerrada. Una terminal que
+ * funciona la pasa a `at_terminal` en un par de segundos.
+ */
+const ESPERA_TERMINAL_MS = 15000
 
 const TEXTO_ESTADO: Record<CanalCobro, Record<string, string>> = {
   point: {
@@ -95,16 +102,21 @@ export function CobroPointDialog({
   const [fase, setFase] = useState<Fase>({ tipo: "enviando" })
   const [qrImagen, setQrImagen] = useState<string | null>(null)
   const [cancelando, setCancelando] = useState(false)
+  // La orden se mandó a la terminal y no la tomó (ver ESPERA_TERMINAL_MS).
+  const [sinTerminal, setSinTerminal] = useState(false)
   const vigente = useRef(false)
+  const viaTerminal = canal === "point" || qrEnTerminal
 
   useEffect(() => {
     if (!open) return
     vigente.current = true
     setFase({ tipo: "enviando" })
     setCancelando(false)
+    setSinTerminal(false)
     setQrImagen(null)
 
     let timer: ReturnType<typeof setTimeout> | null = null
+    let enviadoEn = 0
 
     const poll = async (cobroId: string) => {
       if (!vigente.current) return
@@ -134,6 +146,7 @@ export function CobroPointDialog({
           return
         }
         setFase({ tipo: "esperando", cobroId, estado: r.estado })
+        if (viaTerminal) setSinTerminal(r.estado === "created" && Date.now() - enviadoEn >= ESPERA_TERMINAL_MS)
       } catch (e) {
         // Un error de red en un poll no cancela el cobro: se reintenta.
         console.error("Error consultando el cobro Point:", e)
@@ -155,6 +168,7 @@ export function CobroPointDialog({
     crear
       .then(({ cobroId }) => {
         if (!vigente.current) return
+        enviadoEn = Date.now()
         setFase({ tipo: "esperando", cobroId, estado: "created" })
         timer = setTimeout(() => poll(cobroId), INTERVALO_POLL_MS)
       })
@@ -266,6 +280,24 @@ export function CobroPointDialog({
               </>
             )}
           </div>
+
+          {sinTerminal && (fase.tipo === "esperando" || fase.tipo === "fallo") && (
+            <div className="mt-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-left text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="flex items-center gap-2 font-medium">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                El posnet no está recibiendo el cobro
+              </p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs">
+                <li>Revisá que esté encendido y con batería (si se apagó, dejalo cargando unos minutos).</li>
+                <li>Fijate que tenga Wi‑Fi o datos, y que la fecha y la hora sean las correctas.</li>
+                <li>Abrí la app de Mercado Pago en el posnet y dejala en la pantalla de inicio.</li>
+                <li>
+                  Si sigue igual, reinicialo: mantené apretado el botón de encendido y tocá &quot;Reiniciar&quot;.
+                </li>
+                <li>Cancelá este cobro y volvé a mandarlo. Mientras tanto podés cobrar con QR.</li>
+              </ol>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
